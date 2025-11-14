@@ -1,0 +1,39 @@
+ManifestFileVersion: 0
+CRC: 1148493234
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 865221c3ce81ecc226557cb3ff6e2e66
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: f796107e6d4f36e27ee328e7bb9df1e0
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 89
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: 14e355c0c38c43c081bf615a32e044ee, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/VainSabers/SaberLitInverted.mat
+- Assets/vs_flatglow.shader
+- Assets/VainSabers/vs_blurpart.shader
+- Assets/vs_test.shader
+- Assets/vs_test 1.shader
+- Assets/VainSabers/SaberLit.mat
+- Assets/VainSabers/SaberInverted.mat
+- Assets/VainSabers/Saber.mat
+- Assets/VainSabers/BlurSaberPrefab.prefab
+- Assets/vs_saber.shader
+- Assets/vs_flatglow_2side.shader
+Dependencies: []

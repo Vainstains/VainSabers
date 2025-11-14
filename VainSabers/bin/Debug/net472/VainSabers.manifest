@@ -1,0 +1,16 @@
+{
+   "$schema" : "https://raw.githubusercontent.com/bsmg/BSIPA-MetadataFileSchema/master/Schema.json",
+   "id" : "VainSabers",
+   "name" : "VainSabers",
+   "author" : "Vainstains",
+   "version" : "0.0.1",
+   "gameVersion" : "1.40.8",
+   "description" : "ReeSabers but bad lol",
+   "dependsOn" : {
+      "BSIPA" : "^4.3.0",
+      "SiraUtil" : "^3.2.1"
+   },
+   "misc" : {
+      "generated-by" : "BSMT.Tasks/2.0.0.0"
+   }
+}
