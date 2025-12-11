@@ -160,6 +160,28 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         }
     }
     
+    [UIValue("BladeMilliseconds")]
+    private int BladeMilliseconds
+    {
+        get => m_config.BladeTrailMS;
+        set
+        {
+            m_config.BladeTrailMS = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BladeMilliseconds)));
+        }
+    }
+    
+    [UIValue("TipMilliseconds")]
+    private int TipMilliseconds
+    {
+        get => m_config.BladeTrailMS;
+        set
+        {
+            m_config.TipTrailMS = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TipMilliseconds)));
+        }
+    }
+    
     [UIValue("showInMenu")]
     private bool ShowInMenu
     {

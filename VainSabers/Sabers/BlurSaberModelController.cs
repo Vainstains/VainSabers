@@ -71,8 +71,8 @@ internal class BlurSaber : MonoBehaviour
         historyProvider.Target = target;
         m_blurSaberData = gameObject.AddInitComponent<BlurSaberData>(m_config);
         
-        m_tipTrail = gameObject.AddInitComponent<SaberTipTrail>(target, historyProvider);
-        m_ribbonTrail = gameObject.AddInitComponent<SaberRibbonTrail>(target, historyProvider);
+        m_tipTrail = gameObject.AddInitComponent<SaberTipTrail>(m_config, target, historyProvider);
+        m_ribbonTrail = gameObject.AddInitComponent<SaberRibbonTrail>(m_config, target, historyProvider);
     }
 
     public void SetPreset(string preset)

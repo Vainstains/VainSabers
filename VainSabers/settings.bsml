@@ -12,7 +12,9 @@
                                bind-value="true" apply-on-change="true"/>
         <button on-click="CreateNewPreset" text="Create New Preset"/>
         <button on-click="ToggleEditor" text="Toggle Editor"/>
-        <slider-setting value="BlurMilliseconds" text="Blur MS" apply-on-change="true" integer-only="true" min="0" max="100" />
+        <slider-setting value="BlurMilliseconds" text="Blur MS" apply-on-change="true" integer-only="true" min="0" max="50" />
+        <slider-setting value="BladeMilliseconds" text="Blade Trail MS" apply-on-change="true" integer-only="true" min="0" max="200" />
+        <slider-setting value="TipMilliseconds" text="Tip Trail MS" apply-on-change="true" integer-only="true" min="0" max="200" />
         <toggle-setting text="Always show in menu" value="showInMenu" pref-width="50" apply-on-change="true" hover-hint="yeah" />
     </vertical>
 </bg>

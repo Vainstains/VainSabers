@@ -266,6 +266,7 @@ namespace VainSabers.Sabers
             Vector3 right = Vector3.Cross(avgFwd, tangent).normalized;
 
             motionDir = Vector3.ProjectOnPlane(motionDir, avgFwd).normalized;
+            Vector3 plane = Vector3.Cross(motionDir, avgFwd);
 
             float sweepRatio = dst / (1.5f * radius);
             
@@ -295,7 +296,8 @@ namespace VainSabers.Sabers
                     normal,
                     tSample,
                     color,
-                    right,
+                    plane,
+                    interpSample.forward,
                     sweepRatio * BlurFadeFactor
                 );
             }
@@ -303,7 +305,7 @@ namespace VainSabers.Sabers
             idx += ringVerts;
         }
 
-        private void SetVertex(int idx, Vector3 pos, Vector3 normal, float sweepCoordinate, Color color, Vector3 planeNormal, float sweepRatio)
+        private void SetVertex(int idx, Vector3 pos, Vector3 normal, float sweepCoordinate, Color color, Vector3 planeNormal, Vector3 bladeDir, float sweepRatio)
         {
             if (m_blurTube == null)
                 return;
@@ -311,6 +313,7 @@ namespace VainSabers.Sabers
             m_blurTube.Normals[idx] = normal;
             m_blurTube.Tangents[idx] = new Vector4(planeNormal.x, planeNormal.y, planeNormal.z, 0);
             m_blurTube.Uvs[idx] = new Vector2(sweepCoordinate, Mathf.Clamp01((sweepRatio - 0.7f) * 0.02f));
+            m_blurTube.BladeDirs[idx] = bladeDir;
             m_blurTube.Colors[idx] = color;
         }
         

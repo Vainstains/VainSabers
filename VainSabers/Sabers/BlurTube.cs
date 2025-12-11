@@ -12,6 +12,7 @@ namespace VainSabers.Sabers
         public Vector3[] Normals { get; private set; }
         public Vector4[] Tangents { get; private set; }
         public Vector2[] Uvs { get; private set; }
+        public Vector3[] BladeDirs { get; private set; }
         public Color[] Colors { get; private set; }
 
         public BlurTube(int ringVerts, int ringCount)
@@ -52,12 +53,14 @@ namespace VainSabers.Sabers
             Normals = new Vector3[vertCount];
             Tangents = new Vector4[vertCount];
             Uvs = new Vector2[vertCount];
+            BladeDirs = new Vector3[vertCount];
             Colors = new Color[vertCount];
             
             TubeMesh.SetVertices(Vertices);
             TubeMesh.SetNormals(Normals);
             TubeMesh.SetTangents(Tangents);
             TubeMesh.SetUVs(0, Uvs);
+            TubeMesh.SetUVs(1, BladeDirs);
             TubeMesh.SetColors(Colors);
             TubeMesh.SetTriangles(indices, 0);
         }
@@ -68,6 +71,7 @@ namespace VainSabers.Sabers
             TubeMesh.SetNormals(Normals);
             TubeMesh.SetTangents(Tangents);
             TubeMesh.SetUVs(0, Uvs);
+            TubeMesh.SetUVs(1, BladeDirs);
             TubeMesh.SetColors(Colors);
             
             TubeMesh.RecalculateBounds();

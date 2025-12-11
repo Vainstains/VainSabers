@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using VainSabers.Config;
 
 namespace VainSabers.Sabers;
 
@@ -7,8 +8,7 @@ internal class SaberTipTrail : MonoBehaviour
     private LineRenderer _lineRenderer = null!;
     private Transform _saber = null!;
     private MovementHistoryProvider _sweepData = null!;
-
-    private const float TrailTime = 0.14f; // seconds of history
+    
     private const int CoarseSampleCount = 24; 
     private const int RefinedSampleCount = CoarseSampleCount * 2 - 1;
     private const int RefinedSampleCount2 = RefinedSampleCount * 2 - 1; 
@@ -20,9 +20,11 @@ internal class SaberTipTrail : MonoBehaviour
 
     private float m_opacity = 0.0f;
     private Color m_color = Color.clear;
+    PluginConfig m_config = null!;
 
-    public void Init(Transform saberTransform, MovementHistoryProvider sweepData)
+    public void Init(PluginConfig conf, Transform saberTransform, MovementHistoryProvider sweepData)
     {
+        m_config = conf;
         _saber = saberTransform;
         _sweepData = sweepData;
 
@@ -50,10 +52,12 @@ internal class SaberTipTrail : MonoBehaviour
         // Step 1: Sample coarse positions
         for (int i = 0; i < CoarseSampleCount; i++)
         {
-            float t = (i / (float)(CoarseSampleCount - 1)) * TrailTime;
+            float t = (i / (float)(CoarseSampleCount - 1)) * m_config.TipTrailMS * 0.001f;
             Pose pose = _sweepData.GetPoseAgo(t);
             _coarsePositions[i] = pose.position + pose.forward;
         }
+
+        _lineRenderer.enabled = m_config.TipTrailMS > 0;
 
         // Step 2: Refine for smoothness
         RefinePositions(_coarsePositions, _refinedPositions);
@@ -124,8 +128,6 @@ internal class SaberTipTrail : MonoBehaviour
 }
 public class SaberRibbonTrail : MonoBehaviour
 {
-    [Header("Trail Settings")]
-    public float TrailTime = 0.06f;
     public int SegmentCount = 30;
     
     private MeshRenderer _meshRenderer = null!;
@@ -142,9 +144,11 @@ public class SaberRibbonTrail : MonoBehaviour
     
     private MovementHistoryProvider _movementHistory = null!;
     private Transform _saberTransform = null!;
+    private PluginConfig m_config = null!;
 
-    public void Init(Transform saberTransform, MovementHistoryProvider movementHistory)
+    public void Init(PluginConfig conf, Transform saberTransform, MovementHistoryProvider movementHistory)
     {
+        m_config = conf;
         _saberTransform = saberTransform;
         _movementHistory = movementHistory;
 
@@ -198,6 +202,8 @@ public class SaberRibbonTrail : MonoBehaviour
         float tipSpeed = EstimateTipSpeed();
         UpdateOpacity(tipSpeed);
         UpdateMesh();
+        
+        _meshRenderer.enabled = m_config.BladeTrailMS > 0;
     }
 
     private float EstimateTipSpeed()
@@ -225,7 +231,7 @@ public class SaberRibbonTrail : MonoBehaviour
         for (int i = 0; i <= SegmentCount; i++)
         {
             float t = (float)i / SegmentCount;
-            float timeAgo = t * TrailTime;
+            float timeAgo = t * m_config.BladeTrailMS * 0.001f;
             
             Pose pose = _movementHistory.GetPoseAgo(timeAgo);
             
