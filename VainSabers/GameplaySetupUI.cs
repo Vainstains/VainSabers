@@ -174,7 +174,7 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
     [UIValue("TipMilliseconds")]
     private int TipMilliseconds
     {
-        get => m_config.BladeTrailMS;
+        get => m_config.TipTrailMS;
         set
         {
             m_config.TipTrailMS = value;

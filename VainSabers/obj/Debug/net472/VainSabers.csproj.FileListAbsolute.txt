@@ -38,3 +38,4 @@ C:\Users\dbasp\RiderProjects\VainSabers\VainSabers\bin\Debug\net472\AsmResolver.
 C:\Users\dbasp\RiderProjects\VainSabers\VainSabers\bin\Debug\net472\BepInEx.AssemblyPublicizer.MSBuild.dll
 C:\Users\dbasp\RiderProjects\VainSabers\VainSabers\bin\Debug\net472\BepInEx.AssemblyPublicizer.dll
 C:\Users\dbasp\RiderProjects\VainSabers\VainSabers\obj\Debug\net472\VainSabers.IgnoresAccessChecksTo.cs
+C:\Users\dbasp\RiderProjects\VainSabers\VainSabers\obj\Debug\net472\VainSabers.sourcelink.json
