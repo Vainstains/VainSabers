@@ -1,0 +1,70 @@
+.part PommelOutline
+pos 0.0000 0.0000 -0.0923
+rot 0.0000 180.0000 0.0000
+length 0.0200
+startRad 0.0110
+startColor 1.0000 1.0000 1.0000
+startCustomWeight 0.8500
+startGlow 1.0000
+endRad 0.0080
+endColor 0.4151 0.4151 0.4151
+endCustomWeight 0.8200
+endGlow 0.4900
+inverted 1
+
+.part PommelCore
+pos 0.0000 0.0000 -0.0952
+rot 0.0000 180.0000 0.0000
+length 0.0130
+startRad 0.0060
+startColor 0.0000 0.0000 0.0000
+startCustomWeight 0.3300
+startGlow 0.0000
+endRad 0.0050
+endColor 0.0000 0.0000 0.0000
+endCustomWeight 0.7100
+endGlow 0.0000
+inverted 0
+
+.part BladeOutline
+pos 0.0000 0.0000 0.0000
+rot 0.0000 0.0000 0.0000
+length 1.0000
+startRad 0.0120
+startColor 1.0000 1.0000 1.0000
+startCustomWeight 0.8000
+startGlow 1.0000
+endRad 0.0050
+endColor 0.0000 0.0000 0.0000
+endCustomWeight 1.0000
+endGlow 0.5000
+inverted 1
+
+.part BladeCore
+pos 0.0000 0.0000 0.0050
+rot 0.0000 0.0000 0.0000
+length 0.9900
+startRad 0.0080
+startColor 0.0000 0.0000 0.0000
+startCustomWeight 0.3300
+startGlow 0.0000
+endRad 0.0001
+endColor 0.0000 0.0000 0.0000
+endCustomWeight 1.0000
+endGlow 1.0000
+inverted 0
+
+.part Lower
+pos 0.0000 0.0000 -0.0067
+rot 0.0000 180.0000 0.0000
+length 0.0800
+startRad 0.0100
+startColor 0.0755 0.0755 0.0755
+startCustomWeight 0.2500
+startGlow 0.0000
+endRad 0.0080
+endColor 0.0377 0.0377 0.0377
+endCustomWeight 0.1000
+endGlow 0.0000
+inverted 0
+
