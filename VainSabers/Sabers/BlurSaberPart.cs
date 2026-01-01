@@ -1,5 +1,7 @@
 using System;
+using System.Runtime.CompilerServices;
 using UnityEngine;
+using VainSabers.Config;
 using VainSabers.Helpers;
 
 namespace VainSabers.Sabers
@@ -8,6 +10,7 @@ namespace VainSabers.Sabers
     public class BlurSaberPart : MonoBehaviour
     {
         private const int SampleCount = 16;
+        private Pose[] m_poseSamples = new Pose[SampleCount];
         private int RingCount => Math.Max((int)(Length * 8), MinimumRings) + (EnableEndCaps ? 2 : 0);
         private int ringVerts = 0;
         
@@ -64,6 +67,8 @@ namespace VainSabers.Sabers
         private Material? m_runtimeInvertedMaterial;
         private Material? m_runtimeLitMaterial;
         private Material? m_runtimeLitInvertedMaterial;
+        
+        public PluginConfig Config = null!;
 
         private void OnEnable()
         {
@@ -78,7 +83,7 @@ namespace VainSabers.Sabers
         int ComputeRingVerts(float radius)
         {
             return Mathf.Clamp(
-                Mathf.RoundToInt(Mathf.Lerp(6, 36, Mathf.InverseLerp(0.0f, 0.02f, radius))),
+                Mathf.RoundToInt(Config.SaberQuality * Mathf.Lerp(6, 36, Mathf.InverseLerp(0.0f, 0.02f, radius))),
                 6, 36
             );
         }
@@ -175,16 +180,24 @@ namespace VainSabers.Sabers
 
         void RebuildVerts()
         {
-            var localPose = transform.GetPose().TransformPose(m_movementHistoryProvider.transform.worldToLocalMatrix);
+            var localPose =
+                transform
+                    .GetPose()
+                    .TransformPose(m_movementHistoryProvider.transform.worldToLocalMatrix);
+
             var samples = InterpolateData(m_saberData.BlurTime * BlurFactor);
-            var wtl = transform.worldToLocalMatrix;
-            for (var i = 0; i < samples.Length; i++)
+            
+            Matrix4x4 localPoseMat = localPose.AsMatrix();
+            Matrix4x4 wtl = transform.worldToLocalMatrix;
+            
+            for (int i = 0; i < samples.Length; i++)
             {
-                samples[i] = localPose.TransformPose(samples[i].AsMatrix()).TransformPose(wtl);
-                
-                // Debug.DrawRay(samples[i].position, samples[i].right * 0.01f, Color.red);
-                // Debug.DrawRay(samples[i].position, samples[i].up * 0.01f, Color.green);
-                // Debug.DrawRay(samples[i].position, samples[i].forward * 0.01f, Color.blue);
+                Matrix4x4 combined =
+                    wtl *
+                    samples[i].AsMatrix() *
+                    localPoseMat;
+
+                samples[i] = PoseHelpers.TransformPoseFromMatrix(combined);
             }
 
             int idx = 0;
@@ -286,11 +299,11 @@ namespace VainSabers.Sabers
                 Pose interpSample = SampleAlongCurve(samples, tSample);
 
                 Vector3 ringCenter = interpSample.position + interpSample.forward * zPos;
-                Vector3 normal = offsetDir + 2 * avgFwd * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171));
+                Vector3 normal = offsetDir + avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)));
 
                 Vector3 vertexPos = ringCenter + offsetDir * (isZero ? 0 : radius);
 
-                SetVertex(
+                m_blurTube!.SetVertex(
                     idx + i,
                     vertexPos,
                     normal,
@@ -304,56 +317,19 @@ namespace VainSabers.Sabers
 
             idx += ringVerts;
         }
-
-        private void SetVertex(int idx, Vector3 pos, Vector3 normal, float sweepCoordinate, Color color, Vector3 planeNormal, Vector3 bladeDir, float sweepRatio)
-        {
-            if (m_blurTube == null)
-                return;
-            m_blurTube.Vertices[idx] = pos;
-            m_blurTube.Normals[idx] = normal;
-            m_blurTube.Tangents[idx] = new Vector4(planeNormal.x, planeNormal.y, planeNormal.z, 0);
-            m_blurTube.Uvs[idx] = new Vector2(sweepCoordinate, Mathf.Clamp01((sweepRatio - 0.7f) * 0.02f));
-            m_blurTube.BladeDirs[idx] = bladeDir;
-            m_blurTube.Colors[idx] = color;
-        }
         
         private Pose[] InterpolateData(float time)
         {
             var present = m_movementHistoryProvider.GetPoseAgo(0.0f);
             var past = m_movementHistoryProvider.GetPoseAgo(time);
-            
+
             var angleDifference = Vector3.Angle(present.forward, past.forward);
             float factor = Mathf.Clamp01((angleDifference - 0.3f) * 0.3f);
             time *= factor;
-            
-            var poses = m_movementHistoryProvider.Sample(SampleCount, time);
-            var smoothedPoses = new Pose[SampleCount];
-            
-            for (int i = 0; i < SampleCount; i++)
-            {
-                if (i == 0)
-                {
-                    smoothedPoses[i] = poses[i];
-                }
-                else if (i == SampleCount - 1)
-                {
-                    smoothedPoses[i] = poses[i];
-                }
-                else
-                {
-                    var prev = poses[i - 1];
-                    var current = poses[i];
-                    var next = poses[i + 1];
 
-                    var pos = 0.33333f * (prev.position + current.position + next.position);
-                    var fwd = (prev.forward + current.forward + next.forward).normalized;
-                    var up = (prev.up + current.up + next.up).normalized;
-                    
-                    smoothedPoses[i] = new Pose(pos, Quaternion.LookRotation(fwd, up));
-                }
-            }
-            
-            return smoothedPoses;
+            m_movementHistoryProvider.SampleNonAlloc(SampleCount, time, m_poseSamples);
+
+            return m_poseSamples;
         }
     }
 }

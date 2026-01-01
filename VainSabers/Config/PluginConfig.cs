@@ -18,4 +18,6 @@ public class PluginConfig
     public virtual int BladeTrailMS { get; set; } = 60;
 
     public virtual int SaberSmoothing { get; set; } = 0;
+    
+    public virtual float SaberQuality { get; set; } = 1;
 }

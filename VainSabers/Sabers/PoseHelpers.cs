@@ -44,5 +44,25 @@ namespace VainSabers.Sabers
         {
             return Matrix4x4.TRS(pose.position, pose.rotation, Vector3.one);
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Pose TransformPoseFromMatrix(in Matrix4x4 mat)
+        {
+            Vector3 pos;
+            pos.x = mat.m03;
+            pos.y = mat.m13;
+            pos.z = mat.m23;
+
+            Vector3 fwd, up;
+            fwd.x = mat.m02;
+            fwd.y = mat.m12;
+            fwd.z = mat.m22;
+
+            up.x = mat.m01;
+            up.y = mat.m11;
+            up.z = mat.m21;
+
+            return new Pose(pos, Quaternion.LookRotation(fwd, up));
+        }
     }
 }

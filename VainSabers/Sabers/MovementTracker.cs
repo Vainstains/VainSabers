@@ -47,89 +47,59 @@ namespace VainSabers.Sabers
             return m_movementData[m_movementData.Count - 1].Pose;
         }
         
-        public override Pose[] Sample(uint samples, float duration)
+        public override void SampleNonAlloc(int samples, float duration, Pose[] result)
         {
-            if (samples == 0) return new Pose[0];
-            if (samples == 1) return new Pose[] { m_target.GetPose() };
-            
-            Pose[] result = new Pose[samples];
-            
-            if (duration <= 0.001f)
+            if (samples <= 0)
+                return;
+
+            Pose currentPose = m_target.GetPose();
+
+            if (samples == 1 || duration <= 0.0001f || m_movementData.Count == 0)
             {
-                var currentPose = m_target.GetPose();
                 for (int i = 0; i < samples; i++)
-                {
                     result[i] = currentPose;
-                }
-                return result;
-            }
-            
-            float interval = duration / (samples - 1);
-            
-            if (m_movementData.Count == 0)
-            {
-                var currentPose = m_target.GetPose();
-                for (int i = 0; i < samples; i++)
-                {
-                    result[i] = currentPose;
-                }
-                return result;
+                return;
             }
 
+            float interval = duration / (samples - 1);
             float accumulator = 0f;
-            int sampleIndex = 0;
             int dataIndex = 0;
-            
-            while (sampleIndex < samples && dataIndex < m_movementData.Count - 1)
+
+            // Cache first pose
+            result[0] = currentPose;
+
+            for (int sampleIndex = 1; sampleIndex < samples; sampleIndex++)
             {
                 float targetTime = sampleIndex * interval;
-                
-                while (dataIndex < m_movementData.Count - 1 && accumulator < targetTime)
+
+                while (dataIndex < m_movementData.Count - 1 &&
+                       accumulator + m_movementData[dataIndex].DeltaTime < targetTime)
                 {
                     accumulator += m_movementData[dataIndex].DeltaTime;
                     dataIndex++;
                 }
-                
-                if (dataIndex >= m_movementData.Count)
-                {
-                    break;
-                }
-                
-                int newerIndex = Mathf.Max(0, dataIndex - 1);
-                int olderIndex = dataIndex;
-                
-                float segmentStart = accumulator - m_movementData[newerIndex].DeltaTime;
-                float segmentEnd = accumulator;
-                float segmentDuration = segmentEnd - segmentStart;
-                
-                if (segmentDuration > 0)
-                {
-                    float t = (targetTime - segmentStart) / segmentDuration;
-                    result[sampleIndex] = m_movementData[newerIndex].Pose.LerpTo(m_movementData[olderIndex].Pose, t);
-                }
-                else
-                {
-                    result[sampleIndex] = m_movementData[newerIndex].Pose;
-                }
-                
-                sampleIndex++;
-            }
-            
-            var oldestPose = m_movementData[m_movementData.Count - 1].Pose;
-            for (int i = sampleIndex; i < samples; i++)
-            {
-                result[i] = oldestPose;
-            }
-            
-            return result;
-        }
 
-        private Pose m_lastPose;
+                if (dataIndex >= m_movementData.Count - 1)
+                {
+                    result[sampleIndex] = m_movementData[m_movementData.Count - 1].Pose;
+                    continue;
+                }
+
+                var newer = m_movementData[dataIndex];
+                var older = m_movementData[dataIndex + 1];
+
+                float segmentTime = targetTime - accumulator;
+                float t = newer.DeltaTime > 0f
+                    ? segmentTime / newer.DeltaTime
+                    : 0f;
+
+                result[sampleIndex] = newer.Pose.LerpTo(older.Pose, t);
+            }
+        }
         private void Update()
         {
             var currentPose = m_target.GetPose();
-            m_movementData.Add(new  MovementData { Pose = currentPose.LerpTo(m_lastPose, 0.5f), DeltaTime = Time.deltaTime });
-            m_lastPose = currentPose;
+            m_movementData.Add(new  MovementData { Pose = currentPose, DeltaTime = Time.deltaTime });
         }
     }
 }

@@ -140,6 +140,17 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         }
     }
     
+    [UIValue("SaberQuality")]
+    private float SaberQuality
+    {
+        get => m_config.SaberQuality;
+        set
+        {
+            m_config.SaberQuality = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SaberQuality)));
+        }
+    }
+    
     [UIValue("showInMenu")]
     private bool ShowInMenu
     {

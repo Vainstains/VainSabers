@@ -62,6 +62,8 @@ public class BlurSaberData : MonoBehaviour
         newPart.UseLookDir = false;
         newPart.LookDir = Vector3.zero;
         newPart.Lit = false;
+        
+        newPart.Config = m_config!;
 
         m_components.Add(newPart);
         return newPart;

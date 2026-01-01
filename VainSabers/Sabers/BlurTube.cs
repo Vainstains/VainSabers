@@ -1,79 +1,96 @@
 ﻿using UnityEngine;
+using UnityEngine.Rendering;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace VainSabers.Sabers
 {
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct TubeVertex
+    {
+        public Vector3 position;
+        public Vector3 normal;
+        public Vector4 tangent;
+        public Vector4 color;
+        public Vector2 uv;
+        public Vector3 bladeDir;
+    }
+
     internal class BlurTube
     {
         public Mesh TubeMesh { get; private set; }
         public int RingVerts { get; private set; }
         public int RingCount { get; private set; }
-        
-        public Vector3[] Vertices { get; private set; }
-        public Vector3[] Normals { get; private set; }
-        public Vector4[] Tangents { get; private set; }
-        public Vector2[] Uvs { get; private set; }
-        public Vector3[] BladeDirs { get; private set; }
-        public Color[] Colors { get; private set; }
+
+        private TubeVertex[] _vertices;
+        private int[] _indices;
 
         public BlurTube(int ringVerts, int ringCount)
         {
             RingVerts = ringVerts;
             RingCount = ringCount;
-            
-            TubeMesh = new Mesh();
-            
-            TubeMesh.MarkDynamic();
-            
-            var indexCount = RingVerts * (RingCount - 1) * 6;
-            var vertCount = ringVerts * ringCount;
-            
-            var indices = new int[indexCount];
 
-            var t = 0;
-            for (var ring = 0; ring < RingCount - 1; ring++)
+            TubeMesh = new Mesh
             {
-                var ringStart = ring * RingVerts;
-                var nextRingStart = (ring + 1) * RingVerts;
+                indexFormat = ringVerts * ringCount > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16
+            };
+            TubeMesh.MarkDynamic();
 
-                for (var i = 0; i < RingVerts; i++)
+            int vertCount = ringVerts * ringCount;
+            int indexCount = ringVerts * (ringCount - 1) * 6;
+
+            _vertices = new TubeVertex[vertCount];
+            _indices = new int[indexCount];
+
+            // Fill index buffer
+            int t = 0;
+            for (int ring = 0; ring < RingCount - 1; ring++)
+            {
+                int ringStart = ring * RingVerts;
+                int nextRingStart = (ring + 1) * RingVerts;
+
+                for (int i = 0; i < RingVerts; i++)
                 {
-                    var nextI = (i + 1) % RingVerts;
+                    int nextI = (i + 1) % RingVerts;
+                    int a = ringStart + i;
+                    int b = ringStart + nextI;
+                    int c = nextRingStart + i;
+                    int d = nextRingStart + nextI;
 
-                    var a = ringStart + i;
-                    var b = ringStart + nextI;
-                    var c = nextRingStart + i;
-                    var d = nextRingStart + nextI;
-
-                    indices[t++] = a; indices[t++] = c; indices[t++] = b;
-                    indices[t++] = b; indices[t++] = c; indices[t++] = d;
+                    _indices[t++] = a; _indices[t++] = c; _indices[t++] = b;
+                    _indices[t++] = b; _indices[t++] = c; _indices[t++] = d;
                 }
             }
-            
-            Vertices = new Vector3[vertCount];
-            Normals = new Vector3[vertCount];
-            Tangents = new Vector4[vertCount];
-            Uvs = new Vector2[vertCount];
-            BladeDirs = new Vector3[vertCount];
-            Colors = new Color[vertCount];
-            
-            TubeMesh.SetVertices(Vertices);
-            TubeMesh.SetNormals(Normals);
-            TubeMesh.SetTangents(Tangents);
-            TubeMesh.SetUVs(0, Uvs);
-            TubeMesh.SetUVs(1, BladeDirs);
-            TubeMesh.SetColors(Colors);
-            TubeMesh.SetTriangles(indices, 0);
+
+            // Setup vertex buffer layout
+            TubeMesh.SetVertexBufferParams(vertCount,
+                new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3), // vertex.xyz
+                new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),   // trueNormal
+                new VertexAttributeDescriptor(VertexAttribute.Tangent, VertexAttributeFormat.Float32, 4),  // planeNormal.xyz + sweepFactor
+                new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.Float32, 4),     // color
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2), // uv
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 3)  // bladeDir
+            );
+            // Set initial vertex data and indices
+            TubeMesh.SetVertexBufferData(_vertices, 0, 0, vertCount, 0, MeshUpdateFlags.DontRecalculateBounds);
+            TubeMesh.SetTriangles(_indices, 0, false);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetVertex(int idx, Vector3 pos, Vector3 normal, float sweepCoordinate, Color color, Vector3 planeNormal, Vector3 bladeDir, float sweepRatio)
+        {
+            ref var v = ref _vertices[idx];
+            v.position = pos;
+            v.normal = normal;
+            v.tangent = new Vector4(planeNormal.x, planeNormal.y, planeNormal.z, 0);
+            v.uv = new Vector2(sweepCoordinate, Mathf.Clamp01((sweepRatio - 0.7f) * 0.02f));
+            v.bladeDir = bladeDir;
+            v.color = color;
         }
 
         public void RefreshMesh()
         {
-            TubeMesh.SetVertices(Vertices);
-            TubeMesh.SetNormals(Normals);
-            TubeMesh.SetTangents(Tangents);
-            TubeMesh.SetUVs(0, Uvs);
-            TubeMesh.SetUVs(1, BladeDirs);
-            TubeMesh.SetColors(Colors);
-            
+            TubeMesh.SetVertexBufferData(_vertices, 0, 0, _vertices.Length, 0, MeshUpdateFlags.DontRecalculateBounds);
             TubeMesh.RecalculateBounds();
         }
 
