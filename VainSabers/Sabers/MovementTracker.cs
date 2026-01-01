@@ -11,13 +11,19 @@ namespace VainSabers.Sabers
             public Pose Pose;
             public float DeltaTime;
         }
-        public Transform Target = null!;
+        private Transform m_target = null!;
+        
 
         private CircularBuffer<MovementData> m_movementData = new CircularBuffer<MovementData>(100);
+
+        public void Init(Transform target)
+        {
+            m_target = target;
+        }
         public override Pose GetPoseAgo(float age)
         {
             if (m_movementData.Count == 0)
-                return Target.GetPose();
+                return m_target.GetPose();
 
             float accumulated = 0f;
             
@@ -44,13 +50,13 @@ namespace VainSabers.Sabers
         public override Pose[] Sample(uint samples, float duration)
         {
             if (samples == 0) return new Pose[0];
-            if (samples == 1) return new Pose[] { Target.GetPose() };
+            if (samples == 1) return new Pose[] { m_target.GetPose() };
             
             Pose[] result = new Pose[samples];
             
             if (duration <= 0.001f)
             {
-                var currentPose = Target.GetPose();
+                var currentPose = m_target.GetPose();
                 for (int i = 0; i < samples; i++)
                 {
                     result[i] = currentPose;
@@ -62,7 +68,7 @@ namespace VainSabers.Sabers
             
             if (m_movementData.Count == 0)
             {
-                var currentPose = Target.GetPose();
+                var currentPose = m_target.GetPose();
                 for (int i = 0; i < samples; i++)
                 {
                     result[i] = currentPose;
@@ -121,7 +127,7 @@ namespace VainSabers.Sabers
         private Pose m_lastPose;
         private void Update()
         {
-            var currentPose = Target.GetPose();
+            var currentPose = m_target.GetPose();
             m_movementData.Add(new  MovementData { Pose = currentPose.LerpTo(m_lastPose, 0.5f), DeltaTime = Time.deltaTime });
             m_lastPose = currentPose;
         }

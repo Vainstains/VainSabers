@@ -31,7 +31,6 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
     {
         GameplaySetup.Instance.AddTab(TabName, "VainSabers.settings.bsml", this);
         
-        UpdateLegacyPresetDropdown();
         UpdatePresetDropdown();
         m_menuSaberManager.Update(m_config.CurrentSaber);
     }
@@ -55,39 +54,10 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         }
     }
     
-    [UIValue("legacyEnabled")]
-    private bool LegacyEnabled
-    {
-        get => m_config.UseLegacy;
-        set
-        {
-            m_config.UseLegacy = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LegacyEnabled)));
-        }
-    }
-    
-    [UIComponent("LegacyPresetDropdown")]
-#pragma warning disable CS0649
-    public DropDownListSetting LegacyPresetDropDown = null!;
-#pragma warning restore CS0649
-    
     [UIComponent("PresetDropdown")]
 #pragma warning disable CS0649
     public DropDownListSetting PresetDropDown = null!;
 #pragma warning restore CS0649
-    
-    internal void UpdateLegacyPresetDropdown()
-    {
-        if (LegacyPresetDropDown == null)
-        {
-            return;
-        }
-
-        LegacyPresetNames = GetLegacyPresetNames();
-            
-        LegacyPresetDropDown.Values = LegacyPresetNames;
-        LegacyPresetDropDown.UpdateChoices();
-    }
     
     internal void UpdatePresetDropdown()
     {
@@ -101,15 +71,6 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         PresetDropDown.Values = PresetNames;
         PresetDropDown.UpdateChoices();
     }
-
-    private static List<object> GetLegacyPresetNames()
-    {
-        List<string> files = Directory.GetFiles(Config.ConfigUtil.LegacyConfigDir, "*.json").ToList();
-        files.Sort();
-        Plugin.Log.Info($"Found {files.Count} LegacyPresets");
-
-        return files.Select(Path.GetFileNameWithoutExtension).Cast<object>().ToList();
-    }
     private static List<object> GetPresetNames()
     {
         List<string> files = Directory.GetFiles(Config.ConfigUtil.ConfigDir, "*.txt").ToList();
@@ -117,20 +78,6 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         Plugin.Log.Info($"Found {files.Count} Presets");
 
         return files.Select(Path.GetFileNameWithoutExtension).Cast<object>().ToList();
-    }
-
-    [UIValue("LegacyPresetNames")]
-    private List<object> LegacyPresetNames = GetLegacyPresetNames();
-
-    [UIValue("SelectedLegacyPreset")]
-    private string SelectedLegacyPreset
-    {
-        get => m_config.CurrentLegacySaber;
-        set
-        {
-            m_config.CurrentLegacySaber = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedLegacyPreset)));
-        }
     }
     
     [UIValue("PresetNames")]
@@ -179,6 +126,17 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         {
             m_config.TipTrailMS = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TipMilliseconds)));
+        }
+    }
+    
+    [UIValue("SaberSmoothing")]
+    private int SaberSmoothing
+    {
+        get => m_config.SaberSmoothing;
+        set
+        {
+            m_config.SaberSmoothing = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SaberSmoothing)));
         }
     }
     

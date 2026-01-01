@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using VainSabers.Config;
 using VainSabers.Helpers;
 
 namespace VainSabers.Sabers;
@@ -21,11 +22,12 @@ internal class FrameAverager : MonoBehaviour
 
     private CircularBuffer<MovementData>? m_movementData;
     private Transform? m_target;
-
-    public void Init(Transform target, int framesToConsider)
+    private PluginConfig m_config = null!;
+    public void Init(PluginConfig conf, Transform target)
     {
+        m_config = conf;
         m_target = target;
-        m_movementData = new CircularBuffer<MovementData>(framesToConsider);
+        m_movementData = new CircularBuffer<MovementData>(100);
     }
 
     private void LateUpdate()
@@ -43,7 +45,7 @@ internal class FrameAverager : MonoBehaviour
         Vector3 avgUp = Vector3.zero;
         Vector3 avgFwd = Vector3.zero;
 
-        for (int i = 0; i < m_movementData.Count; i++)
+        for (int i = 0; i < m_config.SaberSmoothing + 1; i++)
         {
             var data = m_movementData[i];
             avgPos += data.Position;
@@ -51,7 +53,7 @@ internal class FrameAverager : MonoBehaviour
             avgFwd += data.Fwd;
         }
 
-        int count = m_movementData.Count;
+        int count = Mathf.Min(m_movementData.Count, m_config.SaberSmoothing + 1);
         if (count > 0)
         {
             avgPos /= count;

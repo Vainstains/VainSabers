@@ -24,9 +24,6 @@ public class PlayerInstaller : Installer
         Plugin.Print("VainSabers is enabled, installing...");
         
         const int priority = 69; // hehe
-        if (m_config.UseLegacy)
-            Container.BindInstance(SaberModelRegistration.Create<LegacySaberModelController>(priority)).AsSingle();
-        else
-            Container.BindInstance(SaberModelRegistration.Create<BlurSaberModelController>(priority)).AsSingle();
+        Container.BindInstance(SaberModelRegistration.Create<BlurSaberModelController>(priority)).AsSingle();
     }
 }

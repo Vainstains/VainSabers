@@ -4,9 +4,6 @@
     <vertical spacing="1" horizontal-fit="Unconstrained" id="root" child-expand-height="false">
         <toggle-setting text="Enable VainSabers" value="modEnabled" pref-width="50" apply-on-change="true" hover-hint="Enables and disables VainSabers" />
         <button text="Refresh presets" on-click="UpdatePresetDropdown"/>
-        <toggle-setting text="Enable Legacy Sabers" value="legacyEnabled" pref-width="50" apply-on-change="true" hover-hint="yeah" />
-        <dropdown-list-setting id="LegacyPresetDropdown" text="Legacy Saber Config" value="SelectedLegacyPreset" choices="LegacyPresetNames"
-                               bind-value="true" apply-on-change="true"/>
         
         <dropdown-list-setting id="PresetDropdown" text="Saber Config" value="SelectedPreset" choices="PresetNames"
                                bind-value="true" apply-on-change="true"/>
@@ -15,6 +12,7 @@
         <slider-setting value="BlurMilliseconds" text="Blur MS" apply-on-change="true" integer-only="true" min="0" max="50" />
         <slider-setting value="BladeMilliseconds" text="Blade Trail MS" apply-on-change="true" integer-only="true" min="0" max="200" />
         <slider-setting value="TipMilliseconds" text="Tip Trail MS" apply-on-change="true" integer-only="true" min="0" max="200" />
+        <slider-setting value="SaberSmoothing" text="Smoothing Window" apply-on-change="true" integer-only="true" min="0" max="20" />
         <toggle-setting text="Always show in menu" value="showInMenu" pref-width="50" apply-on-change="true" hover-hint="yeah" />
     </vertical>
 </bg>

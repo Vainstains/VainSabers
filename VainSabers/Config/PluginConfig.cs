@@ -16,4 +16,6 @@ public class PluginConfig
     
     public virtual int TipTrailMS { get; set; } = 140;
     public virtual int BladeTrailMS { get; set; } = 60;
+
+    public virtual int SaberSmoothing { get; set; } = 0;
 }
