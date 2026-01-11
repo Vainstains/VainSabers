@@ -1,6 +1,6 @@
 ﻿<bg xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
     xsi:noNamespaceSchemaLocation='https://monkeymanboy.github.io/BSML-Docs/BSMLSchema.xsd'>
-
+    
     <vertical spacing="1" id="root" child-expand-height="false" bg='round-rect-panel' pad-left="2" pad-right="2" pref-width="95">
 
         <!-- === PART SELECTION === -->
@@ -16,13 +16,13 @@
         <text text="Transform" align="Center" font-size="4.5" />
 
         <!-- === POSITION === -->
-        <text text="Position" align="Left" font-size="3.5" />
+        <text text="Position" align="Left" font-size="2.5" />
         <slider-setting id="PosX" value="PartPositionX" text="X" apply-on-change="true" min="-0.2" max="0.2" increment="0.005" />
         <slider-setting id="PosY" value="PartPositionY" text="Y" apply-on-change="true" min="-0.2" max="0.2" increment="0.005" />
         <slider-setting id="PosZ" value="PartPositionZ" text="Z" apply-on-change="true" min="-0.2" max="0.2" increment="0.005" />
 
         <!-- === ROTATION === -->
-        <text text="Rotation" align="Left" font-size="3.5" />
+        <text text="Rotation" align="Left" font-size="2.5" />
         <slider-setting id="RotX" value="PartRotationX" text="X" apply-on-change="true" min="-180" max="180" increment="5" />
         <slider-setting id="RotY" value="PartRotationY" text="Y" apply-on-change="true" min="-180" max="180" increment="5" />
         <slider-setting id="RotZ" value="PartRotationZ" text="Z" apply-on-change="true" min="-180" max="180" increment="5" />
@@ -32,6 +32,10 @@
 
         <slider-setting id="Length" value="PartLength" text="Length" apply-on-change="true" min="0.01" max="1.0" formatter="LengthFormatter"/>
         <slider-setting id="BulgeAmount" value="PartBulgeAmount" text="Bulge Amount" apply-on-change="true" min="-1" max="1" increment="0.1" />
+
+        <text text="Misc." align="Center" font-size="4.5" />
+        
+        <slider-setting id="HueShift" value="PartHueShift" text="HueShift" apply-on-change="true" min="-0.5" max="0.5" increment="0.025" />
         
         <!-- === START PROPERTIES === -->
         <text text="Start Properties" align="Center" font-size="4.5" />

@@ -18,8 +18,7 @@ internal class BlurSaber : MonoBehaviour
     public void Init(Transform target, PluginConfig config)
     {
         m_config = config;
-
-        var follower = gameObject.AddInitChild<FrameAverager>(m_config, target).transform;
+        
         var historyProvider = gameObject.AddInitComponent<MovementTracker>(target);
         m_blurSaberData = gameObject.AddInitComponent<BlurSaberData>(m_config);
         

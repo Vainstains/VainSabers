@@ -218,6 +218,9 @@ public class BlurSaberData : MonoBehaviour
                 case "lit":
                     currentPart.Lit = Mathf.Approximately(vals[0], 1f);
                     break;
+                case "hueShift":
+                    currentPart.HueShift = vals[0];
+                    break;
             }
         }
 
@@ -248,6 +251,8 @@ public class BlurSaberData : MonoBehaviour
             sb.AppendLine($"rot {FormatFloat(rot.x)} {FormatFloat(rot.y)} {FormatFloat(rot.z)}");
 
             sb.AppendLine($"length {FormatFloat(part.Length)}");
+            
+            sb.AppendLine($"hueShift {FormatFloat(part.HueShift)}");
 
             sb.AppendLine($"startRad {FormatFloat(part.StartRadius)}");
             sb.AppendLine($"startColor {FormatFloat(part.StartColor.r)} {FormatFloat(part.StartColor.g)} {FormatFloat(part.StartColor.b)}");

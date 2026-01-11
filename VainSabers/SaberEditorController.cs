@@ -204,6 +204,13 @@ internal class SaberEditorController : MonoBehaviour
             float real = sliderValue * sliderValue * sliderValue;
             return real.ToString("0.###");
         }
+        
+        [UIValue("PartHueShift")]
+        private float PartHueShift
+        {
+            get => m_currentPartRight?.HueShift ?? 0.0f;
+            set => ApplyToBoth(p => p.HueShift = value);
+        }
 
         // ---------------- Start Properties ----------------
         [UIValue("PartStartRadius")]
@@ -401,6 +408,8 @@ internal class SaberEditorController : MonoBehaviour
         [UIComponent("RotZ")] private SliderSetting RotZ = null!;
 
         [UIComponent("Length")] private SliderSetting Length = null!;
+        
+        [UIComponent("HueShift")] private SliderSetting HueShift = null!;
 
         [UIComponent("StartRadius")] private SliderSetting StartRadius = null!;
         [UIComponent("StartColorR")] private SliderSetting StartColorR = null!;
@@ -437,6 +446,8 @@ internal class SaberEditorController : MonoBehaviour
                 RotX.Value = RotY.Value = RotZ.Value = 0f;
                 Length.Value = 0.1f;
 
+                HueShift.Value = 0.0f;
+
                 StartRadius.Value = 0.01f;
                 StartColorR.Value = StartColorG.Value = StartColorB.Value = 0f;
                 StartWeight.Value = StartGlow.Value = 0f;
@@ -467,6 +478,8 @@ internal class SaberEditorController : MonoBehaviour
             RotZ.Value = t.localEulerAngles.z;
 
             Length.Value = part.Length;
+            
+            HueShift.Value = part.HueShift;
 
             StartRadius.Value = part.StartRadius;
             StartColorR.Value = part.StartColor.r;

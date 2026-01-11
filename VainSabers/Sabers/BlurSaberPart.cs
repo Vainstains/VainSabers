@@ -24,6 +24,8 @@ namespace VainSabers.Sabers
         public float StartCustomColorWeight = 1;
         public float EndCustomColorWeight = 1;
         
+        public float HueShift = 0f;
+        
         public float StartGlow = 1;
         public float EndGlow = 1;
 
@@ -119,10 +121,10 @@ namespace VainSabers.Sabers
             EnsureRuntimeMaterial(ref m_runtimeLitMaterial, LitMaterial);
             EnsureRuntimeMaterial(ref m_runtimeLitInvertedMaterial, LitInvertedMaterial);
             
-            Material? activeMat = GetActiveMaterial();
+            var activeMat = GetActiveMaterial();
             if (activeMat != null)
             {
-                Material baseMaterial = GetBaseMaterial();
+                var baseMaterial = GetBaseMaterial();
                 activeMat.renderQueue = baseMaterial.renderQueue + RenderQueueOffset + 500;
             }
 
@@ -187,12 +189,12 @@ namespace VainSabers.Sabers
 
             var samples = InterpolateData(m_saberData.BlurTime * BlurFactor);
             
-            Matrix4x4 localPoseMat = localPose.AsMatrix();
-            Matrix4x4 wtl = transform.worldToLocalMatrix;
+            var localPoseMat = localPose.AsMatrix();
+            var wtl = transform.worldToLocalMatrix;
             
-            for (int i = 0; i < samples.Length; i++)
+            for (var i = 0; i < samples.Length; i++)
             {
-                Matrix4x4 combined =
+                var combined =
                     wtl *
                     samples[i].AsMatrix() *
                     localPoseMat;
@@ -200,26 +202,32 @@ namespace VainSabers.Sabers
                 samples[i] = PoseHelpers.TransformPoseFromMatrix(combined);
             }
 
-            int idx = 0;
+            var idx = 0;
             
-            Color startCol = Color.Lerp(StartColor, m_saberData.CustomColor, StartCustomColorWeight);
-            Color endCol = Color.Lerp(EndColor, m_saberData.CustomColor, EndCustomColorWeight);
+            var startCol = Color.Lerp(StartColor, m_saberData.CustomColor, StartCustomColorWeight);
+            var endCol = Color.Lerp(EndColor, m_saberData.CustomColor, EndCustomColorWeight);
+            
+            if (Mathf.Abs(HueShift) > 0.001f)
+            {
+                startCol = ShiftHue(startCol, HueShift);
+                endCol = ShiftHue(endCol, HueShift);
+            }
             
             startCol.a = StartGlow;
             endCol.a = EndGlow;
             
-            float startRad = Inverted ? -StartRadius : StartRadius;
-            float endRad = Inverted ? -EndRadius : EndRadius;
+            var startRad = Inverted ? -StartRadius : StartRadius;
+            var endRad = Inverted ? -EndRadius : EndRadius;
             if (EnableEndCaps)
                 BuildRing(samples, 0 - StartRadius * 0.25f * EndCapExtension, startRad, true, startCol, ref idx);
-            int mainRingCount = EnableEndCaps ? RingCount - 2 : RingCount;
+            var mainRingCount = EnableEndCaps ? RingCount - 2 : RingCount;
 
-            for (int i = 0; i < mainRingCount; i++)
+            for (var i = 0; i < mainRingCount; i++)
             {
                 var t = (float)i / (mainRingCount - 1f);
 
-                float radius = Mathf.Lerp(startRad, endRad, t);
-                float bulge = 4 * (t - t * t);
+                var radius = Mathf.Lerp(startRad, endRad, t);
+                var bulge = 4 * (t - t * t);
                 radius *= 1 + bulge * BulgeAmount;
                 
                 BuildRing(samples, t * Length, radius,
@@ -229,31 +237,16 @@ namespace VainSabers.Sabers
             if (EnableEndCaps)
                 BuildRing(samples, Length + EndRadius * 0.25f * EndCapExtension, endRad, true, endCol, ref idx);
         }
-
-        Pose LerpPose(Pose a, Pose b, float t)
-        {
-            Vector3 pos = Vector3.Lerp(a.position, b.position, t);
-            Quaternion rot = Quaternion.Slerp(a.rotation, b.rotation, t);
-            return new Pose(pos, rot);
-        }
+        
         Pose SampleAlongCurve(Pose[] samples, float t)
         {
             if (samples.Length == 0)
                 return new Pose();
-
-            if (samples.Length == 1)
-                return samples[0];
-
+    
             t = Mathf.Clamp01(t);
-            float scaledT = t * (samples.Length - 1);
-            int idx = Mathf.FloorToInt(scaledT);
-            int nextIdx = Mathf.Min(idx + 1, samples.Length - 1);
-            float localT = scaledT - idx;
-
-            Pose a = samples[idx];
-            Pose b = samples[nextIdx];
-
-            return LerpPose(a, b, localT);
+            var idx = Mathf.FloorToInt(t * (samples.Length - 1));
+    
+            return samples[idx];
         }
 
         void BuildRing(
@@ -266,42 +259,42 @@ namespace VainSabers.Sabers
         {
             var radius = Mathf.Abs(rawRadius);
 
-            Pose first = samples[0];
-            Pose last = samples[^1];
+            var first = samples[0];
+            var last = samples[^1];
             var firstPos = first.position + first.forward * zPos;
             var lastPos = last.position + last.forward * zPos;
 
-            Vector3 motionDir = lastPos - firstPos;
-            float dst = motionDir.magnitude;
+            var motionDir = lastPos - firstPos;
+            var dst = motionDir.magnitude;
 
-            Vector3 avgFwd = (first.forward + last.forward).normalized;
-            Vector3 tangent = Vector3.Cross(avgFwd, Vector3.up).normalized;
-            Vector3 right = Vector3.Cross(avgFwd, tangent).normalized;
+            var avgFwd = (first.forward + last.forward).normalized;
+            var tangent = Vector3.Cross(avgFwd, transform.up).normalized;
+            var right = Vector3.Cross(avgFwd, tangent).normalized;
 
             motionDir = Vector3.ProjectOnPlane(motionDir, avgFwd).normalized;
-            Vector3 plane = Vector3.Cross(motionDir, avgFwd);
+            var plane = Vector3.Cross(motionDir, avgFwd);
 
-            float sweepRatio = dst / (1.5f * radius);
+            var sweepRatio = dst / (1.5f * radius);
             
             if (isZero)
             {
                 radius = 0.0001f;
             }
 
-            for (int i = 0; i < ringVerts; i++)
+            for (var i = 0; i < ringVerts; i++)
             {
-                float theta = 2.0f * Mathf.PI * i / ringVerts;
-                Vector3 offsetDir = Mathf.Sign(-rawRadius) * Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
+                var theta = 2.0f * Mathf.PI * i / ringVerts;
+                var offsetDir = Mathf.Sign(-rawRadius) * Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
 
-                float dot = Vector3.Dot(offsetDir, motionDir);
-                float tSample = (dot + 1.0f) * 0.5f;
+                var dot = Vector3.Dot(offsetDir, motionDir);
+                var tSample = (dot + 1.0f) * 0.5f;
 
-                Pose interpSample = SampleAlongCurve(samples, tSample);
+                var interpSample = SampleAlongCurve(samples, tSample);
 
-                Vector3 ringCenter = interpSample.position + interpSample.forward * zPos;
-                Vector3 normal = offsetDir + avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)));
+                var ringCenter = interpSample.position + interpSample.forward * zPos;
+                var normal = offsetDir + avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)));
 
-                Vector3 vertexPos = ringCenter + offsetDir * (isZero ? 0 : radius);
+                var vertexPos = ringCenter + offsetDir * (isZero ? 0 : radius);
 
                 m_blurTube!.SetVertex(
                     idx + i,
@@ -324,12 +317,22 @@ namespace VainSabers.Sabers
             var past = m_movementHistoryProvider.GetPoseAgo(time);
 
             var angleDifference = Vector3.Angle(present.forward, past.forward);
-            float factor = Mathf.Clamp01((angleDifference - 0.3f) * 0.3f);
+            var factor = Mathf.Clamp01((angleDifference - 0.3f) * 0.3f);
             time *= factor;
 
             m_movementHistoryProvider.SampleNonAlloc(SampleCount, time, m_poseSamples);
 
             return m_poseSamples;
+        }
+        
+        private Color ShiftHue(Color color, float hueShift)
+        {
+            Color.RGBToHSV(color, out var h, out var s, out var v);
+            
+            h = (h + hueShift) % 1f;
+            if (h < 0) h += 1f;
+            
+            return Color.HSVToRGB(h, s, v);
         }
     }
 }

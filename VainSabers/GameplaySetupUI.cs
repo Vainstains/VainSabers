@@ -107,6 +107,17 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         }
     }
     
+    [UIValue("BlurSoftness")]
+    private float BlurSoftness
+    {
+        get => m_config.BlurSoftness;
+        set
+        {
+            m_config.BlurSoftness = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BlurSoftness)));
+        }
+    }
+    
     [UIValue("BladeMilliseconds")]
     private int BladeMilliseconds
     {
@@ -126,17 +137,6 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         {
             m_config.TipTrailMS = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TipMilliseconds)));
-        }
-    }
-    
-    [UIValue("SaberSmoothing")]
-    private int SaberSmoothing
-    {
-        get => m_config.SaberSmoothing;
-        set
-        {
-            m_config.SaberSmoothing = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SaberSmoothing)));
         }
     }
     
@@ -202,7 +202,7 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
 
     [UIAction("#post-parse")]
     private void OnAfterParse() {
-        _root?.AddComponent<MenuStateHandler>();
+        _root?.AddInitComponent<MenuStateHandler>(m_config);
         _root?.AddInitComponent<SaberEditorController>(m_config);
     }
 }

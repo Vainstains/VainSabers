@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using VainSabers.Config;
 using VainSabers.Menu;
 using VainSabers.Sabers;
 
@@ -19,6 +20,13 @@ internal class MenuStateHandler : MonoBehaviour
             EditorOpen = editorOpen;
             EditingPreset = preset;
         }
+    }
+    
+    private PluginConfig m_config = null!;
+
+    public void Init(PluginConfig config)
+    {
+        m_config = config;
     }
     
     public static event Action<ModPanelState> ModPanelStateChanged = null!;
@@ -47,5 +55,10 @@ internal class MenuStateHandler : MonoBehaviour
     {
         s_modPanelState.EditingPreset = preset;
         ModPanelStateChanged?.Invoke(s_modPanelState);
+    }
+
+    private void FixedUpdate()
+    {
+        Shader.SetGlobalFloat("_VainSaberBlurSoftness", m_config.BlurSoftness);
     }
 }

@@ -44,6 +44,8 @@ internal class BlurSaberModelController : SaberModelController, IPreSaberModelIn
     {
         m_blurSaber = gameObject.AddInitComponent<BlurSaber>(m_saberTransform, m_config);
         m_blurSaber.SetPreset(preset);
+        
+        Shader.SetGlobalFloat("_VainSaberBlurSoftness", m_config.BlurSoftness);
     }
     private void SetColor(Color color)
     {
