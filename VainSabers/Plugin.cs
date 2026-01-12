@@ -38,12 +38,12 @@ internal class Plugin
         Log = ipaLogger;
         Log.Info($"{pluginMetadata.Name} {pluginMetadata.HVersion} initialized.");
         
-        Config.ConfigUtil.EnsureDefaultExists();
         
         m_harmony = new Harmony(pluginMetadata.Id);
         
         zenjector.UseLogger(ipaLogger);
         
+        Config.ConfigUtil.EnsureDefaultExists();
         VainSabersAssets.LoadAssets();
         zenjector.Install<AppInstaller>(Location.App, config.Generated<PluginConfig>());
         zenjector.Install<MenuInstaller>(Location.Menu);
@@ -65,6 +65,8 @@ internal class Plugin
         Print("OnApplicationQuit");
         m_harmony.UnpatchSelf();
     }
+    
+    
 }
 
 public static class VainSabersAssets

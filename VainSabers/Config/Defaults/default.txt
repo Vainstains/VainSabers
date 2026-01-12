@@ -1,0 +1,100 @@
+.part Blade
+pos 0.000000 0.000000 0.000000
+rot 0.000000 0.000000 0.000000
+length 1.000000
+hueShift 0.000000
+startRad 0.008000
+startColor 1.000000 1.000000 1.000000
+startCustomWeight 1.000000
+startGlow 0.768432
+endRad 0.003000
+endColor -0.461275 -0.507008 -0.499476
+endCustomWeight 0.835980
+endGlow 0.470669
+inverted 0
+blur 1.000000
+blurFade 1.765374
+enableEndCaps 1
+endCapExtension 0.814861
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.000000
+minimumRings 9
+renderQueueOffset 0
+lit 0
+
+.part Handle
+pos 0.000000 0.000000 0.000000
+rot 180.0 0.0 0.0
+length 0.126410
+hueShift -0.050000
+startRad 0.011000
+startColor -0.042865 -0.095416 -0.014959
+startCustomWeight 0.122283
+startGlow 0.000000
+endRad 0.009000
+endColor 0.037960 0.049346 0.023550
+endCustomWeight 0.192428
+endGlow 0.000000
+inverted 0
+blur 1.000000
+blurFade 0.000000
+enableEndCaps 0
+endCapExtension 0.250000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount -0.200000
+minimumRings 9
+renderQueueOffset 6
+lit 0
+
+.part BladeBase
+pos 0.000000 0.000000 0.000000
+rot 0.000000 0.000000 0.000000
+length 0.027072
+hueShift 0.000000
+startRad 0.011000
+startColor -0.072328 -0.080579 -0.142241
+startCustomWeight 0.573277
+startGlow 0.729399
+endRad 0.008000
+endColor -0.194872 -0.128054 -0.121079
+endCustomWeight 1.000000
+endGlow 0.766862
+inverted 0
+blur 1.000000
+blurFade 5.000000
+enableEndCaps 1
+endCapExtension 0.287349
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount -0.100000
+minimumRings 4
+renderQueueOffset 0
+lit 0
+
+.part Pommel
+pos 0.000000 0.000000 -0.145000
+rot 0.000000 0.000000 0.000000
+length 0.018585
+hueShift 0.000000
+startRad 0.005000
+startColor 1.000000 1.000000 1.000000
+startCustomWeight 1.000000
+startGlow 0.197715
+endRad 0.010000
+endColor 1.000000 1.000000 1.000000
+endCustomWeight 1.000000
+endGlow 1.000000
+inverted 0
+blur 1.000000
+blurFade 1.000000
+enableEndCaps 1
+endCapExtension 0.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.200000
+minimumRings 3
+renderQueueOffset 0
+lit 0
+

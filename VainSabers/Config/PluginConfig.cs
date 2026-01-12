@@ -12,7 +12,7 @@ public class PluginConfig
     public virtual string CurrentSaber { get; set; } = "segmented";
 
     public virtual int BlurMS { get; set; } = 16;
-    public virtual float BlurSoftness { get; set; } = 0.75f;
+    public virtual float BlurSoftness { get; set; } = 0.8f;
     public virtual bool ActiveInMenu { get; set; } = true;
     
     public virtual int TipTrailMS { get; set; } = 140;

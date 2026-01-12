@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using VainSabers.Config;
 using VainSabers.Helpers;
 
@@ -45,18 +46,11 @@ internal class BlurSaber : MonoBehaviour
     
     Color SquarePreserveLuminance(Color c)
     {
-        // 1. Original luminance (Rec. 601 weights for perception)
         float lum = 0.299f * c.r + 0.587f * c.g + 0.114f * c.b;
-
-        // 2. Square channels
         float r2 = c.r * c.r;
         float g2 = c.g * c.g;
         float b2 = c.b * c.b;
-
-        // 3. New luminance
         float lum2 = 0.299f * r2 + 0.587f * g2 + 0.114f * b2;
-
-        // 4. Scale to preserve original luminance
         float scale = (lum2 > 0.00001f) ? (lum / lum2) : 0f;
 
         return new Color(
@@ -67,4 +61,8 @@ internal class BlurSaber : MonoBehaviour
         );
     }
 
+    private void FixedUpdate()
+    {
+        Shader.SetGlobalFloat("_VainSaberBlurSoftness", m_config.BlurSoftness);
+    }
 }

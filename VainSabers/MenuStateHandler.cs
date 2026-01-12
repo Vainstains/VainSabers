@@ -40,7 +40,7 @@ internal class MenuStateHandler : MonoBehaviour
     }
 
     private void OnDisable() {
-        s_modPanelState.ConfigOpen = true;
+        s_modPanelState.ConfigOpen = false;
         ModPanelStateChanged?.Invoke(s_modPanelState);
     }
 
@@ -55,10 +55,5 @@ internal class MenuStateHandler : MonoBehaviour
     {
         s_modPanelState.EditingPreset = preset;
         ModPanelStateChanged?.Invoke(s_modPanelState);
-    }
-
-    private void FixedUpdate()
-    {
-        Shader.SetGlobalFloat("_VainSaberBlurSoftness", m_config.BlurSoftness);
     }
 }

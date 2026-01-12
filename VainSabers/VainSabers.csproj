@@ -28,6 +28,10 @@
     <ItemGroup>
         <None Include="VainSabers.csproj.user" Condition="Exists('VainSabers.csproj.user')"/>
     </ItemGroup>
+    
+    <ItemGroup>
+        <EmbeddedResource Include="Config\Defaults\*.txt" />
+    </ItemGroup>
 
     <ItemGroup>
         <Reference Include="0Harmony">

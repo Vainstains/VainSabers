@@ -1,0 +1,96 @@
+.part PommelOutline
+pos 0.000000 0.000000 -0.140000
+rot 0.000000 180.000000 0.000000
+length 0.018551
+startRad 0.011000
+startColor -1.000000 -1.000000 -1.000000
+startCustomWeight 0.959445
+startGlow 0.367546
+endRad 0.008000
+endColor -1.000000 -1.000000 -1.000000
+endCustomWeight 0.908827
+endGlow 0.328249
+inverted 0
+blur 1.000000
+blurFade 0.616060
+enableEndCaps 1
+endCapExtension 1.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.000000
+minimumRings 2
+renderQueueOffset 0
+lit 0
+
+.part BladeOutline
+pos 0.000000 0.000000 0.010000
+rot 0.000000 0.000000 0.000000
+length 0.989247
+startRad 0.010000
+startColor -1.000000 -1.000000 -1.000000
+startCustomWeight 0.938699
+startGlow 0.269448
+endRad 0.004000
+endColor -1.000000 -1.000000 -1.000000
+endCustomWeight 0.896411
+endGlow 0.964438
+inverted 0
+blur 1.000000
+blurFade 4.586564
+enableEndCaps 1
+endCapExtension 3.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount -0.300000
+minimumRings 2
+renderQueueOffset 0
+lit 0
+
+.part Lower
+pos 0.000000 0.000000 -0.006700
+rot 0.000000 180.000000 0.000000
+length 0.114128
+startRad 0.010000
+startColor 0.075500 0.075500 1.000000
+startCustomWeight 0.000000
+startGlow 0.434426
+endRad 0.008000
+endColor 0.825979 0.068608 0.323393
+endCustomWeight 0.000000
+endGlow 0.221611
+inverted 1
+blur 1.000000
+blurFade 3.557846
+enableEndCaps 1
+endCapExtension 1.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.000000
+minimumRings 8
+renderQueueOffset 0
+lit 0
+
+.part Part 4
+pos 0.000000 0.000000 -0.115000
+rot 0.000000 0.000000 0.000000
+length 0.103319
+startRad 0.005000
+startColor 0.289980 -0.049780 0.145245
+startCustomWeight 0.000000
+startGlow 0.000000
+endRad 0.006000
+endColor -0.030443 -0.012828 0.330730
+endCustomWeight 0.000000
+endGlow 0.000000
+inverted 0
+blur 1.000000
+blurFade 3.052174
+enableEndCaps 1
+endCapExtension 1.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.000000
+minimumRings 9
+renderQueueOffset 0
+lit 0
+

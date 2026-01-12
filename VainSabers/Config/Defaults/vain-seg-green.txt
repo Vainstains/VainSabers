@@ -1,0 +1,96 @@
+.part PommelOutline
+pos 0.000000 0.000000 -0.140000
+rot 0.000000 180.000000 0.000000
+length 0.018551
+startRad 0.011000
+startColor 0.279945 0.268873 0.299443
+startCustomWeight 0.850000
+startGlow 0.367546
+endRad 0.008000
+endColor 0.415100 0.415100 0.415100
+endCustomWeight 0.969701
+endGlow 0.328249
+inverted 0
+blur 1.000000
+blurFade 0.616060
+enableEndCaps 1
+endCapExtension 1.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.000000
+minimumRings 2
+renderQueueOffset 0
+lit 0
+
+.part BladeOutline
+pos 0.000000 0.000000 0.010000
+rot 0.000000 0.000000 0.000000
+length 0.989247
+startRad 0.010000
+startColor -0.319526 -0.308516 -0.329675
+startCustomWeight 0.886030
+startGlow 0.523097
+endRad 0.005000
+endColor 0.000000 0.000000 0.000000
+endCustomWeight 1.000000
+endGlow 0.500000
+inverted 0
+blur 1.000000
+blurFade 4.830823
+enableEndCaps 1
+endCapExtension 1.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.000000
+minimumRings 3
+renderQueueOffset 0
+lit 0
+
+.part Lower
+pos 0.000000 0.000000 -0.006700
+rot 0.000000 180.000000 0.000000
+length 0.114128
+startRad 0.010000
+startColor 0.329995 0.923836 0.339695
+startCustomWeight 0.000000
+startGlow 0.434426
+endRad 0.008000
+endColor 0.252024 0.691885 0.297027
+endCustomWeight 0.000000
+endGlow 0.374330
+inverted 1
+blur 1.000000
+blurFade 3.557846
+enableEndCaps 1
+endCapExtension 1.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.000000
+minimumRings 8
+renderQueueOffset 0
+lit 0
+
+.part Part 4
+pos 0.000000 0.000000 -0.115000
+rot 0.000000 0.000000 0.000000
+length 0.103319
+startRad 0.005000
+startColor 0.102455 0.311812 0.189242
+startCustomWeight 0.000000
+startGlow 0.000000
+endRad 0.006000
+endColor -0.030443 0.490735 0.187168
+endCustomWeight 0.000000
+endGlow 0.000000
+inverted 0
+blur 1.000000
+blurFade 3.052174
+enableEndCaps 1
+endCapExtension 1.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.000000
+minimumRings 9
+renderQueueOffset 0
+lit 0
+

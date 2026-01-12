@@ -1,0 +1,250 @@
+.part outerRing
+pos 0.000000 0.000000 -0.005000
+rot -0.000005 180.000000 180.000000
+length 0.002345
+hueShift 0.000000
+startRad 0.024000
+startColor -0.008575 -0.002451 0.005506
+startCustomWeight 1.000000
+startGlow 0.797432
+endRad 0.024000
+endColor 0.007375 -0.003658 0.009392
+endCustomWeight 1.000000
+endGlow 0.803775
+inverted 1
+blur 1.000000
+blurFade 5.000000
+enableEndCaps 0
+endCapExtension 0.250000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount -0.100000
+minimumRings 4
+renderQueueOffset 0
+lit 0
+
+.part innerRing
+pos 0.000000 0.000000 -0.010000
+rot 0.000000 0.000000 0.000000
+length 0.007448
+hueShift 0.000000
+startRad 0.026000
+startColor 1.000000 1.000000 1.000000
+startCustomWeight 1.000000
+startGlow 0.759467
+endRad 0.026000
+endColor 1.000000 1.000000 1.000000
+endCustomWeight 1.000000
+endGlow 0.689318
+inverted 0
+blur 1.000000
+blurFade 1.000000
+enableEndCaps 0
+endCapExtension 0.250000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.100000
+minimumRings 4
+renderQueueOffset 0
+lit 0
+
+.part inner(er)Ring
+pos 0.000000 0.000000 -0.010000
+rot 0.000000 0.000000 0.000000
+length 0.007413
+hueShift 0.000000
+startRad 0.026000
+startColor 1.000000 1.000000 1.000000
+startCustomWeight 1.000000
+startGlow 0.000000
+endRad 0.026000
+endColor 1.000000 1.000000 1.000000
+endCustomWeight 1.000000
+endGlow 0.002265
+inverted 1
+blur 1.000000
+blurFade 1.000000
+enableEndCaps 0
+endCapExtension 0.250000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount -0.100000
+minimumRings 3
+renderQueueOffset 0
+lit 0
+
+.part Part 5
+pos 0.000000 0.000000 -0.020000
+rot 0.000000 0.000000 0.000000
+length 0.033627
+hueShift 0.000000
+startRad 0.010000
+startColor 0.102138 0.106815 0.099575
+startCustomWeight 0.696183
+startGlow 0.142042
+endRad 0.008000
+endColor 1.000000 1.000000 1.000000
+endCustomWeight 0.851403
+endGlow 0.895009
+inverted 0
+blur 1.000000
+blurFade 5.000000
+enableEndCaps 0
+endCapExtension 1.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount -0.400000
+minimumRings 4
+renderQueueOffset 4
+lit 0
+
+.part Part 6
+pos 0.000000 0.000000 -0.020000
+rot -0.000005 180.000000 180.000000
+length 0.102533
+hueShift -0.275000
+startRad 0.009000
+startColor -1.000000 -1.000000 -1.000000
+startCustomWeight 1.000000
+startGlow 0.610638
+endRad 0.009000
+endColor -1.000000 -1.000000 -1.000000
+endCustomWeight 0.783401
+endGlow 0.442656
+inverted 1
+blur 1.000000
+blurFade 3.668335
+enableEndCaps 0
+endCapExtension 0.250000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount -0.100000
+minimumRings 4
+renderQueueOffset -4
+lit 0
+
+.part Part 7
+pos 0.000000 0.000000 -0.020000
+rot 0.000000 0.000000 0.000000
+length 0.003743
+hueShift 0.000000
+startRad 0.011000
+startColor 1.000000 1.000000 1.000000
+startCustomWeight 1.000000
+startGlow 0.390418
+endRad 0.011000
+endColor 1.000000 1.000000 1.000000
+endCustomWeight 1.000000
+endGlow 0.128967
+inverted 0
+blur 1.000000
+blurFade 1.000000
+enableEndCaps 1
+endCapExtension 0.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.000000
+minimumRings 4
+renderQueueOffset 0
+lit 0
+
+.part Part 8
+pos 0.000000 0.000000 -0.120000
+rot -0.000005 180.000000 180.000000
+length 0.017594
+hueShift 0.000000
+startRad 0.010000
+startColor 1.000000 1.000000 1.000000
+startCustomWeight 1.000000
+startGlow 0.553106
+endRad 0.006000
+endColor 1.000000 1.000000 1.000000
+endCustomWeight 1.000000
+endGlow 0.239193
+inverted 0
+blur 1.000000
+blurFade 1.000000
+enableEndCaps 1
+endCapExtension 0.250000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.200000
+minimumRings 4
+renderQueueOffset 0
+lit 0
+
+.part blade1
+pos 0.000000 0.000000 0.010000
+rot 0.000000 0.000000 0.000000
+length 0.027020
+hueShift 0.000000
+startRad 0.007000
+startColor 1.000000 1.000000 1.000000
+startCustomWeight 1.000000
+startGlow 1.068865
+endRad 0.008000
+endColor 1.000000 1.000000 1.000000
+endCustomWeight 1.000000
+endGlow 0.964281
+inverted 0
+blur 1.000000
+blurFade 5.000000
+enableEndCaps 1
+endCapExtension 0.250000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount 0.500000
+minimumRings 3
+renderQueueOffset 0
+lit 0
+
+.part Part 9
+pos 0.000000 0.000000 0.020000
+rot 0.000000 0.000000 0.000000
+length 0.976705
+hueShift 0.000000
+startRad 0.009000
+startColor 1.000000 1.000000 1.000000
+startCustomWeight 1.000000
+startGlow 1.000000
+endRad 0.003000
+endColor 1.000000 1.000000 1.000000
+endCustomWeight 1.000000
+endGlow 0.300583
+inverted 0
+blur 1.000000
+blurFade 5.000000
+enableEndCaps 1
+endCapExtension 0.250000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount -0.400000
+minimumRings 4
+renderQueueOffset 0
+lit 0
+
+.part Part 10
+pos 0.000000 0.000000 -0.120000
+rot 0.000000 0.000000 0.000000
+length 0.100000
+hueShift -0.275000
+startRad 0.008000
+startColor -0.003706 -0.002190 0.023983
+startCustomWeight 0.351950
+startGlow 0.000000
+endRad 0.008000
+endColor 0.076078 0.074017 0.054427
+endCustomWeight 0.263143
+endGlow 0.000000
+inverted 0
+blur 1.000000
+blurFade 5.000000
+enableEndCaps 1
+endCapExtension 1.000000
+lookDir 0.000000 0.000000 0.000000
+useLookDir 0
+bulgeAmount -0.500000
+minimumRings 5
+renderQueueOffset 0
+lit 0
+
