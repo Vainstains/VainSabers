@@ -1,79 +1,116 @@
 ﻿<bg xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
     xsi:noNamespaceSchemaLocation='https://monkeymanboy.github.io/BSML-Docs/BSMLSchema.xsd'>
+
+    <vertical spacing="2" id="root" child-expand-height="false" pref-width="160">
     
-    <vertical spacing="1" id="root" child-expand-height="false" bg='round-rect-panel' pad-left="2" pad-right="2" pref-width="95">
+        <vertical bg="round-rect-panel" pad="2" spacing="1">
+            <image image-color="#ffffff00" anchor-min-x="0" anchor-min-y="0" anchor-max-x="1" anchor-max-y="1" size-delta-x="0" size-delta-y="0" ignore-layout="true"/>
+            
+            <text text="Saber Part Management" align="Center" font-size="5"/>
 
-        <!-- === PART SELECTION === -->
-        <text text="Saber Part Management" align="Center" font-size="5" />
-        <dropdown-list-setting id="PartDropdown" text="Select Part" value="SelectedPartName" choices="PartNames"
-                               bind-value="true" apply-on-change="true"/>
+            <dropdown-list-setting
+                    id="PartDropdown"
+                    text="Select Part"
+                    value="SelectedPartName"
+                    choices="PartNames"
+                    bind-value="true"
+                    apply-on-change="true"/>
 
-        <horizontal preferred-height="6" spacing="2" horizontal-fit="PreferredSize">
-            <button text="Add Part" on-click="AddNewPart" pref-width="40"/>
-            <button text="Delete Part" on-click="RemoveSelectedPart" pref-width="40"/>
+            <horizontal spacing="2" horizontal-fit="PreferredSize">
+                <button text="Add Part" on-click="AddNewPart" pref-width="40"/>
+                <button text="Delete Part" on-click="RemoveSelectedPart" pref-width="40"/>
+            </horizontal>
+        </vertical>
+        
+        <vertical bg="round-rect-panel" pad="2" spacing="1" horizontal-fit="Unconstrained">
+            <image image-color="#ffffff00" anchor-min-x="0" anchor-min-y="0" anchor-max-x="1" anchor-max-y="1" size-delta-x="0" size-delta-y="0" ignore-layout="true"/>
+            
+            <text text="Transform" align="Center" font-size="4.5"/>
+
+            <horizontal spacing="4">
+                <vertical spacing="0.5" child-control-width="true" horizontal-fit="Unconstrained">
+                    <text text="Position" align="Left" font-size="5.5"/>
+                    <slider-setting id="PosX" value="PartPositionX" text="X" apply-on-change="true" min="-0.2" max="0.2" increment="0.005"/>
+                    <slider-setting id="PosY" value="PartPositionY" text="Y" apply-on-change="true" min="-0.2" max="0.2" increment="0.005"/>
+                    <slider-setting id="PosZ" value="PartPositionZ" text="Z" apply-on-change="true" min="-0.2" max="0.2" increment="0.005"/>
+                </vertical>
+
+                <vertical spacing="0.5"  child-control-width="true" horizontal-fit="Unconstrained">
+                    <text text="Rotation" align="Left" font-size="5.5"/>
+                    <slider-setting id="RotX" value="PartRotationX" text="X" apply-on-change="true" min="-180" max="180" increment="5"/>
+                    <slider-setting id="RotY" value="PartRotationY" text="Y" apply-on-change="true" min="-180" max="180" increment="5"/>
+                    <slider-setting id="RotZ" value="PartRotationZ" text="Z" apply-on-change="true" min="-180" max="180" increment="5"/>
+                </vertical>
+            </horizontal>
+        </vertical>
+        
+        <vertical bg="round-rect-panel" pad="2" spacing="1">
+            <image image-color="#ffffff00" anchor-min-x="0" anchor-min-y="0" anchor-max-x="1" anchor-max-y="1" size-delta-x="0" size-delta-y="0" ignore-layout="true"/>
+            
+            <text text="Geometry" align="Center" font-size="4.5"/>
+
+            <slider-setting id="Length" value="PartLength" text="Length" apply-on-change="true" min="0.01" max="1.0" formatter="LengthFormatter"/>
+            <slider-setting id="BulgeAmount" value="PartBulgeAmount" text="Bulge Amount" apply-on-change="true" min="-1" max="1" increment="0.1"/>
+            <slider-setting id="MinimumRings" value="PartMinimumRings" text="Minimum Rings" apply-on-change="true" min="2" max="10" increment="1"/>
+
+            <toggle-setting id="InvertedToggle" text="Inverted" value="PartInverted" apply-on-change="true"/>
+            <toggle-setting id="UseEndCapsToggle" text="Use End Caps" value="PartUseEndCaps" apply-on-change="true"/>
+            <slider-setting id="EndCapExtensionFactor" value="EndCapExtension" text="End Cap Extension" apply-on-change="true" min="0" max="3"/>
+        </vertical>
+
+        <!-- ================= START / END PROPERTIES ================= -->
+        <horizontal spacing="2" pad="2">
+
+            <!-- START -->
+            <vertical bg="round-rect-panel" pad="2" spacing="1" horizontal-fit="Unconstrained">
+                <image image-color="#ffffff00" anchor-min-x="0" anchor-min-y="0" anchor-max-x="1" anchor-max-y="1" size-delta-x="0" size-delta-y="0" ignore-layout="true"/>
+                
+                <text text="Start Properties" align="Center" font-size="4.5"/>
+
+                <slider-setting id="StartRadius" value="PartStartRadius" text="Radius" apply-on-change="true" min="0.001" max="0.05" increment="0.001" overflow-mode="Overflow"/>
+                <slider-setting id="StartColorR" value="PartStartColorR" text="Color R" apply-on-change="true" min="-1" max="1" overflow-mode="Overflow"/>
+                <slider-setting id="StartColorG" value="PartStartColorG" text="Color G" apply-on-change="true" min="-1" max="1" overflow-mode="Overflow"/>
+                <slider-setting id="StartColorB" value="PartStartColorB" text="Color B" apply-on-change="true" min="-1" max="1" overflow-mode="Overflow"/>
+                <slider-setting id="StartWeight" value="PartStartCustomWeight" text="Custom Weight" apply-on-change="true" min="0" max="1" overflow-mode="Overflow"/>
+                <slider-setting id="StartGlow" value="PartStartGlow" text="Glow" apply-on-change="true" min="0" max="5" overflow-mode="Overflow"/>
+            </vertical>
+
+            <!-- END -->
+            <vertical bg="round-rect-panel" pad="2" spacing="1" horizontal-fit="Unconstrained">
+                <image image-color="#ffffff00" anchor-min-x="0" anchor-min-y="0" anchor-max-x="1" anchor-max-y="1" size-delta-x="0" size-delta-y="0" ignore-layout="true"/>
+                
+                <text text="End Properties" align="Center" font-size="4.5"/>
+
+                <slider-setting id="EndRadius" value="PartEndRadius" text="Radius" apply-on-change="true" min="0.001" max="0.05" increment="0.001" overflow-mode="Overflow"/>
+                <slider-setting id="EndColorR" value="PartEndColorR" text="Color R" apply-on-change="true" min="-1" max="1" overflow-mode="Overflow"/>
+                <slider-setting id="EndColorG" value="PartEndColorG" text="Color G" apply-on-change="true" min="-1" max="1" overflow-mode="Overflow"/>
+                <slider-setting id="EndColorB" value="PartEndColorB" text="Color B" apply-on-change="true" min="-1" max="1" overflow-mode="Overflow"/>
+                <slider-setting id="EndWeight" value="PartEndCustomWeight" text="Custom Weight" apply-on-change="true" min="0" max="1" overflow-mode="Overflow"/>
+                <slider-setting id="EndGlow" value="PartEndGlow" text="Glow" apply-on-change="true" min="0" max="1.5" overflow-mode="Overflow"/>
+            </vertical>
+
         </horizontal>
-        
-        <text text="Transform" align="Center" font-size="4.5" />
 
-        <!-- === POSITION === -->
-        <text text="Position" align="Left" font-size="2.5" />
-        <slider-setting id="PosX" value="PartPositionX" text="X" apply-on-change="true" min="-0.2" max="0.2" increment="0.005" />
-        <slider-setting id="PosY" value="PartPositionY" text="Y" apply-on-change="true" min="-0.2" max="0.2" increment="0.005" />
-        <slider-setting id="PosZ" value="PartPositionZ" text="Z" apply-on-change="true" min="-0.2" max="0.2" increment="0.005" />
+        <!-- ================= RENDERING / MISC ================= -->
+        <vertical bg="round-rect-panel" pad="2" spacing="1">
+            <image image-color="#ffffff00" anchor-min-x="0" anchor-min-y="0" anchor-max-x="1" anchor-max-y="1" size-delta-x="0" size-delta-y="0" ignore-layout="true"/>
+            
+            <text text="Rendering" align="Center" font-size="4.5"/>
 
-        <!-- === ROTATION === -->
-        <text text="Rotation" align="Left" font-size="2.5" />
-        <slider-setting id="RotX" value="PartRotationX" text="X" apply-on-change="true" min="-180" max="180" increment="5" />
-        <slider-setting id="RotY" value="PartRotationY" text="Y" apply-on-change="true" min="-180" max="180" increment="5" />
-        <slider-setting id="RotZ" value="PartRotationZ" text="Z" apply-on-change="true" min="-180" max="180" increment="5" />
+            <toggle-setting id="LitToggle" text="Lit" value="PartLit" apply-on-change="true"/>
+            <slider-setting id="HueShift" value="PartHueShift" text="HueShift" apply-on-change="true" min="-0.5" max="0.5" increment="0.025"/>
 
-        <!-- === DIMENSIONS === -->
-        <text text="Dimensions" align="Center" font-size="4.5" />
+            <slider-setting id="BlurFactor" value="PartBlurFactor" text="Blur Factor" apply-on-change="true" min="0" max="1"/>
+            <slider-setting id="BlurFadeFactor" value="PartBlurFadeFactor" text="Blur Fade Factor" apply-on-change="true" min="0" max="5"/>
 
-        <slider-setting id="Length" value="PartLength" text="Length" apply-on-change="true" min="0.01" max="1.0" formatter="LengthFormatter"/>
-        <slider-setting id="BulgeAmount" value="PartBulgeAmount" text="Bulge Amount" apply-on-change="true" min="-1" max="1" increment="0.1" />
-
-        <text text="Misc." align="Center" font-size="4.5" />
-        
-        <slider-setting id="HueShift" value="PartHueShift" text="HueShift" apply-on-change="true" min="-0.5" max="0.5" increment="0.025" />
-        
-        <!-- === START PROPERTIES === -->
-        <text text="Start Properties" align="Center" font-size="4.5" />
-
-        <slider-setting id="StartRadius" value="PartStartRadius" text="Radius" apply-on-change="true" min="0.001" max="0.05" increment="0.001" />
-        <slider-setting id="StartColorR" value="PartStartColorR" text="Color R" apply-on-change="true" min="-1" max="1" />
-        <slider-setting id="StartColorG" value="PartStartColorG" text="Color G" apply-on-change="true" min="-1" max="1" />
-        <slider-setting id="StartColorB" value="PartStartColorB" text="Color B" apply-on-change="true" min="-1" max="1" />
-        <slider-setting id="StartWeight" value="PartStartCustomWeight" text="Custom Weight" apply-on-change="true" min="0" max="1" />
-        <slider-setting id="StartGlow" value="PartStartGlow" text="Glow" apply-on-change="true" min="0" max="5" />
-
-        <!-- === END PROPERTIES === -->
-        <text text="End Properties" align="Center" font-size="4.5" />
-
-        <slider-setting id="EndRadius" value="PartEndRadius" text="Radius" apply-on-change="true" min="0.001" max="0.05" increment="0.001" />
-        <slider-setting id="EndColorR" value="PartEndColorR" text="Color R" apply-on-change="true" min="-1" max="1" />
-        <slider-setting id="EndColorG" value="PartEndColorG" text="Color G" apply-on-change="true" min="-1" max="1" />
-        <slider-setting id="EndColorB" value="PartEndColorB" text="Color B" apply-on-change="true" min="-1" max="1" />
-        <slider-setting id="EndWeight" value="PartEndCustomWeight" text="Custom Weight" apply-on-change="true" min="0" max="1" />
-        <slider-setting id="EndGlow" value="PartEndGlow" text="Glow" apply-on-change="true" min="0" max="1.5" />
-
-        <!-- === OTHER / BEHAVIOR === -->
-        <text text="Geometry Options" align="Center" font-size="4.5" />
-        
-        <slider-setting id="MinimumRings" value="PartMinimumRings" text="Minimum Rings" apply-on-change="true" min="2" max="10" increment="1" />
-        <toggle-setting id="InvertedToggle" text="Inverted" value="PartInverted" apply-on-change="true" />
-        <toggle-setting id="LitToggle" text="Lit" value="PartLit" apply-on-change="true" />
-        <slider-setting id="BlurFactor" value="PartBlurFactor" text="Blur Factor" apply-on-change="true" min="0" max="1" />
-        <slider-setting id="BlurFadeFactor" value="PartBlurFadeFactor" text="Blur Fade Factor" apply-on-change="true" min="0" max="5" />
-        <slider-setting id="EndCapExtensionFactor" value="EndCapExtension" text="End Cap Extension" apply-on-change="true" min="0" max="3" />
-        <toggle-setting id="UseEndCapsToggle" text="Use End Caps" value="PartUseEndCaps" apply-on-change="true" />
-        <slider-setting id="RenderQueueOffset"
-                        value="PartRenderQueueOffset"
-                        text="Render Queue Offset"
-                        apply-on-change="true"
-                        min="-10"
-                        max="10"
-                        increment="1" />
-
+            <slider-setting
+                    id="RenderQueueOffset"
+                    value="PartRenderQueueOffset"
+                    text="Render Queue Offset"
+                    apply-on-change="true"
+                    min="-10"
+                    max="10"
+                    increment="1"/>
+        </vertical>
     </vertical>
 </bg>

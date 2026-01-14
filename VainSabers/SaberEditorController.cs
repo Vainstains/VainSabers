@@ -149,37 +149,22 @@ internal class SaberEditorController : MonoBehaviour
         [UIValue("PartRotationX")]
         private float PartRotationX
         {
-            get => m_currentPartRight != null ? m_currentPartRight.transform.localEulerAngles.x : 0f;
-            set => ApplyToBoth(p =>
-            {
-                var rot = p.transform.localEulerAngles;
-                rot.x = value;
-                p.transform.localEulerAngles = rot;
-            });
+            get => m_currentPartRight != null ? m_currentPartRight.RotX : 0f;
+            set => ApplyToBoth(p => p.RotX = value);
         }
 
         [UIValue("PartRotationY")]
         private float PartRotationY
         {
-            get => m_currentPartRight != null ? m_currentPartRight.transform.localEulerAngles.y : 0f;
-            set => ApplyToBoth(p =>
-            {
-                var rot = p.transform.localEulerAngles;
-                rot.y = value;
-                p.transform.localEulerAngles = rot;
-            });
+            get => m_currentPartRight != null ? m_currentPartRight.RotY : 0f;
+            set => ApplyToBoth(p => p.RotY = value);
         }
 
         [UIValue("PartRotationZ")]
         private float PartRotationZ
         {
-            get => m_currentPartRight != null ? m_currentPartRight.transform.localEulerAngles.z : 0f;
-            set => ApplyToBoth(p =>
-            {
-                var rot = p.transform.localEulerAngles;
-                rot.z = value;
-                p.transform.localEulerAngles = rot;
-            });
+            get => m_currentPartRight != null ? m_currentPartRight.RotZ : 0f;
+            set => ApplyToBoth(p => p.RotZ = value);
         }
 
         // ---------------- Dimensions ----------------
@@ -575,13 +560,13 @@ internal class SaberEditorController : MonoBehaviour
     private void Awake()
     {
         floatingScreen = FloatingScreen.CreateFloatingScreen(
-            screenSize: new Vector2(100f, 210.0f),
+            screenSize: new Vector2(180f, 250.0f),
             createHandle: false,
             position: new Vector3(0f, -69420f, 0f),
-            rotation: Quaternion.Euler(20f, 0f, 0f));
+            rotation: Quaternion.Euler(0f, 0f, 0f));
 
         floatingScreen.SetRootViewController(editorViewController, ViewController.AnimationType.None);
-        floatingScreen.transform.localScale *= 0.35f;
+        floatingScreen.transform.localScale *= 0.45f;
         MenuStateHandler.ModPanelStateChanged += StateChanged;
     }
 
@@ -607,7 +592,7 @@ internal class SaberEditorController : MonoBehaviour
 
         if (state.EditorOpen)
         {
-            floatingScreen.transform.position = new Vector3(0f, 0.85f, 0.8f);
+            floatingScreen.transform.position = new Vector3(0f, 1.2f, 1.5f);
             wasOpen = true;
         }
         else

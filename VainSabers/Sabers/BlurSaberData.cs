@@ -156,7 +156,9 @@ public class BlurSaberData : MonoBehaviour
                     currentPart.transform.localPosition = new Vector3(vals[0], vals[1], vals[2]);
                     break;
                 case "rot":
-                    currentPart.transform.localRotation = Quaternion.Euler(vals[0], vals[1], vals[2]);
+                    currentPart.RotX = vals[0];
+                    currentPart.RotY = vals[1];
+                    currentPart.RotZ = vals[2];
                     break;
                 case "length":
                     currentPart.Length = vals[0];
@@ -195,7 +197,7 @@ public class BlurSaberData : MonoBehaviour
                     currentPart.BlurFadeFactor = Mathf.Clamp(vals[0], 0f, 10f);
                     break;
                 case "endCapExtension":
-                    currentPart.EndCapExtension = Mathf.Clamp01(vals[0]);
+                    currentPart.EndCapExtension = Mathf.Clamp(vals[0], 0.0f, 3.0f);
                     break;
                 case "enableEndCaps":
                     currentPart.EnableEndCaps = Mathf.Approximately(vals[0], 1f);

@@ -14,6 +14,8 @@ namespace VainSabers.Sabers
         private int RingCount => Math.Max((int)(Length * 8), MinimumRings) + (EnableEndCaps ? 2 : 0);
         private int ringVerts = 0;
         
+        public float RotX, RotY, RotZ;
+        
         public float Length;
         public float StartRadius;
         public float EndRadius;
@@ -133,6 +135,11 @@ namespace VainSabers.Sabers
 
             RebuildVerts();
             m_blurTube.RefreshMesh();
+        }
+
+        private void Update()
+        {
+            transform.localEulerAngles = new Vector3(RotX, RotY, RotZ);
         }
 
         private void EnsureRuntimeMaterial(ref Material? runtimeMaterial, Material baseMaterial)
