@@ -125,10 +125,7 @@ namespace VainSabers.Sabers
             
             var activeMat = GetActiveMaterial();
             if (activeMat != null)
-            {
-                var baseMaterial = GetBaseMaterial();
-                activeMat.renderQueue = baseMaterial.renderQueue + RenderQueueOffset + 500;
-            }
+                activeMat.renderQueue = 3600 + RenderQueueOffset;
 
             m_meshRenderer.sharedMaterial = activeMat;
             m_meshFilter.mesh = m_blurTube.TubeMesh;
@@ -323,7 +320,7 @@ namespace VainSabers.Sabers
             var present = m_movementHistoryProvider.GetPoseAgo(0.0f);
             var past = m_movementHistoryProvider.GetPoseAgo(time);
 
-            var angleDifference = Vector3.Angle(present.forward, past.forward);
+            var angleDifference = Vector3.Angle(present.forward, past.forward) + 40 * Vector3.Distance(present.position, past.position);
             var factor = Mathf.Clamp01((angleDifference - 0.3f) * 0.3f);
             time *= factor;
 

@@ -96,6 +96,7 @@ namespace VainSabers.Sabers
                 result[sampleIndex] = newer.Pose.LerpTo(older.Pose, t);
             }
         }
+        
         private void Update()
         {
             var currentPose = m_target.GetPose();
