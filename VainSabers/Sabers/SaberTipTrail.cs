@@ -235,9 +235,14 @@ public class SaberRibbonTrail : MonoBehaviour
             
             Pose pose = _movementHistory.GetPoseAgo(timeAgo);
             
-            // Calculate vertex positions
-            Vector3 basePos = pose.position + pose.forward * 0.01f;
-            Vector3 tipPos = pose.position + pose.forward;
+            // Calculate vertex positions in world space.
+            Vector3 basePosWorld = pose.position + pose.forward * 0.01f;
+            Vector3 tipPosWorld = pose.position + pose.forward;
+
+            // Mesh vertices are local-space, so convert sampled world positions
+            // into this trail object's local space.
+            Vector3 basePos = transform.InverseTransformPoint(basePosWorld);
+            Vector3 tipPos = transform.InverseTransformPoint(tipPosWorld);
             
             // Set vertices - base edge (always transparent) and tip edge (animated opacity)
             _vertices[vertexIndex] = basePos;     // Base edge vertex
