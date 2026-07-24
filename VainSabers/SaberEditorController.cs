@@ -57,7 +57,16 @@ internal class SaberEditorController : MonoBehaviour
         panel = SimpleFloatingPanel.Create(new Vector2(20, 20), new Vector3(0, 1.2f, 1.5f));
         panel.Show();
 
-        var image = panel.gameObject.AddInitChild<ImageComponent>();
-        image.Color = new Color(0.5f, 0.5f, 0.6f, 1.0f);
+        var bg = panel.AddChild<RoundRectComponent>().ToFill();
+        bg.Color = new Color(0.1f, 0.1f, 0.1f, 1.0f);
+        bg.IsRaycastTarget = true;
+
+        var button = bg.AddChild<TextButtonComponent>().ToTopEdge()
+            .InsetLeft(1).InsetRight(1).ExtendBottom(4).Move(0, -1).WithText("sus");
+
+        button.OnClick += () =>
+        {
+            Plugin.Log.Info("amogus");
+        };
     }
 }

@@ -1,11 +1,13 @@
 using HMUI;
+using IPA.Utilities;
 using UnityEngine;
 using UnityEngine.UI;
 using VainSabers.Helpers;
+using VRUIControls;
 
 namespace VainSabers.UI;
 
-public class SimpleFloatingPanel : MonoBehaviour
+public class SimpleFloatingPanel : MonoBehaviour, IUIParent
 {
     private Canvas m_canvas = null!;
     private CanvasGroup m_canvasGroup = null!;
@@ -25,6 +27,9 @@ public class SimpleFloatingPanel : MonoBehaviour
         var scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.dynamicPixelsPerUnit = 3.44f;
         scaler.referencePixelsPerUnit = 10;
+
+        var raycaster = gameObject.AddComponent<VRGraphicRaycaster>();
+        raycaster.SetField("_physicsRaycaster", UIResources.Raycaster);
 
         m_canvasGroup = gameObject.AddComponent<CanvasGroup>();
         m_canvasGroup.alpha = 0f;
@@ -69,5 +74,10 @@ public class SimpleFloatingPanel : MonoBehaviour
         go.transform.position = position;
 
         return panel;
+    }
+
+    public T AddChild<T>() where T : UIComponent
+    {
+        return gameObject.AddInitChild<T>();
     }
 }
