@@ -30,10 +30,8 @@ namespace VainSabers.Sabers
         
         public float StartGlow = 1;
         public float EndGlow = 1;
-
-        [Range(0f, 1f)]
+        
         public float StartOpacity = 1f;
-        [Range(0f, 1f)]
         public float EndOpacity = 1f;
 
         public float DepthOffset = 0f;

@@ -166,6 +166,7 @@ public class BlurSaberData : MonoBehaviour
                 case "length":
                     currentPart.Length = vals[0];
                     break;
+                
                 case "startRad":
                     currentPart.StartRadius = vals[0];
                     break;
@@ -181,6 +182,7 @@ public class BlurSaberData : MonoBehaviour
                 case "startOpacity":
                     currentPart.StartOpacity = vals[0];
                     break;
+                
                 case "endRad":
                     currentPart.EndRadius = vals[0];
                     break;
@@ -196,6 +198,7 @@ public class BlurSaberData : MonoBehaviour
                 case "endOpacity":
                     currentPart.EndOpacity = vals[0];
                     break;
+                
                 case "inverted":
                     currentPart.Inverted = Mathf.Approximately(vals[0], 1f);
                     break;
