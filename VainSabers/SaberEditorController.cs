@@ -1,17 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using BeatSaberMarkupLanguage;
-using BeatSaberMarkupLanguage.Attributes;
-using BeatSaberMarkupLanguage.Components.Settings;
-using BeatSaberMarkupLanguage.FloatingScreen;
-using BeatSaberMarkupLanguage.ViewControllers;
-using HMUI;
-using UnityEngine;
+﻿using UnityEngine;
 using VainSabers.Config;
-using VainSabers.Helpers;
-using VainSabers.Menu;
-using VainSabers.Sabers;
 using VainSabers.UI;
 
 namespace VainSabers;
@@ -49,7 +37,7 @@ internal class SaberEditorController : MonoBehaviour
     private void StateChanged(MenuStateHandler.ModPanelState state)
     {
         if (panel != null)
-            panel.Destroy();
+            panel.Destroy(); // just yeet it, we can make ui very easily at the call site. (See below)
         
         if (!state.EditorOpen)
             return;
@@ -68,5 +56,12 @@ internal class SaberEditorController : MonoBehaviour
         {
             Plugin.Log.Info("amogus");
         };
+        
+        var dropdown = panel.AddChild<DropdownComponent>().ToTopEdge()
+            .InsetLeft(1).InsetRight(1).ExtendBottom(4).Move(0, -6);
+        dropdown.SetOptions(["Option A", "Option B", "Option C"]);
+        dropdown.OnSelectionChanged += idx => Plugin.Log.Info($"Selected {idx}: {dropdown.SelectedValue}");
+        
+        // more complex stuff to be added later
     }
 }

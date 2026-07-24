@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using HMUI;
 using TMPro;
 using UnityEngine;
@@ -127,5 +128,132 @@ public class TextButtonComponent : ButtonComponent
             throw new Exception("shouldnt be possible (text component not initialized)");
         m_textComponent.Text = text;
         return this;
+    }
+}
+
+public class DropdownComponent : UIComponent
+{
+    private const float RowHeight = 5f;
+
+    private ButtonComponent m_headerButton = null!;
+    private TextComponent m_label = null!;
+    private RoundRectComponent m_listBackground = null!;
+
+    private readonly List<TextButtonComponent> m_optionButtons = new();
+    private List<string> m_options = new();
+    private int m_selectedIndex = -1;
+    private bool m_isOpen = false;
+
+    public event Action<int>? OnSelectionChanged;
+
+    public IReadOnlyList<string> Options => m_options;
+
+    public int SelectedIndex
+    {
+        get => m_selectedIndex;
+        set => SetSelectedIndex(value, true);
+    }
+
+    public string? SelectedValue =>
+        m_selectedIndex >= 0 && m_selectedIndex < m_options.Count ? m_options[m_selectedIndex] : null;
+
+    public bool IsOpen => m_isOpen;
+
+    public void SetOptions(IEnumerable<string> options, int selectedIndex = 0)
+    {
+        m_options = new List<string>(options);
+        Close();
+        RebuildOptionButtons();
+        SetSelectedIndex(m_options.Count > 0 ? Mathf.Clamp(selectedIndex, 0, m_options.Count - 1) : -1, false);
+    }
+
+    public void Open()
+    {
+        if (m_isOpen || m_options.Count == 0)
+            return;
+
+        m_isOpen = true;
+        m_listBackground.gameObject.SetActive(true);
+    }
+
+    public void Close()
+    {
+        m_isOpen = false;
+        m_listBackground.gameObject.SetActive(false);
+    }
+
+    public void Toggle()
+    {
+        if (m_isOpen)
+            Close();
+        else
+            Open();
+    }
+
+    private void SetSelectedIndex(int index, bool invokeEvent)
+    {
+        if (index < -1 || index >= m_options.Count)
+            return;
+
+        m_selectedIndex = index;
+        m_label.Text = SelectedValue ?? "";
+
+        for (var i = 0; i < m_optionButtons.Count; i++)
+            m_optionButtons[i].Color = i == m_selectedIndex ? new Color(0.3f, 0.3f, 0.3f, 1f) : new Color(0.15f, 0.15f, 0.15f, 1f);
+
+        if (invokeEvent)
+            OnSelectionChanged?.Invoke(m_selectedIndex);
+    }
+
+    private void RebuildOptionButtons()
+    {
+        foreach (var btn in m_optionButtons)
+            Destroy(btn.gameObject);
+        m_optionButtons.Clear();
+
+        for (var i = 0; i < m_options.Count; i++)
+        {
+            var index = i;
+
+            var optionButton = m_listBackground.AddChild<TextButtonComponent>()
+                .ToTopEdge()
+                .Move(0, -RowHeight * i)
+                .WithText(m_options[i]);
+
+            optionButton.Pivot = new Vector2(0.5f, 1f);
+            optionButton.SizeDelta = new Vector2(0, RowHeight);
+            optionButton.Color = new Color(0.15f, 0.15f, 0.15f, 1f);
+            optionButton.OnClick += () =>
+            {
+                SetSelectedIndex(index, true);
+                Close();
+            };
+
+            m_optionButtons.Add(optionButton);
+        }
+
+        m_listBackground.SizeDelta = new Vector2(m_listBackground.SizeDelta.x, RowHeight * m_options.Count);
+    }
+
+    protected override void Init()
+    {
+        base.Init();
+
+        m_headerButton = AddChild<ButtonComponent>().ToFill();
+        m_headerButton.Color = new Color(0.15f, 0.15f, 0.15f, 1f);
+        m_headerButton.OnClick += Toggle;
+
+        m_label = m_headerButton.AddChild<TextComponent>().ToFill().Inset(1);
+        m_label.Alignment = TextAlignmentOptions.Left;
+        m_label.OverflowMode = TextOverflowModes.Ellipsis;
+        m_label.EnableWordWrapping = false;
+
+        m_listBackground = AddChild<RoundRectComponent>()
+            .ToBottomEdge()
+            .Move(0, -0.5f);
+        m_listBackground.Pivot = new Vector2(0.5f, 1f);
+        m_listBackground.Color = new Color(0.1f, 0.1f, 0.1f, 1f);
+        m_listBackground.IsRaycastTarget = true;
+        m_listBackground.gameObject.SetActive(false);
     }
 }
