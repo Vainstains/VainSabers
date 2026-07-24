@@ -6,24 +6,31 @@ namespace VainSabers.Menu;
 
 public class MenuPointers
 {
-    private GameObject LeftPointer { get; }
-    private GameObject RightPointer { get; }
-    private List<MeshRenderer> MeshRenderers { get; } = [];
+    private GameObject LeftPointer = null!;
+    private GameObject RightPointer = null!;
+    
+    public (Transform leftParent, Transform rightParent) Parents
+    {
+        get
+        {
+            if (LeftPointer == null)
+                LeftPointer = Resources.FindObjectsOfTypeAll<VRController>().First(c => c.transform.name == "ControllerLeft").transform.Find("MenuHandle").gameObject;
+            if (RightPointer == null)
+                RightPointer = Resources.FindObjectsOfTypeAll<VRController>().First(c => c.transform.name == "ControllerRight").transform.Find("MenuHandle").gameObject;
+            
+            return (LeftPointer.transform, RightPointer.transform);
+        }
+    }
 
-    private MenuPointers()
+    public void SetPointerVisibility(bool visible)
     {
         var controllers = Resources.FindObjectsOfTypeAll<VRController>();
         LeftPointer = controllers.First(c => c.transform.name == "ControllerLeft").transform.Find("MenuHandle").gameObject;
         RightPointer = controllers.First(c => c.transform.name == "ControllerRight").transform.Find("MenuHandle").gameObject;
 
-        MeshRenderers.AddRange(GetMenuHandleRenderers(LeftPointer));
-        MeshRenderers.AddRange(GetMenuHandleRenderers(RightPointer));
+        GetMenuHandleRenderers(LeftPointer).ForEach(r => { if (r != null) r.enabled = visible; });
+        GetMenuHandleRenderers(RightPointer).ForEach(r => { if (r != null) r.enabled = visible; });
     }
-    
-    public (Transform leftParent, Transform rightParent) Parents => (LeftPointer.transform, RightPointer.transform);
-
-    public void SetPointerVisibility(bool visible) =>
-        MeshRenderers.ForEach(r => r.enabled = visible);
 
     private static List<MeshRenderer> GetMenuHandleRenderers(GameObject menuHandle) => [
         menuHandle.transform.Find("Glowing").GetComponent<MeshRenderer>(),
