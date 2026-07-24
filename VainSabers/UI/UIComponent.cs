@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using HMUI;
 using TMPro;
 using UnityEngine;
@@ -130,6 +131,7 @@ public class ImageComponent : UIComponent
         m_imageView.raycastTarget = false;
         m_imageView.color = Color.white;
         m_imageView.sprite = null;
+        m_imageView.material = UIResources.NoGlowMat;
     }
 }
 
@@ -240,6 +242,7 @@ public class ButtonComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
         m_imageView = gameObject.RequireComponent<ImageView>();
         m_imageView.raycastTarget = true;
         m_imageView.sprite = null;
+        m_imageView.material = UIResources.NoGlowMat;
         UpdateState();
     }
 
@@ -267,5 +270,50 @@ public class ButtonComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
     {
         m_isPressed = false;
         UpdateState();
+    }
+}
+
+internal static class UIResources
+{
+    private static Button? s_soloButton = null;
+    private static Button GetSoloButton()
+    {
+        if (s_soloButton != null)
+            return s_soloButton;
+        
+        s_soloButton = Resources.FindObjectsOfTypeAll<Button>().First(b => b.name == "SoloButton");
+        return s_soloButton;
+    }
+
+    private static Material? s_noGlowMat;
+    public static Material NoGlowMat
+    {
+        get
+        {
+            if (s_noGlowMat != null)
+                return s_noGlowMat;
+            
+            var soloButton = GetSoloButton();
+            if (soloButton == null)
+                throw new Exception("Could not find SoloButton");
+            
+            var mat = soloButton.transform.Find("Image/Image0").GetComponent<Image>().material;
+            s_noGlowMat = new Material(mat);
+            return s_noGlowMat;
+        }
+    }
+
+    private static Material? s_fogMat;
+    public static Material FogMat
+    {
+        get
+        {
+            if (s_fogMat != null)
+                return s_fogMat;
+            
+            var fogMaterial = Resources.FindObjectsOfTypeAll<Material>().First(m => m.name == "UIFogBG");
+            s_fogMat = new Material(fogMaterial);
+            return s_fogMat;
+        }
     }
 }

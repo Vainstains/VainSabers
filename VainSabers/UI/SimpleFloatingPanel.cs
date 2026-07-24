@@ -20,6 +20,7 @@ public class SimpleFloatingPanel : MonoBehaviour
         m_canvas = gameObject.AddComponent<Canvas>();
         m_canvas.renderMode = RenderMode.WorldSpace;
         m_canvas.additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord2;
+        m_canvas.sortingOrder = 10;
 
         var scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.dynamicPixelsPerUnit = 3.44f;

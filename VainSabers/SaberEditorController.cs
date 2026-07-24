@@ -55,6 +55,7 @@ internal class SaberEditorController : MonoBehaviour
             return;
         
         panel = SimpleFloatingPanel.Create(new Vector2(20, 20), new Vector3(0, 1.2f, 1.5f));
+        panel.Show();
 
         var image = panel.gameObject.AddInitChild<ImageComponent>();
         image.Color = new Color(0.5f, 0.5f, 0.6f, 1.0f);
