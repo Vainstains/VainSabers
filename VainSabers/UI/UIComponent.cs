@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using VainSabers.Helpers;
 
 namespace VainSabers.UI;
@@ -6,7 +7,9 @@ namespace VainSabers.UI;
 public class UIComponent : MonoBehaviour, IUIParent
 {
     private RectTransform m_rectTransform = null!;
+    private LayoutElement m_layoutElement = null!;
     public RectTransform RectTransform => m_rectTransform;
+    public LayoutElement LayoutElement => m_layoutElement;
     
     public Vector2 Pivot
     {
@@ -53,6 +56,7 @@ public class UIComponent : MonoBehaviour, IUIParent
     protected virtual void Init()
     {
         m_rectTransform = gameObject.RequireComponent<RectTransform>();
+        m_layoutElement = gameObject.AddComponent<LayoutElement>();
     }
 
     public T AddChild<T>() where T : UIComponent

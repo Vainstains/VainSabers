@@ -50,6 +50,15 @@ internal class MenuStateHandler : MonoBehaviour
         Plugin.Log.Info($"Toggling saber editor state: {s_modPanelState.EditorOpen}");
         ModPanelStateChanged?.Invoke(s_modPanelState);
     }
+    
+    public static void SetEditorOpen(bool open)
+    {
+        if (s_modPanelState.EditorOpen == open)
+            return;
+        s_modPanelState.EditorOpen = open;
+        Plugin.Log.Info($"Setting saber editor state: {s_modPanelState.EditorOpen}");
+        ModPanelStateChanged?.Invoke(s_modPanelState);
+    }
 
     public static void SetEditingPreset(string preset)
     {

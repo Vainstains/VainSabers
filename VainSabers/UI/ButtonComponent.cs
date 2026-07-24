@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using HMUI;
 using TMPro;
 using UnityEngine;
@@ -12,7 +11,7 @@ namespace VainSabers.UI;
 public class ButtonComponent : UIComponent, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
 {
     private ImageView m_imageView = null!;
-    private Color m_baseColor = Color.white;
+    private Color m_baseColor = new Color(0.3f, 0.5f, 0.8f);
 
     private bool m_isHovered = false;
     private bool m_isPressed = false;
@@ -63,7 +62,7 @@ public class ButtonComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
         base.Init();
         m_imageView = gameObject.RequireComponent<ImageView>();
         m_imageView.raycastTarget = true;
-        m_imageView.sprite = UIResources.RoundSprite;
+        m_imageView.sprite = UIResources.LoadSpriteFromResource("VainSabers.ui_round.png", borderRatio: 0.5f);
         m_imageView.type = Image.Type.Sliced;
         m_imageView.material = UIResources.NoGlowMat;
         UpdateState();
@@ -96,164 +95,49 @@ public class ButtonComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
     }
 }
 
-public class TextButtonComponent : ButtonComponent
+public class FieldComponent<T> : UIComponent where T : UIComponent
 {
-    private TextComponent? m_textComponent;
+    private TextComponent m_label = null!;
+    private T m_component = null!;
+    private float m_splitRatio = 0.5f;
 
-    public TextComponent Text => m_textComponent ?? null!;
+    public T Component => m_component;
 
-    protected override void UpdateState()
+    public float SplitRatio
     {
-        base.UpdateState();
-        if (m_textComponent == null)
-            return;
-        m_textComponent.Color = IsInteractable ? new Color(0.9f, 0.9f, 0.9f, 1.0f) : new Color(0.7f, 0.7f, 0.7f, 0.8f);
+        get => m_splitRatio;
+        set
+        {
+            m_splitRatio = value;
+            UpdateLayout();
+        }
     }
 
-    protected override void Init()
+    public FieldComponent<T> WithLabel(string text)
     {
-        base.Init();
-        m_textComponent = AddChild<TextComponent>().ToFill();
-        m_textComponent.Text = "Button";
-        m_textComponent.Alignment = TextAlignmentOptions.Center;
-        m_textComponent.OverflowMode = TextOverflowModes.Overflow;
-        m_textComponent.EnableWordWrapping = false;
-
-        UpdateState();
-    }
-
-    public TextButtonComponent WithText(string text)
-    {
-        if (m_textComponent == null)
-            throw new Exception("shouldnt be possible (text component not initialized)");
-        m_textComponent.Text = text;
+        m_label.Text = text;
         return this;
     }
-}
-
-public class DropdownComponent : UIComponent
-{
-    private const float RowHeight = 5f;
-
-    private ButtonComponent m_headerButton = null!;
-    private TextComponent m_label = null!;
-    private RoundRectComponent m_listBackground = null!;
-
-    private readonly List<TextButtonComponent> m_optionButtons = new();
-    private List<string> m_options = new();
-    private int m_selectedIndex = -1;
-    private bool m_isOpen = false;
-
-    public event Action<int>? OnSelectionChanged;
-
-    public IReadOnlyList<string> Options => m_options;
-
-    public int SelectedIndex
-    {
-        get => m_selectedIndex;
-        set => SetSelectedIndex(value, true);
-    }
-
-    public string? SelectedValue =>
-        m_selectedIndex >= 0 && m_selectedIndex < m_options.Count ? m_options[m_selectedIndex] : null;
-
-    public bool IsOpen => m_isOpen;
-
-    public void SetOptions(IEnumerable<string> options, int selectedIndex = 0)
-    {
-        m_options = new List<string>(options);
-        Close();
-        RebuildOptionButtons();
-        SetSelectedIndex(m_options.Count > 0 ? Mathf.Clamp(selectedIndex, 0, m_options.Count - 1) : -1, false);
-    }
-
-    public void Open()
-    {
-        if (m_isOpen || m_options.Count == 0)
-            return;
-
-        m_isOpen = true;
-        m_listBackground.gameObject.SetActive(true);
-    }
-
-    public void Close()
-    {
-        m_isOpen = false;
-        m_listBackground.gameObject.SetActive(false);
-    }
-
-    public void Toggle()
-    {
-        if (m_isOpen)
-            Close();
-        else
-            Open();
-    }
-
-    private void SetSelectedIndex(int index, bool invokeEvent)
-    {
-        if (index < -1 || index >= m_options.Count)
-            return;
-
-        m_selectedIndex = index;
-        m_label.Text = SelectedValue ?? "";
-
-        for (var i = 0; i < m_optionButtons.Count; i++)
-            m_optionButtons[i].Color = i == m_selectedIndex ? new Color(0.3f, 0.3f, 0.3f, 1f) : new Color(0.15f, 0.15f, 0.15f, 1f);
-
-        if (invokeEvent)
-            OnSelectionChanged?.Invoke(m_selectedIndex);
-    }
-
-    private void RebuildOptionButtons()
-    {
-        foreach (var btn in m_optionButtons)
-            Destroy(btn.gameObject);
-        m_optionButtons.Clear();
-
-        for (var i = 0; i < m_options.Count; i++)
-        {
-            var index = i;
-
-            var optionButton = m_listBackground.AddChild<TextButtonComponent>()
-                .ToTopEdge()
-                .Move(0, -RowHeight * i)
-                .WithText(m_options[i]);
-
-            optionButton.Pivot = new Vector2(0.5f, 1f);
-            optionButton.SizeDelta = new Vector2(0, RowHeight);
-            optionButton.Color = new Color(0.15f, 0.15f, 0.15f, 1f);
-            optionButton.OnClick += () =>
-            {
-                SetSelectedIndex(index, true);
-                Close();
-            };
-
-            m_optionButtons.Add(optionButton);
-        }
-
-        m_listBackground.SizeDelta = new Vector2(m_listBackground.SizeDelta.x, RowHeight * m_options.Count);
-    }
-
+    
     protected override void Init()
     {
         base.Init();
-
-        m_headerButton = AddChild<ButtonComponent>().ToFill();
-        m_headerButton.Color = new Color(0.15f, 0.15f, 0.15f, 1f);
-        m_headerButton.OnClick += Toggle;
-
-        m_label = m_headerButton.AddChild<TextComponent>().ToFill().Inset(1);
-        m_label.Alignment = TextAlignmentOptions.Left;
-        m_label.OverflowMode = TextOverflowModes.Ellipsis;
+        m_label = AddChild<TextComponent>();
+        m_label.Alignment = TextAlignmentOptions.TopLeft;
+        m_label.OverflowMode = TextOverflowModes.Overflow;
         m_label.EnableWordWrapping = false;
+        m_label.Color = new Color(0.9f, 0.9f, 0.9f, 1.0f);
 
-        m_listBackground = AddChild<RoundRectComponent>()
-            .ToBottomEdge()
-            .Move(0, -0.5f);
-        m_listBackground.Pivot = new Vector2(0.5f, 1f);
-        m_listBackground.Color = new Color(0.1f, 0.1f, 0.1f, 1f);
-        m_listBackground.IsRaycastTarget = true;
-        m_listBackground.gameObject.SetActive(false);
+        m_component = AddChild<T>();
+        m_component.Pivot = new Vector2(0.5f, 0.5f);
+        m_component.SizeDelta = new Vector2(0, 0);
+        
+        UpdateLayout();
+    }
+
+    private void UpdateLayout()
+    {
+        m_label.ClearOffsets().SetAnchors(new Vector2(0, 0), new Vector2(m_splitRatio, 1f)).InsetTop(0.5f);
+        m_component.ClearOffsets().SetAnchors(new Vector2(m_splitRatio, 0), new Vector2(1f, 1f));
     }
 }

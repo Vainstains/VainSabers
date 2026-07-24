@@ -18,7 +18,10 @@ public class TextComponent : UIComponent
     public string Text
     {
         get => m_textMeshPro.text;
-        set => m_textMeshPro.text = value;
+        set
+        {
+            m_textMeshPro.text = value;
+        }
     }
 
     public float FontSize
@@ -49,8 +52,10 @@ public class TextComponent : UIComponent
     {
         base.Init();
         m_textMeshPro = gameObject.RequireComponent<CurvedTextMeshPro>();
+        m_textMeshPro.font = UIResources.GameFont;
+        m_textMeshPro.fontSharedMaterial = UIResources.GameFontMaterial;
         m_textMeshPro.color = Color.white;
-        m_textMeshPro.fontSize = 4f;
+        m_textMeshPro.fontSize = 3f;
         m_textMeshPro.alignment = TextAlignmentOptions.TopLeft;
         m_textMeshPro.overflowMode = TextOverflowModes.Overflow;
         m_textMeshPro.enableWordWrapping = true;

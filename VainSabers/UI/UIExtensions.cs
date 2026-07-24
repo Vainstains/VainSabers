@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 namespace VainSabers.UI;
@@ -107,4 +108,42 @@ public static class UIExtensions
     
     public static T ToFill<T>(this T component) where T : UIComponent =>
         component.SetAnchors(Vector2.zero, Vector2.one).ClearOffsets();
+    
+
+    public static T WithPreferredWidth<T>(this T component, float value) where T : UIComponent
+    {
+        component.LayoutElement.preferredWidth = value;
+        return component;
+    }
+
+    public static T WithPreferredHeight<T>(this T component, float value) where T : UIComponent
+    {
+        component.LayoutElement.preferredHeight = value;
+        return component;
+    }
+
+    public static T WithMinimumWidth<T>(this T component, float value) where T : UIComponent
+    {
+        component.LayoutElement.minWidth = value;
+        return component;
+    }
+
+    public static T WithMinimumHeight<T>(this T component, float value) where T : UIComponent
+    {
+        component.LayoutElement.minHeight = value;
+        return component;
+    }
+
+    public static void ClearChildren(this UIComponent component, params UIComponent[] exceptions)
+    {
+        var root = component.transform;
+
+        for (int i = root.childCount - 1; i >= 0; i--)
+        {
+            var child = root.GetChild(i);
+            var isException = exceptions.Any(e => e != null && e.gameObject == child.gameObject);
+            if (!isException)
+                Object.Destroy(child.gameObject);
+        }
+    }
 }

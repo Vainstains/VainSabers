@@ -1,7 +1,9 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Rendering;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Object = UnityEngine.Object;
 
 namespace VainSabers.Sabers
 {
@@ -30,21 +32,22 @@ namespace VainSabers.Sabers
             RingVerts = ringVerts;
             RingCount = ringCount;
 
+            int vertCount = ringVerts * ringCount;
+            // Fewer than 2 rings means there's no adjacent ring pair to strip between.
+            int stripCount = Math.Max(ringCount - 1, 0);
+            int indexCount = ringVerts * stripCount * 6;
+
             TubeMesh = new Mesh
             {
-                indexFormat = ringVerts * ringCount > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16
+                indexFormat = vertCount > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16
             };
             TubeMesh.MarkDynamic();
-
-            int vertCount = ringVerts * ringCount;
-            int indexCount = ringVerts * (ringCount - 1) * 6;
 
             _vertices = new TubeVertex[vertCount];
             _indices = new int[indexCount];
 
-            // Fill index buffer
             int t = 0;
-            for (int ring = 0; ring < RingCount - 1; ring++)
+            for (int ring = 0; ring < stripCount; ring++)
             {
                 int ringStart = ring * RingVerts;
                 int nextRingStart = (ring + 1) * RingVerts;

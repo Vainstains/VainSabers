@@ -27,7 +27,7 @@ public class RoundRectComponent : UIComponent
         m_imageView = gameObject.RequireComponent<ImageView>();
         m_imageView.raycastTarget = false;
         m_imageView.color = Color.white;
-        m_imageView.sprite = UIResources.RoundSprite;
+        m_imageView.sprite = UIResources.LoadSpriteFromResource("VainSabers.ui_round.png", borderRatio: 0.5f);
         m_imageView.material = UIResources.NoGlowMat;
         m_imageView.type = Image.Type.Sliced;
     }

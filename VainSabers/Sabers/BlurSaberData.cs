@@ -166,6 +166,28 @@ public class BlurSaberData : MonoBehaviour
                 case "length":
                     currentPart.Length = vals[0];
                     break;
+
+                case "geometryMode":
+                    currentPart.GeometryHandling = Mathf.Approximately(vals[0], 1f)
+                        ? BlurSaberPart.GeometryType.Advanced
+                        : BlurSaberPart.GeometryType.Simple;
+                    break;
+                case "ring":
+                    if (vals.Length != 9)
+                    {
+                        Debug.LogWarning($"Skipping malformed ring line in {path}: '{line}'");
+                        break;
+                    }
+                    currentPart.RingParams.Add(new BlurSaberRingParams(
+                        PosAlongPart01: vals[0],
+                        Radius: vals[1],
+                        Color: new Color(vals[2], vals[3], vals[4], 1f),
+                        CustomWeight: vals[5],
+                        Glow: vals[6],
+                        Opacity: vals[7],
+                        Inverted: Mathf.Approximately(vals[8], 1f)
+                    ));
+                    break;
                 
                 case "startRad":
                     currentPart.StartRadius = vals[0];
@@ -281,6 +303,8 @@ public class BlurSaberData : MonoBehaviour
             sb.AppendLine($"rot {FormatFloat(rot.x)} {FormatFloat(rot.y)} {FormatFloat(rot.z)}");
 
             sb.AppendLine($"length {FormatFloat(part.Length)}");
+
+            sb.AppendLine($"geometryMode {(int)part.GeometryHandling}");
             
             sb.AppendLine($"hueShift {FormatFloat(part.HueShift)}");
 
@@ -317,6 +341,15 @@ public class BlurSaberData : MonoBehaviour
             sb.AppendLine($"rimPerpendicular {FormatFloat(part.RimPerpendicular)}");
             
             sb.AppendLine($"lit {(part.Lit ? "1" : "0")}");
+
+            foreach (var ring in part.RingParams)
+            {
+                sb.AppendLine(
+                    $"ring {FormatFloat(ring.PosAlongPart01)} {FormatFloat(ring.Radius)} " +
+                    $"{FormatFloat(ring.Color.r)} {FormatFloat(ring.Color.g)} {FormatFloat(ring.Color.b)} " +
+                    $"{FormatFloat(ring.CustomWeight)} {FormatFloat(ring.Glow)} {FormatFloat(ring.Opacity)} " +
+                    $"{(ring.Inverted ? "1" : "0")}");
+            }
 
             sb.AppendLine(); 
         }

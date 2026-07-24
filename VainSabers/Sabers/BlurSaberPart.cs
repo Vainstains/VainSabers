@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using VainSabers.Config;
@@ -9,14 +10,28 @@ namespace VainSabers.Sabers
     [ExecuteInEditMode]
     public class BlurSaberPart : MonoBehaviour
     {
+        public enum GeometryType
+        {
+            Simple,
+            Advanced
+        }
+
         private const int SampleCount = 16;
         private Pose[] m_poseSamples = new Pose[SampleCount];
-        private int RingCount => Math.Max((int)(Length * 8), MinimumRings) + (EnableEndCaps ? 2 : 0);
+        private int RingCount =>
+            GeometryHandling == GeometryType.Advanced
+                ? RingParams.Count
+                : Math.Max((int)(Length * 8), MinimumRings) + (EnableEndCaps ? 2 : 0);
         private int ringVerts = 0;
         
         public float RotX, RotY, RotZ;
         
         public float Length;
+
+        public GeometryType GeometryHandling = GeometryType.Simple;
+        // for advanced geometry handling, just use these directly and ignore everything else
+        public List<BlurSaberRingParams> RingParams = new();
+
         public float StartRadius;
         public float EndRadius;
 
@@ -102,6 +117,17 @@ namespace VainSabers.Sabers
                 6, 36
             );
         }
+        
+        private float GetProfileRadiusForRingVerts()
+        {
+            if (GeometryHandling != GeometryType.Advanced)
+                return Mathf.Max(StartRadius, EndRadius);
+
+            var max = 0.05f;
+            for (var i = 0; i < RingParams.Count; i++)
+                max = Mathf.Max(max, Mathf.Abs(RingParams[i].Radius));
+            return max;
+        }
 
         private void Start()
         {
@@ -120,13 +146,25 @@ namespace VainSabers.Sabers
                 return;
             }
 
-            ringVerts = ComputeRingVerts(Mathf.Max(StartRadius, EndRadius));
-            m_blurTube ??= new BlurTube(ringVerts, RingCount);
+            var ringCount = RingCount;
+            if (ringCount < 2)
+            {
+                // Fewer than two rings means there's no adjacent pair to build a quad strip
+                // between - nothing valid to render, so bail out cleanly rather than let
+                // BlurTube construct degenerate/negative-length buffers.
+                m_blurTube?.Destroy();
+                m_blurTube = null;
+                m_meshFilter.mesh = null;
+                return;
+            }
 
-            if (m_blurTube.RingVerts != ringVerts || m_blurTube.RingCount != RingCount)
+            ringVerts = ComputeRingVerts(GetProfileRadiusForRingVerts());
+            m_blurTube ??= new BlurTube(ringVerts, ringCount);
+
+            if (m_blurTube.RingVerts != ringVerts || m_blurTube.RingCount != ringCount)
             {
                 m_blurTube.Destroy();
-                m_blurTube = new BlurTube(ringVerts, RingCount);
+                m_blurTube = new BlurTube(ringVerts, ringCount);
             }
             
             EnsureRuntimeMaterial(ref m_runtimeMaterial, Material);
@@ -228,6 +266,12 @@ namespace VainSabers.Sabers
             }
 
             var idx = 0;
+
+            if (GeometryHandling == GeometryType.Advanced)
+            {
+                BuildAdvancedRings(samples, ref idx);
+                return;
+            }
             
             var startCol = Color.Lerp(StartColor, m_saberData.CustomColor, StartCustomColorWeight);
             var endCol = Color.Lerp(EndColor, m_saberData.CustomColor, EndCustomColorWeight);
@@ -263,6 +307,23 @@ namespace VainSabers.Sabers
             }
             if (EnableEndCaps)
                 BuildRing(samples, Length + EndRadius * 0.25f * EndCapExtension, endRad, true, endCol, EndOpacity, ref idx);
+        }
+        
+        void BuildAdvancedRings(Pose[] samples, ref int idx)
+        {
+            for (var i = 0; i < RingParams.Count; i++)
+            {
+                var ring = RingParams[i];
+
+                var col = Color.Lerp(ring.Color, m_saberData.CustomColor, ring.CustomWeight);
+                if (Mathf.Abs(HueShift) > 0.001f)
+                    col = ShiftHue(col, HueShift);
+                col.a = ring.Glow;
+
+                var rawRadius = ring.Inverted ? -ring.Radius : ring.Radius;
+
+                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, Mathf.Abs(rawRadius) < 0.0002, col, ring.Opacity, ref idx);
+            }
         }
         
         Pose SampleAlongCurve(Pose[] samples, float t)
@@ -365,4 +426,14 @@ namespace VainSabers.Sabers
             return Color.HSVToRGB(h, s, v);
         }
     }
+
+    public record struct BlurSaberRingParams (
+        float PosAlongPart01,
+        float Radius,
+        Color Color,
+        float CustomWeight,
+        float Glow,
+        float Opacity,
+        bool Inverted
+    );
 }

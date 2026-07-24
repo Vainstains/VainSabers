@@ -163,7 +163,7 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         }
     }
     
-    public void ToggleEditor() => MenuStateHandler.ToggleEditorOpen();
+    public void ToggleEditor() => MenuStateHandler.SetEditorOpen(true);
     
     [UIAction("CreateNewPreset")]
     private void CreateNewPreset()

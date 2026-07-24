@@ -40,7 +40,7 @@ public class SimpleFloatingPanel : MonoBehaviour, IUIParent
         transform.localScale = new Vector3(0.02f, 0.02f, 0.02f);
 
         var curvedSettings = gameObject.AddComponent<CurvedCanvasSettings>();
-        curvedSettings.SetRadius(140f);
+        curvedSettings.SetRadius(120f);
     }
 
     public void Show()

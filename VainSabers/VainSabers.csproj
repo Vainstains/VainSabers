@@ -35,7 +35,7 @@
     <ItemGroup>
         <EmbeddedResource Include="Config\Defaults\*.txt" />
         <None Remove="ui_round.png" />
-        <EmbeddedResource Include="ui_round.png" />
+        <EmbeddedResource Include="**\*.png" />
     </ItemGroup>
 
     <ItemGroup>
