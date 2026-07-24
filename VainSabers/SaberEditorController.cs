@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using VainSabers.Config;
 using VainSabers.Sabers;
@@ -100,6 +101,10 @@ class SaberEditorComponent : UIComponent
     private TextButtonComponent m_addPartButton = null!;
     private TextButtonComponent m_removePartButton = null!;
 
+    // advanced geometry
+    private int m_selectedRingIndex = 0;
+    private TextComponent m_ringIndexText = null!;
+
     private UIComponent m_partSelectRow = null!;
 
     protected override void Init()
@@ -194,6 +199,7 @@ class SaberEditorComponent : UIComponent
     private void SelectedPartChanged(int index)
     {
         m_selectedPartIndex = index;
+        m_selectedRingIndex = 0;
 
         if (index < 0)
         {
@@ -364,6 +370,7 @@ class SaberEditorComponent : UIComponent
             .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
             .WithValue(referencePart.StartCustomColorWeight).OnValueChanged += val =>
             ApplyToBothParts(part => part.StartCustomColorWeight = val);
+        if (!referencePart.Lit)
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
             .WithValue(referencePart.StartGlow).OnValueChanged += val =>
@@ -400,6 +407,7 @@ class SaberEditorComponent : UIComponent
             .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
             .WithValue(referencePart.EndCustomColorWeight).OnValueChanged += val =>
             ApplyToBothParts(part => part.EndCustomColorWeight = val);
+        if (!referencePart.Lit)
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
             .WithValue(referencePart.EndGlow).OnValueChanged += val =>
@@ -434,6 +442,218 @@ class SaberEditorComponent : UIComponent
 
     private void BuildAdvancedGeometryPanel(BlurSaberPart referencePart)
     {
-        throw new NotImplementedException();
+        if (referencePart.RingParams.Count == 0)
+        {
+            var start = new BlurSaberRingParams(
+                0f, referencePart.StartRadius, referencePart.StartColor,
+                referencePart.StartCustomColorWeight, referencePart.StartGlow,
+                referencePart.StartOpacity, referencePart.Inverted);
+            var end = new BlurSaberRingParams(
+                1f, referencePart.EndRadius, referencePart.EndColor,
+                referencePart.EndCustomColorWeight, referencePart.EndGlow,
+                referencePart.EndOpacity, referencePart.Inverted);
+            ApplyToBothParts(part =>
+            {
+                part.RingParams.Clear();
+                part.RingParams.Add(start);
+                part.RingParams.Add(end);
+            });
+            m_selectedRingIndex = 0;
+        }
+
+        if (m_selectedRingIndex >= referencePart.RingParams.Count)
+            m_selectedRingIndex = referencePart.RingParams.Count - 1;
+
+        var ringNavRow = m_geometryPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
+        var ringNavLayout = ringNavRow.AddChild<HorizontalLayoutGroupComponent>().ToFill();
+        ringNavLayout.WithSpacing(0.5f).WithPadding(0);
+        ringNavLayout.ChildControlWidth = true;
+        ringNavLayout.ChildControlHeight = true;
+        ringNavLayout.ChildForceExpandWidth = true;
+        ringNavLayout.ChildForceExpandHeight = true;
+
+        var prevBtn = ringNavLayout.AddChild<TextButtonComponent>().WithText("<");
+        prevBtn.Color = new Color(0.3f, 0.3f, 0.35f, 1f);
+        prevBtn.OnClick += () =>
+        {
+            if (m_selectedRingIndex > 0)
+            {
+                m_selectedRingIndex--;
+                RebuildPanels();
+            }
+        };
+
+        m_ringIndexText = ringNavLayout.AddChild<TextComponent>();
+        m_ringIndexText.Alignment = TextAlignmentOptions.Center;
+        m_ringIndexText.Color = new Color(0.9f, 0.9f, 0.9f, 1f);
+        m_ringIndexText.FontSize = 3.5f;
+        m_ringIndexText.Text = $"{m_selectedRingIndex + 1}/{referencePart.RingParams.Count}";
+
+        var nextBtn = ringNavLayout.AddChild<TextButtonComponent>().WithText(">");
+        nextBtn.Color = new Color(0.3f, 0.3f, 0.35f, 1f);
+        nextBtn.OnClick += () =>
+        {
+            if (m_selectedRingIndex < referencePart.RingParams.Count - 1)
+            {
+                m_selectedRingIndex++;
+                RebuildPanels();
+            }
+        };
+
+        var removeBtn = ringNavLayout.AddChild<TextButtonComponent>().WithText("-");
+        removeBtn.Color = new Color(0.6f, 0.2f, 0.2f, 1f);
+        removeBtn.OnClick += () =>
+        {
+            if (referencePart.RingParams.Count <= 1)
+                return;
+            ApplyToBothParts(part =>
+            {
+                if (m_selectedRingIndex >= part.RingParams.Count)
+                    m_selectedRingIndex = part.RingParams.Count - 1;
+                part.RingParams.RemoveAt(m_selectedRingIndex);
+            });
+            if (m_selectedRingIndex >= EditingSaber.Data.Components[m_selectedPartIndex].RingParams.Count)
+                m_selectedRingIndex = EditingSaber.Data.Components[m_selectedPartIndex].RingParams.Count - 1;
+            RebuildPanels();
+        };
+        removeBtn.IsInteractable = referencePart.RingParams.Count > 1;
+
+        var addBtn = ringNavLayout.AddChild<TextButtonComponent>().WithText("+");
+        addBtn.Color = new Color(0.2f, 0.5f, 0.2f, 1f);
+        addBtn.OnClick += () =>
+        {
+            var current = referencePart.RingParams[m_selectedRingIndex];
+            var newRing = new BlurSaberRingParams(
+                Mathf.Clamp01(current.PosAlongPart01 + 0.1f),
+                current.Radius, current.Color, current.CustomWeight,
+                current.Glow, current.Opacity, current.Inverted);
+            ApplyToBothParts(part =>
+            {
+                part.RingParams.Insert(m_selectedRingIndex + 1, newRing);
+            });
+            m_selectedRingIndex++;
+            RebuildPanels();
+        };
+
+        m_geometryPanel.Content.AddSpace(1);
+
+        var ring = referencePart.RingParams[m_selectedRingIndex];
+
+        m_geometryPanel.Content.AddSubHeader("Ring Properties");
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Position").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(ring.PosAlongPart01).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                        part.RingParams[i] = part.RingParams[i] with { PosAlongPart01 = Mathf.Clamp01(val) };
+                });
+            };
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
+            .WithValue(ring.Radius).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                        part.RingParams[i] = part.RingParams[i] with { Radius = val };
+                });
+            };
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Inverted").SetComponent<ToggleComponent>().WithValue(ring.Inverted)
+            .OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                        part.RingParams[i] = part.RingParams[i] with { Inverted = val };
+                });
+            };
+
+        m_geometryPanel.Content.AddSpace(1);
+
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(ring.Color.r).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                    {
+                        var c = part.RingParams[i].Color;
+                        part.RingParams[i] = part.RingParams[i] with { Color = new Color(val, c.g, c.b, c.a) };
+                    }
+                });
+            };
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(ring.Color.g).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                    {
+                        var c = part.RingParams[i].Color;
+                        part.RingParams[i] = part.RingParams[i] with { Color = new Color(c.r, val, c.b, c.a) };
+                    }
+                });
+            };
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(ring.Color.b).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                    {
+                        var c = part.RingParams[i].Color;
+                        part.RingParams[i] = part.RingParams[i] with { Color = new Color(c.r, c.g, val, c.a) };
+                    }
+                });
+            };
+
+        m_geometryPanel.Content.AddSpace(1);
+
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
+            .WithValue(ring.CustomWeight).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                        part.RingParams[i] = part.RingParams[i] with { CustomWeight = val };
+                });
+            };
+        if (!referencePart.Lit)
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
+            .WithValue(ring.Glow).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                        part.RingParams[i] = part.RingParams[i] with { Glow = val };
+                });
+            };
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(ring.Opacity).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                        part.RingParams[i] = part.RingParams[i] with { Opacity = val };
+                });
+            };
     }
 }
