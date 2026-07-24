@@ -150,7 +150,7 @@ public class DropdownComponent : UIComponent
         m_listBackground.gameObject.SetActive(true);
         m_blocker.IsInteractable = true;
 
-        m_arrow.RectTransform.eulerAngles = new Vector3(0f, 0f, -90f);
+        m_arrow.RectTransform.eulerAngles = new Vector3(0f, 0f, 0f);
     }
 
     public void Close()
@@ -159,7 +159,7 @@ public class DropdownComponent : UIComponent
         m_listBackground.gameObject.SetActive(false);
         m_blocker.IsInteractable = false;
 
-        m_arrow.RectTransform.eulerAngles = new Vector3(0f, 0f, 0f);
+        m_arrow.RectTransform.eulerAngles = new Vector3(0f, 0f, -90f);
     }
 
     public void Toggle()
@@ -196,11 +196,11 @@ public class DropdownComponent : UIComponent
         {
             var index = i;
             var optionButton = m_listBackground.AddChild<DropdownItemComponent>()
-                .ToTopEdge()
-                .Move(0, -RowHeight * i);
+                .ToBottomEdge()
+                .Move(0, RowHeight * i);
             optionButton.Text = m_options[i];
 
-            optionButton.Pivot = new Vector2(0.5f, 1f);
+            optionButton.Pivot = new Vector2(0.5f, 0f);
             optionButton.SizeDelta = new Vector2(0, RowHeight);
             
             optionButton.OnClick += () =>
@@ -242,9 +242,9 @@ public class DropdownComponent : UIComponent
         m_arrow.Pivot = new Vector2(0.5f, 0.5f);
         
         m_listBackground = AddChild<RoundRectComponent>()
-            .ToBottomEdge()
-            .Move(0, -0.5f);
-        m_listBackground.Pivot = new Vector2(0.5f, 1f);
+            .ToTopEdge()
+            .Move(0, 0.5f);
+        m_listBackground.Pivot = new Vector2(0.5f, 0f);
         m_listBackground.Color = new Color(0.1f, 0.1f, 0.1f, 1f);
         m_listBackground.IsRaycastTarget = true;
         m_listBackground.gameObject.SetActive(false);
@@ -252,6 +252,7 @@ public class DropdownComponent : UIComponent
         m_listCanvas = m_listBackground.gameObject.AddComponent<Canvas>();
         m_listCanvas.renderMode = RenderMode.WorldSpace;
         m_listCanvas.additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord2;
+        m_listCanvas.overrideSorting = true;
         m_listCanvas.sortingOrder = 20;
 
         var scaler = m_listBackground.gameObject.AddComponent<CanvasScaler>();

@@ -233,6 +233,7 @@ public class NumberInputComponent : UIComponent
         m_popupCanvas = m_popupBackground.gameObject.AddComponent<Canvas>();
         m_popupCanvas.renderMode = RenderMode.WorldSpace;
         m_popupCanvas.additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord2;
+        m_popupCanvas.overrideSorting = true;
         m_popupCanvas.sortingOrder = 20;
 
         var scaler = m_popupBackground.gameObject.AddComponent<CanvasScaler>();
@@ -251,9 +252,12 @@ public class NumberInputComponent : UIComponent
         popupLayout.ChildForceExpandHeight = false; // children will use their preferred heights
 
         // Display at the top of the popup
-        m_popupDisplayText = popupLayout.AddChild<TextComponent>();
-        m_popupDisplayText.LayoutElement.preferredHeight = 10f;
-        m_popupDisplayText.LayoutElement.flexibleHeight = 0;
+        var textDisplayContainer = popupLayout.AddChild<RoundRectComponent>()
+            .WithPreferredHeight(5);
+        textDisplayContainer.LayoutElement.flexibleHeight = 0;
+        textDisplayContainer.Color = new Color(0.2f, 0.2f, 0.2f, 0.7f);
+
+        m_popupDisplayText = textDisplayContainer.AddChild<TextComponent>().ToFill();
         m_popupDisplayText.Alignment = TextAlignmentOptions.Center;
         m_popupDisplayText.OverflowMode = TextOverflowModes.Overflow;
         m_popupDisplayText.EnableWordWrapping = false;
