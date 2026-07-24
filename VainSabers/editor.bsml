@@ -55,6 +55,7 @@
 
             <toggle-setting id="InvertedToggle" text="Inverted" value="PartInverted" apply-on-change="true"/>
             <toggle-setting id="UseEndCapsToggle" text="Use End Caps" value="PartUseEndCaps" apply-on-change="true"/>
+            <toggle-setting id="EnableRoundedNormalsToggle" text="Bend Normals" value="PartEnableRoundedNormals" apply-on-change="true"/>
             <slider-setting id="EndCapExtensionFactor" value="EndCapExtension" text="End Cap Extension" apply-on-change="true" min="0" max="3"/>
         </vertical>
 
@@ -72,7 +73,7 @@
                 <slider-setting id="StartColorG" value="PartStartColorG" text="Color G" apply-on-change="true" min="-1" max="1" overflow-mode="Overflow"/>
                 <slider-setting id="StartColorB" value="PartStartColorB" text="Color B" apply-on-change="true" min="-1" max="1" overflow-mode="Overflow"/>
                 <slider-setting id="StartWeight" value="PartStartCustomWeight" text="Custom Weight" apply-on-change="true" min="0" max="1" overflow-mode="Overflow"/>
-                <slider-setting id="StartGlow" value="PartStartGlow" text="Glow" apply-on-change="true" min="0" max="5" overflow-mode="Overflow"/>
+                <slider-setting id="StartGlow" value="PartStartGlow" text="Glow" apply-on-change="true" min="0" max="1.5" overflow-mode="Overflow"/>
                 <slider-setting id="StartOpacity" value="PartStartOpacity" text="Opacity" apply-on-change="true" min="0" max="1" increment="0.01" overflow-mode="Overflow"/>
             </vertical>
 
@@ -101,6 +102,10 @@
 
             <toggle-setting id="LitToggle" text="Lit" value="PartLit" apply-on-change="true"/>
             <slider-setting id="HueShift" value="PartHueShift" text="HueShift" apply-on-change="true" min="-0.5" max="0.5" increment="0.025"/>
+            
+            <slider-setting id="RimFactor" value="PartRimFactor" text="Rim Factor" apply-on-change="true" min="-2" max="2" increment="0.1"/>
+            <slider-setting id="RimPower" value="PartRimPower" text="Rim Power" apply-on-change="true" min="0.25" max="6" increment="0.25"/>
+            <slider-setting id="RimPerpendicular" value="PartRimPerpendicular" text="Rim Perpendicular" apply-on-change="true" min="0" max="1" increment="0.1"/>
 
             <slider-setting id="BlurFactor" value="PartBlurFactor" text="Blur Factor" apply-on-change="true" min="0" max="1"/>
             <slider-setting id="BlurFadeFactor" value="PartBlurFadeFactor" text="Blur Fade Factor" apply-on-change="true" min="0" max="5"/>

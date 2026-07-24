@@ -362,6 +362,13 @@ internal class SaberEditorController : MonoBehaviour
             get => m_currentPartRight?.EnableEndCaps ?? true;
             set => ApplyToBoth(p => p.EnableEndCaps = value);
         }
+
+        [UIValue("PartEnableRoundedNormals")]
+        private bool PartEnableRoundedNormals
+        {
+            get => m_currentPartRight?.EnableRoundedNormals ?? true;
+            set => ApplyToBoth(p => p.EnableRoundedNormals = value);
+        }
         
         [UIValue("EndCapExtension")]
         private float EndCapExtension
@@ -396,6 +403,27 @@ internal class SaberEditorController : MonoBehaviour
         {
             get => m_currentPartRight?.DepthOffset ?? 0f;
             set => ApplyToBoth(p => p.DepthOffset = value);
+        }
+
+        [UIValue("PartRimFactor")]
+        private float PartRimFactor
+        {
+            get => m_currentPartRight?.RimFactor ?? 0f;
+            set => ApplyToBoth(p => p.RimFactor = value);
+        }
+
+        [UIValue("PartRimPower")]
+        private float PartRimPower
+        {
+            get => m_currentPartRight?.RimPower ?? 3f;
+            set => ApplyToBoth(p => p.RimPower = value);
+        }
+
+        [UIValue("PartRimPerpendicular")]
+        private float PartRimPerpendicular
+        {
+            get => m_currentPartRight?.RimPerpendicular ?? 0f;
+            set => ApplyToBoth(p => p.RimPerpendicular = value);
         }
 
         [UIAction("#post-parse")]
@@ -438,11 +466,16 @@ internal class SaberEditorController : MonoBehaviour
         [UIComponent("BlurFactor")] private SliderSetting BlurFactor = null!;
         [UIComponent("BlurFadeFactor")] private SliderSetting BlurFadeFactor = null!;
         [UIComponent("UseEndCapsToggle")] private ToggleSetting UseEndCapsToggle = null!;
+        [UIComponent("EnableRoundedNormalsToggle")] private ToggleSetting EnableRoundedNormalsToggle = null!;
         [UIComponent("EndCapExtensionFactor")] private SliderSetting EndCapExtensionFactor = null!;
         [UIComponent("BulgeAmount")] private SliderSetting BulgeAmount = null!;
         [UIComponent("MinimumRings")] private SliderSetting MinimumRings = null!;
         [UIComponent("RenderQueueOffset")] private SliderSetting RenderQueueOffset = null!;
         [UIComponent("DepthOffset")] private SliderSetting DepthOffset = null!;
+
+        [UIComponent("RimFactor")] private SliderSetting PartRimFactorSetting = null!;
+        [UIComponent("RimPower")] private SliderSetting PartRimPowerSetting = null!;
+        [UIComponent("RimPerpendicular")] private SliderSetting PartRimPerpendicularSetting = null!;
         
 #pragma warning restore CS0649
         // Refresh all bound UI values
@@ -472,10 +505,16 @@ internal class SaberEditorController : MonoBehaviour
                 BlurFactor.Value = 1f;
                 BlurFadeFactor.Value = 1f;
                 UseEndCapsToggle.Value = true;
+                EnableRoundedNormalsToggle.Value = true;
                 BulgeAmount.Value = 0f;
                 MinimumRings.Value = 4;
                 RenderQueueOffset.Value = 0f;
                 DepthOffset.Value = 0f;
+
+                PartRimFactorSetting.Value = 0f;
+                PartRimPowerSetting.Value = 3f;
+                PartRimPerpendicularSetting.Value = 0f;
+
                 LitToggle.Value = false;
                 
                 return;
@@ -515,13 +554,27 @@ internal class SaberEditorController : MonoBehaviour
             BlurFactor.Value = part.BlurFactor;
             BlurFadeFactor.Value = part.BlurFadeFactor;
             UseEndCapsToggle.Value = part.EnableEndCaps;
+            EnableRoundedNormalsToggle.Value = part.EnableRoundedNormals;
             EndCapExtensionFactor.Value = part.EndCapExtension;
             BulgeAmount.Value = part.BulgeAmount;
             MinimumRings.Value = part.MinimumRings;
             RenderQueueOffset.Value = part.RenderQueueOffset;
             DepthOffset.Value = part.DepthOffset;
+
+            PartRimFactorSetting.Value = part.RimFactor;
+            PartRimPowerSetting.Value = part.RimPower;
+            PartRimPerpendicularSetting.Value = part.RimPerpendicular;
             
             LitToggle.Value = part.Lit;
+        }
+        
+        private string GetUniquePartName(BlurSaberData data)
+        {
+            var existing = new HashSet<string>(data.Components.Select(c => c.gameObject.name));
+            var i = 1;
+            while (existing.Contains($"Part {i}"))
+                i++;
+            return $"Part {i}";
         }
         
         [UIAction("AddNewPart")]
@@ -534,8 +587,10 @@ internal class SaberEditorController : MonoBehaviour
                 return;
 
             // Create new part on both sabers
-            var newRightPart = right.Data.AddComponent($"Part {right.Data.ComponentCount + 1}");
-            var newLeftPart = left.Data.AddComponent($"Part {left.Data.ComponentCount + 1}");
+            var newName = GetUniquePartName(right.Data);
+            
+            var newRightPart = right.Data.AddComponent(newName);
+            var newLeftPart = left.Data.AddComponent(newName);
 
             // Refresh dropdown
             UpdatePartDropDown();
@@ -559,20 +614,19 @@ internal class SaberEditorController : MonoBehaviour
 
             var rightData = right?.Data;
             var leftData = left?.Data;
-
             if (rightData == null || leftData == null)
                 return;
 
             var partRight = rightData.FindComponent(SelectedPartName);
             var partLeft = leftData.FindComponent(SelectedPartName);
 
-            // Remove from both
-            if (partRight != null)
-                rightData.RemoveComponent(partRight);
-            if (partLeft != null)
-                leftData.RemoveComponent(partLeft);
+            if (partRight != null) rightData.RemoveComponent(partRight);
+            if (partLeft != null) leftData.RemoveComponent(partLeft);
+            
+            m_currentPartRight = null;
+            m_currentPartLeft = null;
+            m_selectedPartName = string.Empty;
 
-            // Refresh dropdown and UI
             UpdatePartDropDown();
         }
         

@@ -214,6 +214,9 @@ public class BlurSaberData : MonoBehaviour
                 case "enableEndCaps":
                     currentPart.EnableEndCaps = Mathf.Approximately(vals[0], 1f);
                     break;
+                case "enableRoundedNormals":
+                    currentPart.EnableRoundedNormals = Mathf.Approximately(vals[0], 1f);
+                    break;
                 case "lookDir":
                     currentPart.LookDir = new Vector3(vals[0], vals[1], vals[2]);
                     break;
@@ -237,6 +240,16 @@ public class BlurSaberData : MonoBehaviour
                     break;
                 case "hueShift":
                     currentPart.HueShift = vals[0];
+                    break;
+
+                case "rimFactor":
+                    currentPart.RimFactor = vals[0];
+                    break;
+                case "rimPower":
+                    currentPart.RimPower = vals[0];
+                    break;
+                case "rimPerpendicular":
+                    currentPart.RimPerpendicular = vals[0];
                     break;
             }
         }
@@ -287,6 +300,7 @@ public class BlurSaberData : MonoBehaviour
             sb.AppendLine($"blur {FormatFloat(part.BlurFactor)}");
             sb.AppendLine($"blurFade {FormatFloat(part.BlurFadeFactor)}");
             sb.AppendLine($"enableEndCaps {(part.EnableEndCaps ? "1" : "0")}");
+            sb.AppendLine($"enableRoundedNormals {(part.EnableRoundedNormals ? "1" : "0")}");
             sb.AppendLine($"endCapExtension {FormatFloat(part.EndCapExtension)}");
             sb.AppendLine($"endOpacity {FormatFloat(part.EndOpacity)}");
 
@@ -297,6 +311,10 @@ public class BlurSaberData : MonoBehaviour
             sb.AppendLine($"minimumRings {part.MinimumRings}");
             sb.AppendLine($"renderQueueOffset {part.RenderQueueOffset}");
             sb.AppendLine($"depthOffset {FormatFloat(part.DepthOffset)}");
+
+            sb.AppendLine($"rimFactor {FormatFloat(part.RimFactor)}");
+            sb.AppendLine($"rimPower {FormatFloat(part.RimPower)}");
+            sb.AppendLine($"rimPerpendicular {FormatFloat(part.RimPerpendicular)}");
             
             sb.AppendLine($"lit {(part.Lit ? "1" : "0")}");
 

@@ -43,11 +43,16 @@ namespace VainSabers.Sabers
         public float BlurFadeFactor = 1;
 
         public bool EnableEndCaps = true;
+        public bool EnableRoundedNormals = true;
 
         public float EndCapExtension = 0.25f;
 
         public float BulgeAmount = 0.00f;
         public int MinimumRings = 4;
+
+        public float RimFactor = 0;
+        public float RimPower = 3;
+        public float RimPerpendicular = 0;
         
         public Vector3 LookDir = Vector3.zero;
         public bool UseLookDir = false;
@@ -136,6 +141,10 @@ namespace VainSabers.Sabers
                 
                 m_propertyBlock ??= new MaterialPropertyBlock();
                 m_propertyBlock.SetFloat("_DepthOffset", DepthOffset + (Inverted ? 0f : 0.001f));
+
+                m_propertyBlock.SetFloat("_RimFactor", RimFactor);
+                m_propertyBlock.SetFloat("_RimPower", RimPower);
+                m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
                 m_meshRenderer.SetPropertyBlock(m_propertyBlock);
             }
 
@@ -311,7 +320,9 @@ namespace VainSabers.Sabers
                 var interpSample = SampleAlongCurve(samples, tSample);
 
                 var ringCenter = interpSample.position + interpSample.forward * zPos;
-                var normal = offsetDir + avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)));
+                var normal = offsetDir;
+                if (EnableRoundedNormals)
+                    normal += avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)));
 
                 var vertexPos = ringCenter + offsetDir * (isZero ? 0 : radius);
 

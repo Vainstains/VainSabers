@@ -61,11 +61,16 @@ struct SaberFragVariables {
     float3 viewDir;
     float3 normal;
     float sweepRatio;
+    float rimFactor; 
 };
 
 #define MINIMUM_EDGE_SOFTNESS 0.05
 
 float _VainSaberBlurSoftness;
+
+float _RimFactor;
+float _RimPower;
+float _RimPerpendicular;
 
 SaberFragVariables GetCommonSaberVars(v2f vertStage)
 {
@@ -127,6 +132,25 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     commonVars.normal = (dot(vertStage.normal, vertStage.normal) > 1e-6)
                         ? normalize(vertStage.normal)
                         : float3(0,0,1);
+
+    // Rim stuff
+    float3 N = commonVars.normal;
+    float3 V = commonVars.viewDir;
+
+    float fresnelFull = 1.0 - saturate(dot(N, V));
+
+    float3 Nperp = N - blade * dot(N, blade);
+    float3 Vperp = V - blade * dot(V, blade);
+    float nPerpLenSq = dot(Nperp, Nperp);
+    float vPerpLenSq = dot(Vperp, Vperp);
+    Nperp = (nPerpLenSq > 1e-6) ? Nperp * rsqrt(nPerpLenSq) : N;
+    Vperp = (vPerpLenSq > 1e-6) ? Vperp * rsqrt(vPerpLenSq) : V;
+    float fresnelPerp = 1.0 - saturate(dot(Nperp, Vperp));
+
+    float fresnelTerm = lerp(fresnelFull, fresnelPerp, saturate(_RimPerpendicular));
+    fresnelTerm = pow(saturate(fresnelTerm), max(_RimPower, 0.0001));
+
+    commonVars.rimFactor = 1.0 + _RimFactor * fresnelTerm;
 
     return commonVars;
 }

@@ -103,7 +103,7 @@
 
             fixed4 frag(v2f i) : SV_Target
             {
-                // UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 SaberFragVariables vars = GetCommonSaberVars(i);
 
                 // Lighting
@@ -134,7 +134,7 @@
                 float3 rimFinal = rimLight + cubemapEffect;
 
                 // Combine all lighting components
-                float3 rgb = (diffuse + spec + rimFinal) * _ColorBoost;
+                float3 rgb = (diffuse + spec + rimFinal) * _ColorBoost * max(0.0, vars.rimFactor);
 
                 // Alpha controlled by blur & sweep
                 float alpha = vars.alpha;
