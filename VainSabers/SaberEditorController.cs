@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using VainSabers.Config;
@@ -45,7 +46,7 @@ internal class SaberEditorController : MonoBehaviour
         if (!state.EditorOpen)
             return;
         
-        panel = SimpleFloatingPanel.Create(new Vector2(200, 80), new Vector3(0, 1.2f, 1.5f));
+        panel = SimpleFloatingPanel.Create(new Vector2(200, 110), new Vector3(0, 1.2f, 1.5f));
         panel.Show();
 
         var editor = panel.AddChild<SaberEditorComponent>().ToFill();
@@ -268,11 +269,14 @@ class SaberEditorComponent : UIComponent
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Use Lit Shader").SetComponent<ToggleComponent>().WithValue(referencePart.Lit)
             .OnValueChanged += val =>
-            ApplyToBothParts(part => part.Lit = val);
+            {
+                ApplyToBothParts(part => part.Lit = val);
+                RebuildPanels();
+            };
 
         m_materialPanel.Content.AddSubHeader("Rim Shading");
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(-2f, 2f, 0.1f)
+            .WithLabel("Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(-3f, 3f, 0.1f).WithSensitivityCoef(0.3f)
             .WithValue(referencePart.RimFactor).OnValueChanged += val =>
             ApplyToBothParts(part => part.RimFactor = val);
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
@@ -280,28 +284,156 @@ class SaberEditorComponent : UIComponent
             .WithValue(referencePart.RimPower).OnValueChanged += val =>
             ApplyToBothParts(part => part.RimPower = val);
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Perpendicular Filter").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.1f)
+            .WithLabel("Perpendicular Filter").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.1f).WithSensitivityCoef(0.3f)
             .WithValue(referencePart.RimPerpendicular).OnValueChanged += val =>
             ApplyToBothParts(part => part.RimPerpendicular = val);
         
         m_materialPanel.Content.AddSubHeader("Blur");
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Time").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.1f)
+            .WithLabel("Time").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.1f).WithSensitivityCoef(0.3f)
             .WithValue(referencePart.BlurFactor).OnValueChanged += val =>
             ApplyToBothParts(part => part.BlurFactor = val);
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Softness").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 5f, 0.1f)
+            .WithLabel("Softness").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 5f, 0.1f).WithSensitivityCoef(0.3f)
             .WithValue(referencePart.BlurFadeFactor).OnValueChanged += val =>
             ApplyToBothParts(part => part.BlurFadeFactor = val);
 
         m_materialPanel.Content.AddSubHeader("Rendering");
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Depth Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.02f, 0.02f, 0.001f)
+            .WithLabel("Depth Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.02f, 0.02f, 0.001f).WithSensitivityCoef(0.03f)
             .WithValue(referencePart.DepthOffset).OnValueChanged += val =>
             ApplyToBothParts(part => part.DepthOffset = val);
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Queue Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-10f, 10f, 1f)
             .WithValue(referencePart.RenderQueueOffset).OnValueChanged += val =>
             ApplyToBothParts(part => part.RenderQueueOffset = Mathf.RoundToInt(val));
+        
+        // Geometry panel
+        var options = new List<string>();
+        foreach (var value in Enum.GetValues(typeof(BlurSaberPart.GeometryType)))
+            options.Add(value.ToString());
+        
+        var typeDropdown = m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Geometry Type").SetComponent<DropdownComponent>();
+        typeDropdown.SetOptions(options);
+        typeDropdown.SelectedIndex = options.IndexOf(referencePart.GeometryHandling.ToString());
+        typeDropdown.OnSelectionChanged += index =>
+        {
+            var value = Enum.Parse(typeof(BlurSaberPart.GeometryType), options[index]);
+            ApplyToBothParts(part => part.GeometryHandling = (BlurSaberPart.GeometryType)value);
+            RebuildPanels();
+        };
+
+        switch (referencePart.GeometryHandling)
+        {
+            case BlurSaberPart.GeometryType.Simple:
+                BuildSimpleGeometryPanel(referencePart);
+                break;
+            case BlurSaberPart.GeometryType.Advanced:
+                BuildAdvancedGeometryPanel(referencePart);
+                break;
+        }
+    }
+
+    private void BuildSimpleGeometryPanel(BlurSaberPart referencePart)
+    {
+        m_geometryPanel.Content.AddSubHeader("Start Properties");
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
+            .WithValue(referencePart.StartRadius).OnValueChanged += val =>
+            ApplyToBothParts(part => part.StartRadius = val);
+        
+        m_geometryPanel.Content.AddSpace(2);
+        
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(referencePart.StartColor.r).OnValueChanged += val =>
+            ApplyToBothParts(part => part.StartColor = new Color(val, part.StartColor.g, part.StartColor.b, part.StartColor.a));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(referencePart.StartColor.g).OnValueChanged += val =>
+            ApplyToBothParts(part => part.StartColor = new Color(part.StartColor.r, val, part.StartColor.b, part.StartColor.a));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(referencePart.StartColor.b).OnValueChanged += val =>
+            ApplyToBothParts(part => part.StartColor = new Color(part.StartColor.r, part.StartColor.g, val, part.StartColor.a));
+        
+        m_geometryPanel.Content.AddSpace(2);
+
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
+            .WithValue(referencePart.StartCustomColorWeight).OnValueChanged += val =>
+            ApplyToBothParts(part => part.StartCustomColorWeight = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
+            .WithValue(referencePart.StartGlow).OnValueChanged += val =>
+            ApplyToBothParts(part => part.StartGlow = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(referencePart.StartOpacity).OnValueChanged += val =>
+            ApplyToBothParts(part => part.StartOpacity = val);
+        
+        m_geometryPanel.Content.AddSubHeader("End Properties");
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
+            .WithValue(referencePart.EndRadius).OnValueChanged += val =>
+            ApplyToBothParts(part => part.EndRadius = val);
+        
+        m_geometryPanel.Content.AddSpace(2);
+        
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(referencePart.EndColor.r).OnValueChanged += val =>
+            ApplyToBothParts(part => part.EndColor = new Color(val, part.EndColor.g, part.EndColor.b, part.EndColor.a));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(referencePart.EndColor.g).OnValueChanged += val =>
+            ApplyToBothParts(part => part.EndColor = new Color(part.EndColor.r, val, part.EndColor.b, part.EndColor.a));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(referencePart.EndColor.b).OnValueChanged += val =>
+            ApplyToBothParts(part => part.EndColor = new Color(part.EndColor.r, part.EndColor.g, val, part.EndColor.a));
+        
+        m_geometryPanel.Content.AddSpace(2);
+
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
+            .WithValue(referencePart.EndCustomColorWeight).OnValueChanged += val =>
+            ApplyToBothParts(part => part.EndCustomColorWeight = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
+            .WithValue(referencePart.EndGlow).OnValueChanged += val =>
+            ApplyToBothParts(part => part.EndGlow = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(referencePart.EndOpacity).OnValueChanged += val =>
+            ApplyToBothParts(part => part.EndOpacity = val);
+        
+        m_geometryPanel.Content.AddSubHeader("Common Properties");
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Bulge Amount").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(referencePart.BulgeAmount).OnValueChanged += val =>
+            ApplyToBothParts(part => part.BulgeAmount = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Rings").SetComponent<NumberInputComponent>().WithMinMaxStep(2f, 10f, 1f)
+            .WithValue(referencePart.MinimumRings).OnValueChanged += val =>
+            ApplyToBothParts(part => part.MinimumRings = Mathf.RoundToInt(Mathf.Clamp(val, 2f, 10f)));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Inverted").SetComponent<ToggleComponent>().WithValue(referencePart.Inverted)
+            .OnValueChanged += val =>
+            ApplyToBothParts(part => part.Inverted = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Use End Caps").SetComponent<ToggleComponent>().WithValue(referencePart.EnableEndCaps)
+            .OnValueChanged += val =>
+            ApplyToBothParts(part => part.EnableEndCaps = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("End Cap Extension").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 3f, 0.01f)
+            .WithValue(referencePart.EndCapExtension).OnValueChanged += val =>
+            ApplyToBothParts(part => part.EndCapExtension = val);
+    }
+
+    private void BuildAdvancedGeometryPanel(BlurSaberPart referencePart)
+    {
+        throw new NotImplementedException();
     }
 }
