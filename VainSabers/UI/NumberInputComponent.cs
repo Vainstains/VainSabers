@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using VainSabers.Helpers;
+using VainSabers.Menu;
 using VRUIControls;
 
 namespace VainSabers.UI;
@@ -15,6 +16,7 @@ public class NumberInputComponent : UIComponent
 {
     private const float DefaultFontSize = 4f;
     private const float DefaultDragSensitivity = 0.05f;
+    private const float DragDeadZoneDegrees = 2f;
     private const float PopupWidth = 20f;
     private const float PopupHeight = 30f;
     private const float ButtonSize = 5f;
@@ -43,8 +45,12 @@ public class NumberInputComponent : UIComponent
 
     private bool m_isDragging = false;
     private bool m_isPopupOpen = false;
-    private Vector2 m_dragStartPos;
+    private bool m_dragActive = false;
+    private bool m_wasDragged = false;
+    private Transform? m_dragControllerTransform;
+    private Vector3 m_dragStartForwardXZ;
     private float m_dragStartValue;
+    private float m_deadZoneOffset;
     private string m_inputBuffer = "";
     private bool m_isTextInputMode = false;
 
@@ -193,9 +199,8 @@ public class NumberInputComponent : UIComponent
         m_headerButton.OnClick += OnHeaderClick;
 
         var dragHandler = m_headerButton.gameObject.AddComponent<DragHandlerComponent>();
-        dragHandler.OnDragStart += OnDragStart;
-        dragHandler.OnDragged += OnDrag;
-        dragHandler.OnDragEnd += OnDragEnd;
+        dragHandler.OnPointerPressed += OnDragPointerDown;
+        dragHandler.OnPointerReleased += OnDragPointerUp;
 
         // Display text inside header
         m_displayText = m_headerButton.AddChild<TextComponent>().ToFill().Inset(0.5f);
@@ -264,34 +269,63 @@ public class NumberInputComponent : UIComponent
 
     private void OnHeaderClick()
     {
+        if (m_wasDragged)
+        {
+            m_wasDragged = false;
+            return;
+        }
         TogglePopup();
     }
 
-    private void OnDragStart(PointerEventData eventData)
+    private void OnDragPointerDown(PointerEventData eventData)
     {
-        Plugin.Log.Info("Start Drag");
-        m_isDragging = true;
-        m_dragStartPos = eventData.position;
-        m_dragStartValue = m_value;
-    }
-
-    private void OnDrag(PointerEventData eventData)
-    {
-        if (!m_isDragging)
+        var controller = VRPointerManager.Instance?.ActiveTransform;
+        if (controller == null)
+        {
+            Plugin.Log.Info("DragPointerDown: no active controller");
             return;
-
-        float deltaX = eventData.position.x - m_dragStartPos.x;
-        Plugin.Log.Info($"delta x: {deltaX}");
-        float deltaValue = deltaX * m_dragSensitivity * m_stepSize;
-        Plugin.Log.Info($"delta val: {deltaValue}");
-        float newValue = m_dragStartValue + deltaValue;
-        SetValue(newValue, true);
+        }
+        
+        m_isDragging = true;
+        m_dragActive = false;
+        m_wasDragged = false;
+        m_dragControllerTransform = controller;
+        m_dragStartForwardXZ = Vector3.ProjectOnPlane(controller.forward, Vector3.up).normalized;
+        m_dragStartValue = m_value;
+        m_deadZoneOffset = 0f;
     }
 
-    private void OnDragEnd(PointerEventData eventData)
+    private void OnDragPointerUp(PointerEventData eventData)
     {
         m_isDragging = false;
-        Plugin.Log.Info("End Drag");
+        m_dragActive = false;
+        m_dragControllerTransform = null;
+    }
+
+    private void Update()
+    {
+        if (!m_isDragging || m_dragControllerTransform == null)
+            return;
+
+        Vector3 currentForwardXZ = Vector3.ProjectOnPlane(m_dragControllerTransform.forward, Vector3.up).normalized;
+        float angle = Vector3.SignedAngle(m_dragStartForwardXZ, currentForwardXZ, Vector3.up);
+
+        if (!m_dragActive)
+        {
+            if (Mathf.Abs(angle) > DragDeadZoneDegrees)
+            {
+                m_dragActive = true;
+                m_wasDragged = true;
+                m_deadZoneOffset = angle;
+            }
+        }
+
+        if (m_dragActive)
+        {
+            float effectiveAngle = angle - m_deadZoneOffset;
+            float newValue = m_dragStartValue + effectiveAngle * m_dragSensitivity;
+            SetValue(newValue, true);
+        }
     }
 
     private void UpdateDisplayText()
@@ -429,25 +463,19 @@ public class NumberInputComponent : UIComponent
         ClosePopup();
     }
     
-    private class DragHandlerComponent : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    private class DragHandlerComponent : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
     {
-        public event Action<PointerEventData>? OnDragStart;
-        public event Action<PointerEventData>? OnDragged;
-        public event Action<PointerEventData>? OnDragEnd;
+        public event Action<PointerEventData>? OnPointerPressed;
+        public event Action<PointerEventData>? OnPointerReleased;
 
-        public void OnBeginDrag(PointerEventData eventData)
+        public void OnPointerDown(PointerEventData eventData)
         {
-            OnDragStart?.Invoke(eventData);
+            OnPointerPressed?.Invoke(eventData);
         }
 
-        public void OnDrag(PointerEventData eventData)
+        public void OnPointerUp(PointerEventData eventData)
         {
-            OnDragged?.Invoke(eventData);
-        }
-
-        public void OnEndDrag(PointerEventData eventData)
-        {
-            OnDragEnd?.Invoke(eventData);
+            OnPointerReleased?.Invoke(eventData);
         }
     }
 }
