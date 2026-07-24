@@ -293,7 +293,7 @@ namespace VainSabers.Sabers
             motionDir = Vector3.ProjectOnPlane(motionDir, avgFwd).normalized;
             var plane = Vector3.Cross(motionDir, avgFwd);
 
-            var sweepRatio = dst / (1.5f * radius);
+            var sweepRatio = Config.BlurSoftness * 1.5f * dst / (1.5f * radius);
             
             if (isZero)
             {

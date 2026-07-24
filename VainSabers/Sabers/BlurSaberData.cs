@@ -275,6 +275,7 @@ public class BlurSaberData : MonoBehaviour
             sb.AppendLine($"startColor {FormatFloat(part.StartColor.r)} {FormatFloat(part.StartColor.g)} {FormatFloat(part.StartColor.b)}");
             sb.AppendLine($"startCustomWeight {FormatFloat(part.StartCustomColorWeight)}");
             sb.AppendLine($"startGlow {FormatFloat(part.StartGlow)}");
+            sb.AppendLine($"startOpacity {FormatFloat(part.StartOpacity)}");
 
             sb.AppendLine($"endRad {FormatFloat(part.EndRadius)}");
             sb.AppendLine($"endColor {FormatFloat(part.EndColor.r)} {FormatFloat(part.EndColor.g)} {FormatFloat(part.EndColor.b)}");

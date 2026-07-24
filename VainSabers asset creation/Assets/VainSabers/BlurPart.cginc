@@ -65,7 +65,7 @@ struct SaberFragVariables {
 
 #define MINIMUM_EDGE_SOFTNESS 0.05
 
-
+float _VainSaberBlurSoftness;
 
 SaberFragVariables GetCommonSaberVars(v2f vertStage)
 {
@@ -87,7 +87,7 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float3 viewDir = (viewDeltaLenSq > 1e-6) ? normalize(viewDelta) : float3(0,0,1);
 
     // Sweep factor
-    float sweepFactor = vertStage.uv.y;
+    float sweepFactor = vertStage.uv.y * 1.5 * _VainSaberBlurSoftness;
 
     // Distance to edge
     float distanceToEdge = min(vertStage.uv.x * 2.0, 2.0 - 2.0 * vertStage.uv.x);
@@ -99,10 +99,13 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
                          ? normalize(vertStage.planeNormal.xyz)
                          : float3(0,0,1);
 
-    // Blur strength (avoid pow of 0)
     float3 blade = normalize(vertStage.bladeDir);
-    float3 viewDirTangent = normalize(viewDir - blade * dot(viewDir, blade));
-    float blurStrength = saturate(2*abs(dot(planeNormal, viewDirTangent))-0.3);
+    float3 motionDirRaw = cross(blade, planeNormal);
+    float3 motionDir = (dot(motionDirRaw, motionDirRaw) > 1e-6)
+                       ? normalize(motionDirRaw)
+                       : float3(0,0,1);
+                       
+    float blurStrength = saturate(1.3 - 1.5 * abs(dot(motionDir, viewDir)));
     
     // Build return vars
     SaberFragVariables commonVars;
@@ -112,12 +115,12 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
 
     // Alpha calculation with clamp
     float denom = max(sweepFactor, 0.01);
-    commonVars.alpha = saturate(distanceToEdge * distanceToEdge * distanceToEdge / (1.4 * denom));
-    commonVars.alpha = lerp(1.0, commonVars.alpha, blurStrength);
+    commonVars.alpha = saturate(distanceToEdge * distanceToEdge / (1.9 * denom));
+    commonVars.alpha = 1.0 - blurStrength * (commonVars.alpha - 1.0) * (commonVars.alpha - 1.0);
     commonVars.alpha /= denom + 1;
     commonVars.alpha *= 1.1;
     commonVars.alpha = saturate(commonVars.alpha);
-    commonVars.alpha *= vertStage.bladeDir.w;
+    commonVars.alpha *= pow(vertStage.bladeDir.w, 1.5); // looks better with ^1.5 i think
     commonVars.alpha = saturate(commonVars.alpha);
     // Safe normals
     commonVars.viewDir = viewDir;

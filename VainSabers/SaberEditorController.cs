@@ -509,7 +509,7 @@ internal class SaberEditorController : MonoBehaviour
             EndColorB.Value = part.EndColor.b;
             EndWeight.Value = part.EndCustomColorWeight;
             EndGlow.Value = part.EndGlow;
-            StartOpacity.Value = part.StartOpacity;
+            EndOpacity.Value = part.EndOpacity;
 
             InvertedToggle.Value = part.Inverted;
             BlurFactor.Value = part.BlurFactor;

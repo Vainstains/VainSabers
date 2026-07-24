@@ -83,7 +83,7 @@ namespace VainSabers.Sabers
             v.position = pos;
             v.normal = normal;
             v.tangent = new Vector4(planeNormal.x, planeNormal.y, planeNormal.z, 0);
-            v.uv = new Vector2(sweepCoordinate, Mathf.Clamp01((sweepRatio - 0.7f) * 0.02f));
+            v.uv = new Vector2(sweepCoordinate, Mathf.Clamp((sweepRatio - 0.7f) * 0.01f,0.0f, 5.0f));
             v.bladeDir = new Vector4(bladeDir.x, bladeDir.y, bladeDir.z, opacity);
             v.color = color;
         }
