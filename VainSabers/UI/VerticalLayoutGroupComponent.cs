@@ -1,3 +1,5 @@
+using TMPro;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace VainSabers.UI;
@@ -100,4 +102,23 @@ public class VerticalLayoutGroupComponent : UIComponent
 
     public VerticalLayoutGroupComponent WithPadding(int value) =>
         WithTopPadding(value).WithBottomPadding(value).WithLeftPadding(value).WithRightPadding(value);
+    
+    public UIComponent AddSpace(float value)
+    {
+        var child = AddChild<UIComponent>();
+        child.LayoutElement.preferredHeight = value;
+        return child;
+    }
+
+    public UIComponent AddSubHeader(string text)
+    {
+        var child = AddChild<UIComponent>();
+        child.LayoutElement.preferredHeight = 4;
+        var textElement = child.AddChild<TextComponent>().InsetTop(1);
+        textElement.Alignment = TextAlignmentOptions.Center;
+        textElement.FontSize = 3.0f;
+        textElement.Color = new Color(0.7f, 0.7f, 0.7f, 0.8f);
+        textElement.Text = text;
+        return child;
+    }
 }

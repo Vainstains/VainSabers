@@ -15,7 +15,7 @@ public class SubPanelComponent : UIComponent
         set => m_label.Text = value;
     }
 
-    public UIComponent Content => m_layout;
+    public VerticalLayoutGroupComponent Content => m_layout;
 
     protected override void Init()
     {

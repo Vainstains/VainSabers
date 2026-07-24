@@ -15,6 +15,7 @@ public class ButtonComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
 
     private bool m_isHovered = false;
     private bool m_isPressed = false;
+    private bool m_instantClick = true;
 
     public bool IsInteractable
     {
@@ -22,6 +23,16 @@ public class ButtonComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
         set
         {
             m_imageView.raycastTarget = value;
+            UpdateState();
+        }
+    }
+    
+    public bool InstantClick
+    {
+        get => m_instantClick;
+        set
+        {
+            m_instantClick = value;
             UpdateState();
         }
     }
@@ -84,24 +95,26 @@ public class ButtonComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
     {
         m_isPressed = true;
         UpdateState();
-
-        OnClick?.Invoke();
+        if (m_instantClick)
+            OnClick?.Invoke();
     }
 
     public void OnPointerUp(PointerEventData eventData)
     {
         m_isPressed = false;
         UpdateState();
+        if (!m_instantClick)
+            OnClick?.Invoke();
     }
 }
 
-public class FieldComponent<T> : UIComponent where T : UIComponent
+public class FieldComponent : UIComponent
 {
     private TextComponent m_label = null!;
-    private T m_component = null!;
+    private UIComponent? m_component;
     private float m_splitRatio = 0.5f;
 
-    public T Component => m_component;
+    public UIComponent? Component => m_component;
 
     public float SplitRatio
     {
@@ -113,9 +126,23 @@ public class FieldComponent<T> : UIComponent where T : UIComponent
         }
     }
 
-    public FieldComponent<T> WithLabel(string text)
+    public FieldComponent WithLabel(string text)
     {
         m_label.Text = text;
+        return this;
+    }
+
+    public T SetComponent<T>() where T : UIComponent
+    {
+        m_component = AddChild<T>();
+        UpdateLayout();
+        return (T)m_component;
+    }
+
+    public FieldComponent WithSplitRatio(float value)
+    {
+        m_splitRatio = value;
+        UpdateLayout();
         return this;
     }
     
@@ -127,16 +154,14 @@ public class FieldComponent<T> : UIComponent where T : UIComponent
         m_label.OverflowMode = TextOverflowModes.Overflow;
         m_label.EnableWordWrapping = false;
         m_label.Color = new Color(0.9f, 0.9f, 0.9f, 1.0f);
-
-        m_component = AddChild<T>();
-        m_component.Pivot = new Vector2(0.5f, 0.5f);
-        m_component.SizeDelta = new Vector2(0, 0);
         
         UpdateLayout();
     }
 
     private void UpdateLayout()
     {
+        if (m_component == null)
+            return;
         m_label.ClearOffsets().SetAnchors(new Vector2(0, 0), new Vector2(m_splitRatio, 1f)).InsetTop(0.5f);
         m_component.ClearOffsets().SetAnchors(new Vector2(m_splitRatio, 0), new Vector2(1f, 1f));
     }

@@ -79,6 +79,14 @@ class SaberEditorComponent : UIComponent
         action(MenuStateHandler.Sabers.left);
     }
 
+    private void ApplyToBothParts(Action<BlurSaberPart> action)
+    {
+        if (m_selectedPartIndex < 0)
+            return;
+        action(MenuStateHandler.Sabers.right.Data.Components[m_selectedPartIndex]);
+        action(MenuStateHandler.Sabers.left.Data.Components[m_selectedPartIndex]);
+    }
+
     private BlurSaber EditingSaber => MenuStateHandler.Sabers.right;
     
     // panels
@@ -206,6 +214,47 @@ class SaberEditorComponent : UIComponent
 
     private void RebuildPanels()
     {
+        if (m_selectedPartIndex < 0)
+            return;
         
+        var referencePart = EditingSaber.Data.Components[m_selectedPartIndex];
+        
+        m_partPanel.Content.AddSubHeader("Position");
+        m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(referencePart.transform.localPosition.x).OnValueChanged += val =>
+            ApplyToBothParts(part => 
+            part.transform.localPosition = part.transform.localPosition with { x = val });
+        m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(referencePart.transform.localPosition.y).OnValueChanged += val =>
+            ApplyToBothParts(part => 
+            part.transform.localPosition = part.transform.localPosition with { y = val });
+        m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithValue(referencePart.transform.localPosition.z).OnValueChanged += val =>
+            ApplyToBothParts(part =>     
+            part.transform.localPosition = part.transform.localPosition with { z = val });
+        
+        m_partPanel.Content.AddSubHeader("Rotation");
+        m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 5f)
+            .WithValue(referencePart.RotX).OnValueChanged += val =>
+            ApplyToBothParts(part => part.RotX = val);
+        m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 5f)
+            .WithValue(referencePart.RotY).OnValueChanged += val =>
+            ApplyToBothParts(part => part.RotY = val);
+        m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 5f)
+            .WithValue(referencePart.RotZ).OnValueChanged += val =>
+            ApplyToBothParts(part => part.RotZ = val);
+        
+        m_partPanel.Content.AddSubHeader("Geometry");
+        m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Length").SetComponent<NumberInputComponent>()
+            .WithMinMaxStep(0.01f, 1f, 0.005f)
+            .WithValue(referencePart.Length).OnValueChanged += val =>
+            ApplyToBothParts(part => part.Length = val);
     }
 }
