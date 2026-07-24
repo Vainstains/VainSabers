@@ -205,20 +205,22 @@ class SaberEditorComponent : UIComponent
             m_materialPanel.Title = $"{EditingSaber.Data.Components[index].gameObject.name} : Material";
         }
 
-        m_partPanel.Content.ClearChildren(m_partSelectRow);
-        m_geometryPanel.Content.ClearChildren();
-        m_materialPanel.Content.ClearChildren();
-
         RebuildPanels();
     }
 
     private void RebuildPanels()
     {
+        m_partPanel.Content.ClearChildren(m_partSelectRow);
+        m_geometryPanel.Content.ClearChildren();
+        m_materialPanel.Content.ClearChildren();
+
         if (m_selectedPartIndex < 0)
             return;
         
         var referencePart = EditingSaber.Data.Components[m_selectedPartIndex];
         
+        // Part panel
+
         m_partPanel.Content.AddSubHeader("Position");
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
@@ -256,5 +258,50 @@ class SaberEditorComponent : UIComponent
             .WithMinMaxStep(0.01f, 1f, 0.005f)
             .WithValue(referencePart.Length).OnValueChanged += val =>
             ApplyToBothParts(part => part.Length = val);
+        
+        // Material panel
+        m_materialPanel.Content.AddSubHeader("General");
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Hue Shift").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.5f, 0.5f, 0.025f)
+            .WithValue(referencePart.HueShift).OnValueChanged += val =>
+            ApplyToBothParts(part => part.HueShift = val);
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Use Lit Shader").SetComponent<ToggleComponent>().WithValue(referencePart.Lit)
+            .OnValueChanged += val =>
+            ApplyToBothParts(part => part.Lit = val);
+
+        m_materialPanel.Content.AddSubHeader("Rim Shading");
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(-2f, 2f, 0.1f)
+            .WithValue(referencePart.RimFactor).OnValueChanged += val =>
+            ApplyToBothParts(part => part.RimFactor = val);
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Falloff Power").SetComponent<NumberInputComponent>().WithMinMaxStep(0.25f, 6f, 0.25f)
+            .WithValue(referencePart.RimPower).OnValueChanged += val =>
+            ApplyToBothParts(part => part.RimPower = val);
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Perpendicular Filter").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.1f)
+            .WithValue(referencePart.RimPerpendicular).OnValueChanged += val =>
+            ApplyToBothParts(part => part.RimPerpendicular = val);
+        
+        m_materialPanel.Content.AddSubHeader("Blur");
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Time").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.1f)
+            .WithValue(referencePart.BlurFactor).OnValueChanged += val =>
+            ApplyToBothParts(part => part.BlurFactor = val);
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Softness").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 5f, 0.1f)
+            .WithValue(referencePart.BlurFadeFactor).OnValueChanged += val =>
+            ApplyToBothParts(part => part.BlurFadeFactor = val);
+
+        m_materialPanel.Content.AddSubHeader("Rendering");
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Depth Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.02f, 0.02f, 0.001f)
+            .WithValue(referencePart.DepthOffset).OnValueChanged += val =>
+            ApplyToBothParts(part => part.DepthOffset = val);
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Queue Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-10f, 10f, 1f)
+            .WithValue(referencePart.RenderQueueOffset).OnValueChanged += val =>
+            ApplyToBothParts(part => part.RenderQueueOffset = Mathf.RoundToInt(val));
     }
 }

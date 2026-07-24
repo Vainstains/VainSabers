@@ -168,4 +168,11 @@ public class ToggleComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
         m_switchInner.SizeDelta = new Vector2(height - 2, height - 2);
         return this;
     }
+
+    public ToggleComponent WithValue(bool value)
+    {
+        m_isOn = value;
+        UpdateVisuals();
+        return this;
+    }
 }
