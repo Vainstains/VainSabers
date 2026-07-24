@@ -238,15 +238,15 @@ class SaberEditorComponent : UIComponent
         
         m_partPanel.Content.AddSubHeader("Rotation");
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 5f)
+            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 1f).WithSensitivityCoef(45)
             .WithValue(referencePart.RotX).OnValueChanged += val =>
             ApplyToBothParts(part => part.RotX = val);
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 5f)
+            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 1f).WithSensitivityCoef(45)
             .WithValue(referencePart.RotY).OnValueChanged += val =>
             ApplyToBothParts(part => part.RotY = val);
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 5f)
+            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 1f).WithSensitivityCoef(45)
             .WithValue(referencePart.RotZ).OnValueChanged += val =>
             ApplyToBothParts(part => part.RotZ = val);
         

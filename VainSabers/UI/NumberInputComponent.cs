@@ -32,7 +32,6 @@ public class NumberInputComponent : UIComponent
     private readonly List<ButtonComponent> m_numpadButtons = new();
     private TextComponent m_popupDisplayText = null!;
     private ButtonComponent m_okButton = null!;
-    private ButtonComponent m_cancelButton = null!;
     private VerticalLayoutGroupComponent m_rowsContainer = null!;
 
     private float m_value = 0f;
@@ -152,6 +151,12 @@ public class NumberInputComponent : UIComponent
         SetValue(value, false);
         return this;
     }
+    
+    public NumberInputComponent WithSensitivityCoef(float coef)
+    {
+        DragSensitivity *= coef;
+        return this;
+    }
 
     public void OpenPopup()
     {
@@ -160,7 +165,8 @@ public class NumberInputComponent : UIComponent
 
         m_isPopupOpen = true;
         m_isTextInputMode = true;
-        m_inputBuffer = m_value.ToString(m_formatString);
+        m_inputBuffer = "";
+        m_popupDisplayText.Text = m_inputBuffer;
 
         BuildNumpad();
         m_popupBackground.gameObject.SetActive(true);
@@ -217,9 +223,9 @@ public class NumberInputComponent : UIComponent
         m_popupBlocker.IsInteractable = false;
 
         // Popup background – centered above the header
-        m_popupBackground = AddChild<RoundRectComponent>().ToCenter().Move(0, 30f);
+        m_popupBackground = AddChild<RoundRectComponent>().ToBottomCenter().Move(0, PopupHeight * 0.5f);
         m_popupBackground.SizeDelta = new Vector2(PopupWidth, PopupHeight);
-        m_popupBackground.Color = new Color(0.1f, 0.1f, 0.1f, 0.95f);
+        m_popupBackground.Color = new Color(0.07f, 0.07f, 0.07f, 1.0f);
         m_popupBackground.IsRaycastTarget = true;
         m_popupBackground.gameObject.SetActive(false);
 
@@ -357,9 +363,9 @@ public class NumberInputComponent : UIComponent
         
         m_rowsContainer.ClearChildren();
 
-        string[] rows = { "123", "456", "789", "0<" };
+        string[] digitRows = { "123", "456", "789" };
 
-        foreach (string row in rows)
+        foreach (string row in digitRows)
         {
             var rowLayout = m_rowsContainer.AddChild<HorizontalLayoutGroupComponent>();
             rowLayout.LayoutElement.preferredHeight = ButtonSize;
@@ -379,46 +385,40 @@ public class NumberInputComponent : UIComponent
                 btnText.Color = new Color(0.95f, 0.95f, 0.95f, 1f);
                 btnText.FontSize = 3.5f;
 
-                if (c == '<')
-                {
-                    btnText.Text = "<";
-                    btn.OnClick += OnBackspaceClick;
-                }
-                else
-                {
-                    btnText.Text = c.ToString();
-                    char digit = c;
-                    btn.OnClick += () => OnDigitClick(digit);
-                }
+                btnText.Text = c.ToString();
+                char digit = c;
+                btn.OnClick += () => OnDigitClick(digit);
 
                 m_numpadButtons.Add(btn);
             }
         }
-        
-        var okCancelRow = m_rowsContainer.AddChild<HorizontalLayoutGroupComponent>();
-        okCancelRow.LayoutElement.preferredHeight = ButtonSize;
-        okCancelRow.ChildControlWidth = true;
-        okCancelRow.ChildControlHeight = true;
-        okCancelRow.ChildForceExpandWidth = true;
-        okCancelRow.ChildForceExpandHeight = true;
-        okCancelRow.WithSpacing(ButtonSpacing);
-        okCancelRow.WithPadding(0);
-        
-        m_cancelButton = okCancelRow.AddChild<ButtonComponent>();
-        m_cancelButton.Color = new Color(0.5f, 0.2f, 0.2f, 1f);
-        var cancelText = m_cancelButton.AddChild<TextComponent>().ToFill().Inset(0.5f);
-        cancelText.Alignment = TextAlignmentOptions.Center;
-        cancelText.Color = Color.white;
-        cancelText.FontSize = 3f;
-        cancelText.Text = "X";
-        m_cancelButton.OnClick += () =>
-        {
-            m_inputBuffer = m_value.ToString(m_formatString);
-            m_popupDisplayText.Text = m_inputBuffer;
-            ClosePopup();
-        };
-        
-        m_okButton = okCancelRow.AddChild<ButtonComponent>();
+
+        var specialRow = m_rowsContainer.AddChild<HorizontalLayoutGroupComponent>();
+        specialRow.LayoutElement.preferredHeight = ButtonSize;
+        specialRow.ChildControlWidth = true;
+        specialRow.ChildControlHeight = true;
+        specialRow.ChildForceExpandWidth = true;
+        specialRow.ChildForceExpandHeight = true;
+        specialRow.WithSpacing(ButtonSpacing);
+        specialRow.WithPadding(0);
+
+        AddNumpadButton(specialRow, "~", OnSignToggleClick);
+        AddNumpadButton(specialRow, "0", () => OnDigitClick('0'));
+        AddNumpadButton(specialRow, ".", OnDecimalClick);
+
+        var bottomRow = m_rowsContainer.AddChild<HorizontalLayoutGroupComponent>();
+        bottomRow.LayoutElement.preferredHeight = ButtonSize;
+        bottomRow.ChildControlWidth = true;
+        bottomRow.ChildControlHeight = true;
+        bottomRow.ChildForceExpandWidth = true;
+        bottomRow.ChildForceExpandHeight = true;
+        bottomRow.WithSpacing(ButtonSpacing);
+        bottomRow.WithPadding(0);
+
+        AddNumpadButton(bottomRow, "<", OnBackspaceClick);
+
+        m_okButton = bottomRow.AddChild<ButtonComponent>();
+        m_okButton.LayoutElement.preferredWidth = ButtonSize * 2 + ButtonSpacing;
         m_okButton.Color = new Color(0.2f, 0.5f, 0.2f, 1f);
         var okText = m_okButton.AddChild<TextComponent>().ToFill().Inset(0.5f);
         okText.Alignment = TextAlignmentOptions.Center;
@@ -426,6 +426,19 @@ public class NumberInputComponent : UIComponent
         okText.FontSize = 3f;
         okText.Text = "OK";
         m_okButton.OnClick += OnOkClick;
+    }
+
+    private void AddNumpadButton(HorizontalLayoutGroupComponent row, string label, Action onClick)
+    {
+        var btn = row.AddChild<ButtonComponent>();
+        btn.Color = new Color(0.2f, 0.2f, 0.25f, 1f);
+        var btnText = btn.AddChild<TextComponent>().ToFill().Inset(0.5f);
+        btnText.Alignment = TextAlignmentOptions.Center;
+        btnText.Color = new Color(0.95f, 0.95f, 0.95f, 1f);
+        btnText.FontSize = 3.5f;
+        btnText.Text = label;
+        btn.OnClick += onClick;
+        m_numpadButtons.Add(btn);
     }
 
     private void OnDigitClick(char digit)
@@ -440,6 +453,39 @@ public class NumberInputComponent : UIComponent
         else
             m_inputBuffer += digit;
 
+        m_popupDisplayText.Text = m_inputBuffer;
+    }
+
+    private void OnSignToggleClick()
+    {
+        if (string.IsNullOrEmpty(m_inputBuffer) || m_inputBuffer == "0")
+        {
+            m_inputBuffer = "-";
+        }
+        else if (m_inputBuffer.StartsWith('-'))
+        {
+            m_inputBuffer = m_inputBuffer[1..];
+        }
+        else
+        {
+            m_inputBuffer = "-" + m_inputBuffer;
+        }
+        m_popupDisplayText.Text = m_inputBuffer;
+    }
+
+    private void OnDecimalClick()
+    {
+        if (m_inputBuffer.Length >= 10)
+            return;
+
+        if (string.IsNullOrEmpty(m_inputBuffer) || m_inputBuffer == "-")
+        {
+            m_inputBuffer = m_inputBuffer == "-" ? "-0." : "0.";
+        }
+        else if (!m_inputBuffer.Contains('.'))
+        {
+            m_inputBuffer += '.';
+        }
         m_popupDisplayText.Text = m_inputBuffer;
     }
 
