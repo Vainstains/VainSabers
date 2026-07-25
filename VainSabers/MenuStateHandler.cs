@@ -30,6 +30,7 @@ internal class MenuStateHandler : MonoBehaviour
     }
     
     public static event Action<ModPanelState> ModPanelStateChanged = null!;
+    public static event Action? PresetListChanged = null!;
     
     private static ModPanelState s_modPanelState = new ModPanelState(false, false, "");
     
@@ -64,5 +65,10 @@ internal class MenuStateHandler : MonoBehaviour
     {
         s_modPanelState.EditingPreset = preset;
         ModPanelStateChanged?.Invoke(s_modPanelState);
+    }
+
+    public static void NotifyPresetListChanged()
+    {
+        PresetListChanged?.Invoke();
     }
 }

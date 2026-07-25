@@ -54,6 +54,7 @@ internal class SaberEditorController : MonoBehaviour
 
         var editor = panel.AddChild<SaberEditorComponent>().ToFill();
         var editingPreset = string.IsNullOrEmpty(state.EditingPreset) ? config.CurrentSaber : state.EditingPreset;
+        editor.ConfigTitle = $"Config : {editingPreset}";
         editor.OnSave += () =>
         {
             Plugin.Log.Info("Saving and closing editor");
@@ -83,6 +84,7 @@ internal class SaberEditorController : MonoBehaviour
                 File.Delete(path);
             MenuStateHandler.SetEditingPreset("");
             config.CurrentSaber = "";
+            MenuStateHandler.NotifyPresetListChanged();
             MenuStateHandler.SetEditorOpen(false);
         };
         editor.OnRename += newName =>
@@ -95,7 +97,9 @@ internal class SaberEditorController : MonoBehaviour
                 File.Move(oldPath, newPath);
                 editingPreset = newName;
                 config.CurrentSaber = newName;
+                editor.ConfigTitle = $"Config : {newName}";
                 MenuStateHandler.SetEditingPreset(newName);
+                MenuStateHandler.NotifyPresetListChanged();
             }
         };
     }
@@ -115,6 +119,12 @@ class SaberEditorComponent : UIComponent
     public event Action? OnRevert;
     public event Action? OnDelete;
     public event Action<string>? OnRename;
+
+    public string ConfigTitle
+    {
+        get => m_configPanel.Title;
+        set => m_configPanel.Title = value;
+    }
 
     private int m_selectedPartIndex = -1;
 

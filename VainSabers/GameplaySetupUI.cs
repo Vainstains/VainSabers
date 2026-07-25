@@ -31,14 +31,23 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
     {
         GameplaySetup.Instance.AddTab(TabName, "VainSabers.settings.bsml", this);
         
+        MenuStateHandler.PresetListChanged += OnPresetListChanged;
         UpdatePresetDropdown();
         m_menuSaberManager.Update(m_config.CurrentSaber);
     }
     
     public void Dispose()
     {
+        MenuStateHandler.PresetListChanged -= OnPresetListChanged;
         if (GameplaySetup.Instance != null)
             GameplaySetup.Instance.RemoveTab(TabName);
+    }
+
+    private void OnPresetListChanged()
+    {
+        UpdatePresetDropdown();
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedPreset)));
+        m_menuSaberManager.Update(m_config.CurrentSaber);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
