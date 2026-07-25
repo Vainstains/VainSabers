@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using TMPro;
 using UnityEngine;
@@ -73,15 +74,42 @@ internal class SaberEditorController : MonoBehaviour
             MenuStateHandler.SetEditorOpen(false);
             MenuStateHandler.SetEditorOpen(true);
         };
+        editor.OnDelete += () =>
+        {
+            Plugin.Log.Info($"Deleting preset: {editingPreset}");
+            var path = ConfigUtil.GetSaberProfile(editingPreset);
+            if (File.Exists(path))
+                File.Delete(path);
+            MenuStateHandler.SetEditingPreset("");
+            config.CurrentSaber = "";
+            MenuStateHandler.SetEditorOpen(false);
+        };
+        editor.OnRename += newName =>
+        {
+            Plugin.Log.Info($"Renaming preset: {editingPreset} -> {newName}");
+            var oldPath = ConfigUtil.GetSaberProfile(editingPreset);
+            var newPath = ConfigUtil.GetSaberProfile(newName);
+            if (File.Exists(oldPath) && !File.Exists(newPath))
+            {
+                File.Move(oldPath, newPath);
+                editingPreset = newName;
+                config.CurrentSaber = newName;
+                MenuStateHandler.SetEditingPreset(newName);
+            }
+        };
     }
 }
 
 class SaberEditorComponent : UIComponent
 {
     private TextButtonComponent m_saveButton = null!;
+    private TextButtonComponent m_deleteButton = null!;
+    private TextInputComponent m_renameInput = null!;
 
     public event Action? OnSave;
     public event Action? OnRevert;
+    public event Action? OnDelete;
+    public event Action<string>? OnRename;
 
     private int m_selectedPartIndex = -1;
 
@@ -146,6 +174,17 @@ class SaberEditorComponent : UIComponent
         m_revertButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Revert");
         m_revertButton.OnClick += () => OnRevert?.Invoke();
         m_revertButton.Color = new Color(0.6f, 0.5f, 0.2f, 1.0f);
+
+        m_deleteButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Delete");
+        m_deleteButton.OnClick += () => OnDelete?.Invoke();
+        m_deleteButton.Color = new Color(0.7f, 0.15f, 0.15f, 1.0f);
+
+        m_renameInput = configContent.AddChild<TextInputComponent>().WithPreferredHeight(4);
+        m_renameInput.OnValueChanged += name =>
+        {
+            if (!string.IsNullOrWhiteSpace(name))
+                OnRename?.Invoke(name);
+        };
 
         m_partPanel = leftColumn.AddChild<SubPanelComponent>().WithLabel("Part");
         m_partPanel.LayoutElement.flexibleHeight = 3;
@@ -294,17 +333,17 @@ class SaberEditorComponent : UIComponent
 
         m_partPanel.Content.AddSubHeader("Position");
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
             .WithValue(referencePart.transform.localPosition.x).OnValueChanged += val =>
             ApplyToBothParts(part => 
             part.transform.localPosition = part.transform.localPosition with { x = val });
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
             .WithValue(referencePart.transform.localPosition.y).OnValueChanged += val =>
             ApplyToBothParts(part => 
             part.transform.localPosition = part.transform.localPosition with { y = val });
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
             .WithValue(referencePart.transform.localPosition.z).OnValueChanged += val =>
             ApplyToBothParts(part =>     
             part.transform.localPosition = part.transform.localPosition with { z = val });
