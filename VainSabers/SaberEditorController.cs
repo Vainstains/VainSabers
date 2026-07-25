@@ -51,7 +51,7 @@ internal class SaberEditorController : MonoBehaviour
         panel.Show();
 
         var editor = panel.AddChild<SaberEditorComponent>().ToFill();
-        var editingPreset = state.EditingPreset;
+        var editingPreset = string.IsNullOrEmpty(state.EditingPreset) ? config.CurrentSaber : state.EditingPreset;
         editor.OnSave += () =>
         {
             Plugin.Log.Info("Saving and closing editor");
