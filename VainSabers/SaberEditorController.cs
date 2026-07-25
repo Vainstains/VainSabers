@@ -323,7 +323,7 @@ class SaberEditorComponent : UIComponent
         m_partPanel.Content.AddSubHeader("Geometry");
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Length").SetComponent<NumberInputComponent>()
-            .WithMinMaxStep(0.01f, 1f, 0.005f)
+            .WithMinMaxStep(0.001f, 1f, 0.001f)
             .WithValue(referencePart.Length).OnValueChanged += val =>
             ApplyToBothParts(part => part.Length = val);
         
