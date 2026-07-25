@@ -264,8 +264,8 @@ public class TextInputComponent : UIComponent
                 btnText.Color = new Color(0.95f, 0.95f, 0.95f, 1f);
                 btnText.FontSize = 3f;
                 btnText.Text = label;
-                char capturedInput = input;
-                btn.OnClick += () => OnCharacterClick(capturedInput);
+                var capturedDef = keyDef;
+                btn.OnClick += () => OnCharacterClick(m_shift ? capturedDef.InputShifted : capturedDef.InputNormal);
                 m_keyButtons.Add(new KeyButtonInfo(keyDef, btn, btnText));
             }
         }
