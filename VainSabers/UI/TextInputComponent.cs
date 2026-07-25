@@ -14,18 +14,63 @@ public class TextInputComponent : UIComponent
 {
     private const float DefaultFontSize = 4f;
     private const float PopupWidth = 40f;
-    private const float PopupHeight = 35f;
+    private const float PopupHeight = 40f;
     private const float ButtonSize = 4.5f;
     private const float ButtonSpacing = 0.4f;
     private const int MaxBufferLength = 40;
 
-    private static readonly string[] KeyboardRows =
+    private struct KeyDef
     {
-        "1234567890",
-        "qwertyuiop",
-        "asdfghjkl",
-        "zxcvbnm,."
+        public readonly string Normal;
+        public readonly string Shifted;
+        public readonly char InputNormal;
+        public readonly char InputShifted;
+
+        public KeyDef(string normal, string shifted)
+        {
+            Normal = normal;
+            Shifted = shifted;
+            InputNormal = normal[0];
+            InputShifted = shifted[0];
+        }
+
+        public KeyDef(string normal, string shifted, char inputNormal, char inputShifted)
+        {
+            Normal = normal;
+            Shifted = shifted;
+            InputNormal = inputNormal;
+            InputShifted = inputShifted;
+        }
+    }
+
+    private static readonly KeyDef[] Row1 = {
+        new("1", "!"), new("2", "@"), new("3", "#"), new("4", "$"), new("5", "%"),
+        new("6", "^"), new("7", "&"), new("8", "*"), new("9", "("), new("0", ")")
     };
+
+    private static readonly KeyDef[] Row2 = {
+        new("q", "Q"), new("w", "W"), new("e", "E"), new("r", "R"), new("t", "T"),
+        new("y", "Y"), new("u", "U"), new("i", "I"), new("o", "O"), new("p", "P")
+    };
+
+    private static readonly KeyDef[] Row3 = {
+        new("a", "A"), new("s", "S"), new("d", "D"), new("f", "F"), new("g", "G"),
+        new("h", "H"), new("j", "J"), new("k", "K"), new("l", "L")
+    };
+
+    private static readonly KeyDef[] Row4 = {
+        new("z", "Z"), new("x", "X"), new("c", "C"), new("v", "V"), new("b", "B"),
+        new("n", "N"), new("m", "M")
+    };
+
+    private static readonly KeyDef[] Row5 = {
+        new("-", "_"), new("=", "+"), new("[", "{"), new("]", "}"),
+        new(";", ":"), new("'", "\""), new(",", "<"), new(".", ">")
+    };
+
+    private static readonly KeyDef[][] AllRows = { Row1, Row2, Row3, Row4, Row5 };
+
+    private readonly List<KeyButtonInfo> m_keyButtons = new();
 
     private ButtonComponent m_headerButton = null!;
     private TextComponent m_displayText = null!;
@@ -34,18 +79,16 @@ public class TextInputComponent : UIComponent
     private VRGraphicRaycaster m_popupRaycaster = null!;
     private ButtonComponent m_popupBlocker = null!;
 
-    private readonly List<ButtonComponent> m_keyButtons = new();
     private TextComponent m_popupDisplayText = null!;
     private ButtonComponent m_okButton = null!;
     private VerticalLayoutGroupComponent m_rowsContainer = null!;
-    private ButtonComponent m_capsButton = null!;
+    private ButtonComponent m_shiftButton = null!;
     private TextComponent m_capsButtonText = null!;
 
     private string m_value = "";
     private string m_inputBuffer = "";
     private bool m_isPopupOpen = false;
-    private bool m_capsLock = false;
-    private bool m_shiftActive = false;
+    private bool m_shift = false;
 
     public event Action<string>? OnValueChanged;
 
@@ -89,13 +132,12 @@ public class TextInputComponent : UIComponent
             return;
 
         m_isPopupOpen = true;
-        m_capsLock = false;
-        m_shiftActive = false;
+        m_shift = false;
         m_inputBuffer = m_value;
         m_popupDisplayText.Text = m_inputBuffer;
 
         BuildKeyboard();
-        UpdateCapsVisual();
+        UpdateShiftVisuals();
         m_popupBackground.gameObject.SetActive(true);
         m_popupBlocker.IsInteractable = true;
         m_headerButton.gameObject.SetActive(false);
@@ -191,13 +233,16 @@ public class TextInputComponent : UIComponent
 
     private void BuildKeyboard()
     {
-        foreach (var btn in m_keyButtons)
-            Destroy(btn.gameObject);
+        foreach (var info in m_keyButtons)
+            if (info.Button != null)
+                Destroy(info.Button.gameObject);
         m_keyButtons.Clear();
 
         m_rowsContainer.ClearChildren();
 
-        foreach (string row in KeyboardRows)
+        bool showShifted = m_shift;
+
+        foreach (var row in AllRows)
         {
             var rowLayout = m_rowsContainer.AddChild<HorizontalLayoutGroupComponent>();
             rowLayout.LayoutElement.preferredHeight = ButtonSize;
@@ -208,10 +253,20 @@ public class TextInputComponent : UIComponent
             rowLayout.WithSpacing(ButtonSpacing);
             rowLayout.WithPadding(0);
 
-            foreach (char c in row)
+            foreach (var keyDef in row)
             {
-                char key = c;
-                AddKeyButton(rowLayout, key.ToString(), () => OnCharacterClick(key));
+                string label = showShifted ? keyDef.Shifted : keyDef.Normal;
+                char input = showShifted ? keyDef.InputShifted : keyDef.InputNormal;
+                var btn = rowLayout.AddChild<ButtonComponent>();
+                btn.Color = new Color(0.2f, 0.2f, 0.25f, 1f);
+                var btnText = btn.AddChild<TextComponent>().ToFill().Inset(0.5f);
+                btnText.Alignment = TextAlignmentOptions.Center;
+                btnText.Color = new Color(0.95f, 0.95f, 0.95f, 1f);
+                btnText.FontSize = 3f;
+                btnText.Text = label;
+                char capturedInput = input;
+                btn.OnClick += () => OnCharacterClick(capturedInput);
+                m_keyButtons.Add(new KeyButtonInfo(keyDef, btn, btnText));
             }
         }
 
@@ -224,21 +279,36 @@ public class TextInputComponent : UIComponent
         bottomRow.WithSpacing(ButtonSpacing);
         bottomRow.WithPadding(0);
 
-        m_capsButton = bottomRow.AddChild<ButtonComponent>();
-        m_capsButton.Color = new Color(0.2f, 0.2f, 0.25f, 1f);
-        m_capsButtonText = m_capsButton.AddChild<TextComponent>().ToFill().Inset(0.5f);
+        m_shiftButton = bottomRow.AddChild<ButtonComponent>();
+        m_shiftButton.Color = new Color(0.2f, 0.2f, 0.25f, 1f);
+        m_capsButtonText = m_shiftButton.AddChild<TextComponent>().ToFill().Inset(0.5f);
         m_capsButtonText.Alignment = TextAlignmentOptions.Center;
         m_capsButtonText.Color = new Color(0.95f, 0.95f, 0.95f, 1f);
         m_capsButtonText.FontSize = 2.5f;
-        m_capsButtonText.Text = "CAPS";
-        m_capsButton.OnClick += OnCapsClick;
+        m_capsButtonText.Text = "SHIFT";
+        m_shiftButton.OnClick += OnShiftClick;
 
-        AddKeyButton(bottomRow, " ", () => OnCharacterClick(' '));
+        var spaceBtn = bottomRow.AddChild<ButtonComponent>();
+        spaceBtn.LayoutElement.flexibleWidth = 2;
+        spaceBtn.Color = new Color(0.2f, 0.2f, 0.25f, 1f);
+        var spaceBtnText = spaceBtn.AddChild<TextComponent>().ToFill().Inset(0.5f);
+        spaceBtnText.Alignment = TextAlignmentOptions.Center;
+        spaceBtnText.Color = new Color(0.95f, 0.95f, 0.95f, 1f);
+        spaceBtnText.FontSize = 3f;
+        spaceBtnText.Text = "_";
+        spaceBtn.OnClick += () => OnCharacterClick(' ');
 
-        AddKeyButton(bottomRow, "<", OnBackspaceClick);
+        var backBtn = bottomRow.AddChild<ButtonComponent>();
+        backBtn.Color = new Color(0.2f, 0.2f, 0.25f, 1f);
+        var backBtnText = backBtn.AddChild<TextComponent>().ToFill().Inset(0.5f);
+        backBtnText.Alignment = TextAlignmentOptions.Center;
+        backBtnText.Color = new Color(0.95f, 0.95f, 0.95f, 1f);
+        backBtnText.FontSize = 3f;
+        backBtnText.Text = "<";
+        backBtn.OnClick += OnBackspaceClick;
 
         m_okButton = bottomRow.AddChild<ButtonComponent>();
-        m_okButton.LayoutElement.preferredWidth = ButtonSize * 2 + ButtonSpacing;
+        m_okButton.LayoutElement.preferredWidth = ButtonSize * 1.3f + ButtonSpacing;
         m_okButton.Color = new Color(0.2f, 0.5f, 0.2f, 1f);
         var okText = m_okButton.AddChild<TextComponent>().ToFill().Inset(0.5f);
         okText.Alignment = TextAlignmentOptions.Center;
@@ -248,54 +318,33 @@ public class TextInputComponent : UIComponent
         m_okButton.OnClick += OnOkClick;
     }
 
-    private void AddKeyButton(HorizontalLayoutGroupComponent row, string label, Action onClick)
-    {
-        var btn = row.AddChild<ButtonComponent>();
-        btn.Color = new Color(0.2f, 0.2f, 0.25f, 1f);
-        var btnText = btn.AddChild<TextComponent>().ToFill().Inset(0.5f);
-        btnText.Alignment = TextAlignmentOptions.Center;
-        btnText.Color = new Color(0.95f, 0.95f, 0.95f, 1f);
-        btnText.FontSize = 3f;
-        btnText.Text = label;
-        btn.OnClick += onClick;
-        m_keyButtons.Add(btn);
-    }
-
     private void OnCharacterClick(char c)
     {
         if (m_inputBuffer.Length >= MaxLength)
             return;
 
-        bool useUpper = m_capsLock ^ m_shiftActive;
-        if (useUpper && char.IsLetter(c))
-            c = char.ToUpper(c);
-
         m_inputBuffer += c;
         m_popupDisplayText.Text = m_inputBuffer;
-
-        if (m_shiftActive)
-        {
-            m_shiftActive = false;
-            UpdateCapsVisual();
-        }
     }
 
-    private void OnCapsClick()
+    private void OnShiftClick()
     {
-        m_capsLock = !m_capsLock;
-        UpdateCapsVisual();
+        m_shift = !m_shift;
+        UpdateShiftVisuals();
     }
 
-    private void UpdateCapsVisual()
+    private void UpdateShiftVisuals()
     {
-        if (m_capsButtonText == null)
-            return;
+        bool showShifted = m_shift;
 
-        bool active = m_capsLock || m_shiftActive;
-        m_capsButton.Color = active
+        m_shiftButton.Color = m_shift
             ? new Color(0.35f, 0.35f, 0.5f, 1f)
             : new Color(0.2f, 0.2f, 0.25f, 1f);
-        m_capsButtonText.Text = m_capsLock ? "CAPS" : (m_shiftActive ? "SHIFT" : "CAPS");
+
+        foreach (var info in m_keyButtons)
+        {
+            info.Text.Text = showShifted ? info.Definition.Shifted : info.Definition.Normal;
+        }
     }
 
     private void OnBackspaceClick()
@@ -311,5 +360,19 @@ public class TextInputComponent : UIComponent
     {
         SetValue(m_inputBuffer, true);
         ClosePopup();
+    }
+
+    private class KeyButtonInfo
+    {
+        public readonly KeyDef Definition;
+        public readonly ButtonComponent Button;
+        public readonly TextComponent Text;
+
+        public KeyButtonInfo(KeyDef def, ButtonComponent button, TextComponent text)
+        {
+            Definition = def;
+            Button = button;
+            Text = text;
+        }
     }
 }
