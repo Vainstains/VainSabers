@@ -64,6 +64,12 @@ internal class SaberEditorController : MonoBehaviour
             }
             MenuStateHandler.SetEditorOpen(false);
         };
+        editor.OnRevert += () =>
+        {
+            Plugin.Log.Info("Reverting...");
+            MenuStateHandler.SetEditorOpen(false);
+            MenuStateHandler.SetEditorOpen(true);
+        };
     }
 }
 
@@ -72,6 +78,7 @@ class SaberEditorComponent : UIComponent
     private TextButtonComponent m_saveButton = null!;
 
     public event Action? OnSave;
+    public event Action? OnRevert;
 
     private int m_selectedPartIndex = -1;
 
@@ -92,6 +99,7 @@ class SaberEditorComponent : UIComponent
     private BlurSaber EditingSaber => MenuStateHandler.Sabers.right;
     
     // panels
+    private SubPanelComponent m_configPanel = null!;
     private SubPanelComponent m_partPanel = null!;
     private SubPanelComponent m_geometryPanel = null!;
     private SubPanelComponent m_materialPanel = null!;
@@ -101,6 +109,7 @@ class SaberEditorComponent : UIComponent
     private TextButtonComponent m_addPartButton = null!;
     private TextButtonComponent m_removePartButton = null!;
     private TextInputComponent m_partNameInput = null!;
+    private TextButtonComponent m_revertButton = null!;
 
     // advanced geometry
     private int m_selectedRingIndex = 0;
@@ -116,14 +125,30 @@ class SaberEditorComponent : UIComponent
         layout.ChildForceExpandWidth = true;
         layout.ChildForceExpandHeight = true;
         
-        m_partPanel = layout.AddChild<SubPanelComponent>().WithLabel("Part");
+        var leftColumn = layout.AddChild<VerticalLayoutGroupComponent>();
+        leftColumn.ChildControlWidth = true;
+        leftColumn.ChildControlHeight = true;
+        leftColumn.ChildForceExpandWidth = true;
+        leftColumn.ChildForceExpandHeight = false;
+        leftColumn.WithSpacing(2);
+
+        m_configPanel = leftColumn.AddChild<SubPanelComponent>().WithLabel("Config");
+        m_configPanel.LayoutElement.flexibleHeight = 1;
+
+        var configContent = m_configPanel.Content;
+        m_saveButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Save");
+        m_saveButton.OnClick += () => OnSave?.Invoke();
+        m_saveButton.Color = new Color(0.3f, 0.5f, 0.7f, 1.0f);
+
+        m_revertButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Revert");
+        m_revertButton.OnClick += () => OnRevert?.Invoke();
+        m_revertButton.Color = new Color(0.6f, 0.5f, 0.2f, 1.0f);
+
+        m_partPanel = leftColumn.AddChild<SubPanelComponent>().WithLabel("Part");
+        m_partPanel.LayoutElement.flexibleHeight = 3;
+
         m_geometryPanel = layout.AddChild<SubPanelComponent>().WithLabel("Geometry");
         m_materialPanel = layout.AddChild<SubPanelComponent>().WithLabel("Material");
-
-        m_saveButton = m_partPanel.AddChild<TextButtonComponent>().ToTopLeft()
-            .ExtendBottom(4).ExtendRight(7).Move(1,-1).WithText("Save");
-        m_saveButton.OnClick += () => OnSave?.Invoke();
-        m_saveButton.Color = new  Color(0.3f, 0.5f, 0.7f, 1.0f);
 
         m_partSelectRow = m_partPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
 
