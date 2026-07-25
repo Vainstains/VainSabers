@@ -113,11 +113,18 @@ public class VerticalLayoutGroupComponent : UIComponent
     public UIComponent AddSubHeader(string text)
     {
         var child = AddChild<UIComponent>();
-        child.LayoutElement.preferredHeight = 4;
-        var textElement = child.AddChild<TextComponent>().InsetTop(1);
+        child.LayoutElement.preferredHeight = 6;
+        
+        var line = child.AddChild<ImageComponent>().ToTopEdge().ExtendBottom(0.5f);
+        line.Color = new Color(0.7f, 0.7f, 0.7f, 0.1f);
+        
+        line = child.AddChild<ImageComponent>().ToFill().InsetTop(2f).InsetBottom(0.5f);
+        line.Color = new Color(0.02f, 0.02f, 0.02f, 0.1f);
+        
+        var textElement = line.AddChild<TextComponent>();
         textElement.Alignment = TextAlignmentOptions.Center;
-        textElement.FontSize = 3.0f;
-        textElement.Color = new Color(0.7f, 0.7f, 0.7f, 0.8f);
+        textElement.FontSize = 3.3f;
+        textElement.Color = new Color(0.9f, 0.9f, 0.9f, 0.9f);
         textElement.Text = text;
         return child;
     }

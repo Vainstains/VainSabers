@@ -102,6 +102,7 @@ public class ButtonComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
     public void OnPointerUp(PointerEventData eventData)
     {
         m_isPressed = false;
+        m_isHovered = false;
         UpdateState();
         if (!m_instantClick)
             OnClick?.Invoke();
@@ -153,7 +154,7 @@ public class FieldComponent : UIComponent
         m_label.Alignment = TextAlignmentOptions.TopLeft;
         m_label.OverflowMode = TextOverflowModes.Overflow;
         m_label.EnableWordWrapping = false;
-        m_label.Color = new Color(0.9f, 0.9f, 0.9f, 1.0f);
+        m_label.Color = new Color(0.7f, 0.7f, 0.7f, 1.0f);
         
         UpdateLayout();
     }

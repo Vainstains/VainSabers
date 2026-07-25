@@ -63,7 +63,7 @@ public class ImageComponent : UIComponent
         m_imageView = gameObject.RequireComponent<ImageView>();
         m_imageView.raycastTarget = false;
         m_imageView.color = Color.white;
-        m_imageView.sprite = null;
+        m_imageView.sprite = UIResources.LoadSingleColorSprite(Color.white);
         m_imageView.material = UIResources.NoGlowMat;
     }
 }

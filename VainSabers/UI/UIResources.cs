@@ -11,6 +11,7 @@ namespace VainSabers.UI;
 internal static class UIResources
 {
     private static readonly Dictionary<string, Sprite> SpriteCache = new();
+    private static readonly Dictionary<Color, Sprite> SingleColorSpriteCache = new();
     public static Sprite LoadSpriteFromResource(
         string resourceName,
         float pixelsPerUnit = 320f,
@@ -60,6 +61,20 @@ internal static class UIResources
         var sprite = Sprite.Create(texture, rect, pivotVal, pixelsPerUnit, 0, SpriteMeshType.FullRect, border);
         
         SpriteCache[resourceName] = sprite;
+        return sprite;
+    }
+
+    public static Sprite LoadSingleColorSprite(Color color)
+    {
+        if (SingleColorSpriteCache.TryGetValue(color, out var cached))
+            return cached;
+
+        var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+        texture.SetPixel(0, 0, color);
+        texture.Apply();
+
+        var sprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 320f, 0, SpriteMeshType.Tight);
+        SingleColorSpriteCache[color] = sprite;
         return sprite;
     }
     

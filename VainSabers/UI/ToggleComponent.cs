@@ -69,7 +69,7 @@ public class ToggleComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
         m_switchOuter = AddChild<RoundRectComponent>()
             .ToRightCenter()
             .ExtendLeft(8).ExtendTop(2).ExtendBottom(2);
-        m_switchOuter.Color = new Color(0.3f, 0.3f, 0.3f, 1f);
+        m_switchOuter.Color = new Color(0.15f, 0.15f, 0.15f, 1f);
 
         m_switchInner = m_switchOuter.AddChild<RoundRectComponent>()
             .ToLeftCenter();
@@ -82,7 +82,7 @@ public class ToggleComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
         if (m_switchOuter == null || m_switchInner == null)
             return;
 
-        Color outerColor = new Color(0.3f, 0.3f, 0.3f, 1f);;
+        Color outerColor = new Color(0.1f, 0.1f, 0.1f, 1f);;
         Color innerColor;
         
         m_switchInner.ToFill().Inset(0.5f);
@@ -94,7 +94,7 @@ public class ToggleComponent : UIComponent, IPointerEnterHandler, IPointerExitHa
         else
         {
             m_switchInner.InsetRight(3);
-            innerColor = new Color(0.5f, 0.2f, 0.2f, 1f);
+            innerColor = new Color(0.7f, 0.2f, 0.2f, 1f);
         }
 
         if (!m_interactable)

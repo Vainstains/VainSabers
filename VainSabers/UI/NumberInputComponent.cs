@@ -14,13 +14,17 @@ namespace VainSabers.UI;
 
 public class NumberInputComponent : UIComponent
 {
-    private const float DefaultFontSize = 4f;
+    private const float DefaultFontSize = 3f;
     private const float DefaultDragSensitivity = 0.05f;
     private const float DragDeadZoneDegrees = 2f;
     private const float PopupWidth = 20f;
     private const float PopupHeight = 30f;
     private const float ButtonSize = 5f;
     private const float ButtonSpacing = 0.5f;
+
+    // Base colors for multiplicative tinting
+    private static readonly Color HeaderBaseColor = new Color(0.15f, 0.15f, 0.15f, 1f);
+    private static readonly Color PopupBaseColor = new Color(0.07f, 0.07f, 0.07f, 1f);
 
     private ButtonComponent m_headerButton = null!;
     private TextComponent m_displayText = null!;
@@ -52,6 +56,8 @@ public class NumberInputComponent : UIComponent
     private float m_deadZoneOffset;
     private string m_inputBuffer = "";
     private bool m_isTextInputMode = false;
+    
+    private Color m_tintColor = Color.white;
 
     public event Action<float>? OnValueChanged;
 
@@ -152,6 +158,15 @@ public class NumberInputComponent : UIComponent
         return this;
     }
     
+    public NumberInputComponent WithTint(Color color)
+    {
+        m_tintColor = color;
+        // If already initialized, apply the new tint immediately
+        if (m_headerButton != null)
+            ApplyTint();
+        return this;
+    }
+    
     public NumberInputComponent WithSensitivityCoef(float coef)
     {
         DragSensitivity *= coef;
@@ -198,9 +213,7 @@ public class NumberInputComponent : UIComponent
     {
         base.Init();
         
-        // Header button (clickable and draggable)
         m_headerButton = AddChild<ButtonComponent>().ToFill();
-        m_headerButton.Color = new Color(0.15f, 0.15f, 0.15f, 1f);
         m_headerButton.InstantClick = false;
         m_headerButton.OnClick += OnHeaderClick;
 
@@ -213,7 +226,7 @@ public class NumberInputComponent : UIComponent
         m_displayText.Alignment = TextAlignmentOptions.Center;
         m_displayText.OverflowMode = TextOverflowModes.Overflow;
         m_displayText.EnableWordWrapping = false;
-        m_displayText.Color = new Color(0.9f, 0.9f, 0.9f, 1.0f);
+        m_displayText.Color = new Color(0.8f, 0.8f, 0.8f, 0.7f);
         m_displayText.FontSize = DefaultFontSize;
 
         // Popup blocker (full‑screen transparent)
@@ -225,7 +238,6 @@ public class NumberInputComponent : UIComponent
         // Popup background – centered above the header
         m_popupBackground = AddChild<RoundRectComponent>().ToBottomCenter().Move(0, PopupHeight * 0.5f);
         m_popupBackground.SizeDelta = new Vector2(PopupWidth, PopupHeight);
-        m_popupBackground.Color = new Color(0.07f, 0.07f, 0.07f, 1.0f);
         m_popupBackground.IsRaycastTarget = true;
         m_popupBackground.gameObject.SetActive(false);
 
@@ -273,8 +285,34 @@ public class NumberInputComponent : UIComponent
         m_rowsContainer.ChildForceExpandWidth = true;
         m_rowsContainer.ChildForceExpandHeight = false; // rows keep their preferred height
         m_rowsContainer.WithSpacing(ButtonSpacing);
+        
+        // static arrows on the side to telegraph dragging
+        var arrow = m_headerButton.AddChild<ImageComponent>().ToRightCenter().Move(-2f, 0)
+            .Extend(1.5f);
+        arrow.Color = new Color(0.9f, 0.9f, 0.9f, 0.1f);
+        arrow.Sprite = UIResources.LoadSpriteFromResource("VainSabers.dropdown_arrow.png");
+        arrow.Pivot = new Vector2(0.5f, 0.5f);
+        arrow.RectTransform.eulerAngles = new Vector3(0f, 0f, 90f);
+        
+        arrow = m_headerButton.AddChild<ImageComponent>().ToLeftCenter().Move(2f, 0)
+            .Extend(1.5f);
+        arrow.Color = new Color(0.9f, 0.9f, 0.9f, 0.1f);
+        arrow.Sprite = UIResources.LoadSpriteFromResource("VainSabers.dropdown_arrow.png");
+        arrow.Pivot = new Vector2(0.5f, 0.5f);
+        arrow.RectTransform.eulerAngles = new Vector3(0f, 0f, -90f);
+        
+        ApplyTint();
 
         UpdateDisplayText();
+    }
+
+    // Apply the current tint color multiplicatively to the backgrounds
+    private void ApplyTint()
+    {
+        if (m_headerButton != null)
+            m_headerButton.Color = HeaderBaseColor * m_tintColor;
+        if (m_popupBackground != null)
+            m_popupBackground.Color = PopupBaseColor * m_tintColor;
     }
 
     private void OnHeaderClick()

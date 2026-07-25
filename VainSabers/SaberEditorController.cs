@@ -5,6 +5,7 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using VainSabers.Config;
+using VainSabers.Helpers;
 using VainSabers.Sabers;
 using VainSabers.UI;
 
@@ -48,7 +49,7 @@ internal class SaberEditorController : MonoBehaviour
         if (!state.EditorOpen)
             return;
         
-        panel = SimpleFloatingPanel.Create(new Vector2(200, 110), new Vector3(0, 1.2f, 1.5f));
+        panel = SimpleFloatingPanel.Create(new Vector2(200, 126), new Vector3(0, 1.2f, 1.5f));
         panel.Show();
 
         var editor = panel.AddChild<SaberEditorComponent>().ToFill();
@@ -102,6 +103,10 @@ internal class SaberEditorController : MonoBehaviour
 
 class SaberEditorComponent : UIComponent
 {
+    private static readonly Color RedColor = (VainColor)"#f3769c" * 1.3f;
+    private static readonly Color GreenColor = (VainColor)"#72ee91" * 1.3f;
+    private static readonly Color BlueColor = (VainColor)"#79a7f7" * 1.3f;
+
     private TextButtonComponent m_saveButton = null!;
     private TextButtonComponent m_deleteButton = null!;
     private TextInputComponent m_renameInput = null!;
@@ -334,16 +339,19 @@ class SaberEditorComponent : UIComponent
         m_partPanel.Content.AddSubHeader("Position");
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithTint(RedColor)
             .WithValue(referencePart.transform.localPosition.x).OnValueChanged += val =>
             ApplyToBothParts(part => 
             part.transform.localPosition = part.transform.localPosition with { x = val });
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithTint(GreenColor)
             .WithValue(referencePart.transform.localPosition.y).OnValueChanged += val =>
             ApplyToBothParts(part => 
             part.transform.localPosition = part.transform.localPosition with { y = val });
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithTint(BlueColor)
             .WithValue(referencePart.transform.localPosition.z).OnValueChanged += val =>
             ApplyToBothParts(part =>     
             part.transform.localPosition = part.transform.localPosition with { z = val });
@@ -351,14 +359,17 @@ class SaberEditorComponent : UIComponent
         m_partPanel.Content.AddSubHeader("Rotation");
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 1f).WithSensitivityCoef(45)
+            .WithTint(RedColor)
             .WithValue(referencePart.RotX).OnValueChanged += val =>
             ApplyToBothParts(part => part.RotX = val);
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 1f).WithSensitivityCoef(45)
+            .WithTint(GreenColor)
             .WithValue(referencePart.RotY).OnValueChanged += val =>
             ApplyToBothParts(part => part.RotY = val);
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-180f, 180f, 1f).WithSensitivityCoef(45)
+            .WithTint(BlueColor)
             .WithValue(referencePart.RotZ).OnValueChanged += val =>
             ApplyToBothParts(part => part.RotZ = val);
         
@@ -451,62 +462,71 @@ class SaberEditorComponent : UIComponent
             .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
             .WithValue(referencePart.StartRadius).OnValueChanged += val =>
             ApplyToBothParts(part => part.StartRadius = val);
+        if (!referencePart.Lit)
+            m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
+                .WithValue(referencePart.StartGlow).OnValueChanged += val =>
+                ApplyToBothParts(part => part.StartGlow = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(referencePart.StartOpacity).OnValueChanged += val =>
+            ApplyToBothParts(part => part.StartOpacity = val);
+        m_geometryPanel.Content.AddSpace(2);
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(RedColor)
             .WithValue(referencePart.StartColor.r).OnValueChanged += val =>
             ApplyToBothParts(part => part.StartColor = new Color(val, part.StartColor.g, part.StartColor.b, part.StartColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(GreenColor)
             .WithValue(referencePart.StartColor.g).OnValueChanged += val =>
             ApplyToBothParts(part => part.StartColor = new Color(part.StartColor.r, val, part.StartColor.b, part.StartColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(BlueColor)
             .WithValue(referencePart.StartColor.b).OnValueChanged += val =>
             ApplyToBothParts(part => part.StartColor = new Color(part.StartColor.r, part.StartColor.g, val, part.StartColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
             .WithValue(referencePart.StartCustomColorWeight).OnValueChanged += val =>
             ApplyToBothParts(part => part.StartCustomColorWeight = val);
-        if (!referencePart.Lit)
-        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
-            .WithValue(referencePart.StartGlow).OnValueChanged += val =>
-            ApplyToBothParts(part => part.StartGlow = val);
-        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
-            .WithValue(referencePart.StartOpacity).OnValueChanged += val =>
-            ApplyToBothParts(part => part.StartOpacity = val);
+        
         
         m_geometryPanel.Content.AddSubHeader("End Properties");
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
             .WithValue(referencePart.EndRadius).OnValueChanged += val =>
             ApplyToBothParts(part => part.EndRadius = val);
+        if (!referencePart.Lit)
+            m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
+                .WithValue(referencePart.EndGlow).OnValueChanged += val =>
+                ApplyToBothParts(part => part.EndGlow = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(referencePart.EndOpacity).OnValueChanged += val =>
+            ApplyToBothParts(part => part.EndOpacity = val);
+        m_geometryPanel.Content.AddSpace(2);
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(RedColor)
             .WithValue(referencePart.EndColor.r).OnValueChanged += val =>
             ApplyToBothParts(part => part.EndColor = new Color(val, part.EndColor.g, part.EndColor.b, part.EndColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(GreenColor)
             .WithValue(referencePart.EndColor.g).OnValueChanged += val =>
             ApplyToBothParts(part => part.EndColor = new Color(part.EndColor.r, val, part.EndColor.b, part.EndColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(BlueColor)
             .WithValue(referencePart.EndColor.b).OnValueChanged += val =>
             ApplyToBothParts(part => part.EndColor = new Color(part.EndColor.r, part.EndColor.g, val, part.EndColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
             .WithValue(referencePart.EndCustomColorWeight).OnValueChanged += val =>
             ApplyToBothParts(part => part.EndCustomColorWeight = val);
-        if (!referencePart.Lit)
-        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
-            .WithValue(referencePart.EndGlow).OnValueChanged += val =>
-            ApplyToBothParts(part => part.EndGlow = val);
-        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
-            .WithValue(referencePart.EndOpacity).OnValueChanged += val =>
-            ApplyToBothParts(part => part.EndOpacity = val);
         
         m_geometryPanel.Content.AddSubHeader("Common Properties");
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
@@ -668,11 +688,36 @@ class SaberEditorComponent : UIComponent
                         part.RingParams[i] = part.RingParams[i] with { Inverted = val };
                 });
             };
+        
+        if (!referencePart.Lit)
+            m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
+                .WithValue(ring.Glow).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                        part.RingParams[i] = part.RingParams[i] with { Glow = val };
+                });
+            };
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(ring.Opacity).OnValueChanged += val =>
+        {
+            var i = m_selectedRingIndex;
+            ApplyToBothParts(part =>
+            {
+                if (i < part.RingParams.Count)
+                    part.RingParams[i] = part.RingParams[i] with { Opacity = val };
+            });
+        };
 
-        m_geometryPanel.Content.AddSpace(1);
+        m_geometryPanel.Content.AddSpace(2);
 
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(RedColor)
             .WithValue(ring.Color.r).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
@@ -687,6 +732,7 @@ class SaberEditorComponent : UIComponent
             };
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(GreenColor)
             .WithValue(ring.Color.g).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
@@ -701,6 +747,7 @@ class SaberEditorComponent : UIComponent
             };
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(BlueColor)
             .WithValue(ring.Color.b).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
@@ -725,29 +772,6 @@ class SaberEditorComponent : UIComponent
                 {
                     if (i < part.RingParams.Count)
                         part.RingParams[i] = part.RingParams[i] with { CustomWeight = val };
-                });
-            };
-        if (!referencePart.Lit)
-        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
-            .WithValue(ring.Glow).OnValueChanged += val =>
-            {
-                var i = m_selectedRingIndex;
-                ApplyToBothParts(part =>
-                {
-                    if (i < part.RingParams.Count)
-                        part.RingParams[i] = part.RingParams[i] with { Glow = val };
-                });
-            };
-        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
-            .WithValue(ring.Opacity).OnValueChanged += val =>
-            {
-                var i = m_selectedRingIndex;
-                ApplyToBothParts(part =>
-                {
-                    if (i < part.RingParams.Count)
-                        part.RingParams[i] = part.RingParams[i] with { Opacity = val };
                 });
             };
     }
