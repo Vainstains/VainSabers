@@ -51,16 +51,19 @@ internal class SaberEditorController : MonoBehaviour
         panel.Show();
 
         var editor = panel.AddChild<SaberEditorComponent>().ToFill();
+        var editingPreset = state.EditingPreset;
         editor.OnSave += () =>
         {
             Plugin.Log.Info("Saving and closing editor");
-            if (state.EditingPreset != "")
+            Plugin.Log.Info($"Finishing editing: {editingPreset}");
+            if (editingPreset != "")
             {
-                MenuStateHandler.Sabers.right.Data.SaveToFile(
-                    ConfigUtil.GetSaberProfile(state.EditingPreset));
+                var profile = ConfigUtil.GetSaberProfile(editingPreset);
+                Plugin.Log.Info($"Saving to profile: {profile}");
+                MenuStateHandler.Sabers.right.Data.SaveToFile(profile);
 
-                MenuStateHandler.Sabers.right.SetPreset(state.EditingPreset);
-                MenuStateHandler.Sabers.left.SetPreset(state.EditingPreset);
+                MenuStateHandler.Sabers.right.SetPreset(editingPreset);
+                MenuStateHandler.Sabers.left.SetPreset(editingPreset);
             }
             MenuStateHandler.SetEditorOpen(false);
         };
@@ -409,9 +412,6 @@ class SaberEditorComponent : UIComponent
             .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
             .WithValue(referencePart.StartRadius).OnValueChanged += val =>
             ApplyToBothParts(part => part.StartRadius = val);
-        
-        m_geometryPanel.Content.AddSpace(2);
-        
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithValue(referencePart.StartColor.r).OnValueChanged += val =>
@@ -424,9 +424,6 @@ class SaberEditorComponent : UIComponent
             .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithValue(referencePart.StartColor.b).OnValueChanged += val =>
             ApplyToBothParts(part => part.StartColor = new Color(part.StartColor.r, part.StartColor.g, val, part.StartColor.a));
-        
-        m_geometryPanel.Content.AddSpace(2);
-
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
             .WithValue(referencePart.StartCustomColorWeight).OnValueChanged += val =>
@@ -446,9 +443,6 @@ class SaberEditorComponent : UIComponent
             .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
             .WithValue(referencePart.EndRadius).OnValueChanged += val =>
             ApplyToBothParts(part => part.EndRadius = val);
-        
-        m_geometryPanel.Content.AddSpace(2);
-        
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithValue(referencePart.EndColor.r).OnValueChanged += val =>
@@ -461,9 +455,6 @@ class SaberEditorComponent : UIComponent
             .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithValue(referencePart.EndColor.b).OnValueChanged += val =>
             ApplyToBothParts(part => part.EndColor = new Color(part.EndColor.r, part.EndColor.g, val, part.EndColor.a));
-        
-        m_geometryPanel.Content.AddSpace(2);
-
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
             .WithValue(referencePart.EndCustomColorWeight).OnValueChanged += val =>
@@ -499,6 +490,10 @@ class SaberEditorComponent : UIComponent
             .WithLabel("End Cap Extension").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 3f, 0.01f)
             .WithValue(referencePart.EndCapExtension).OnValueChanged += val =>
             ApplyToBothParts(part => part.EndCapExtension = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Rounded Normals").SetComponent<ToggleComponent>().WithValue(referencePart.EnableRoundedNormals)
+            .OnValueChanged += val =>
+            ApplyToBothParts(part => part.EnableRoundedNormals = val);
     }
 
     private void BuildAdvancedGeometryPanel(BlurSaberPart referencePart)

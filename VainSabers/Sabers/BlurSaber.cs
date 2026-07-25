@@ -29,8 +29,7 @@ internal class BlurSaber : MonoBehaviour
 
     public void SetPreset(string preset)
     {
-        if (preset != m_currentPreset)
-            m_blurSaberData?.ImportFromFile(Config.ConfigUtil.GetSaberProfile(preset));
+        m_blurSaberData?.ImportFromFile(Config.ConfigUtil.GetSaberProfile(preset));
         m_currentPreset = preset;
     }
 

@@ -283,7 +283,7 @@ public class BlurSaberData : MonoBehaviour
     {
         if (string.IsNullOrEmpty(path))
         {
-            Debug.LogError("Save path cannot be null or empty");
+            Plugin.Log.Info("Save path cannot be null or empty");
             return;
         }
 
@@ -361,11 +361,11 @@ public class BlurSaberData : MonoBehaviour
                 Directory.CreateDirectory(directory);
 
             File.WriteAllText(path, sb.ToString());
-            Debug.Log($"Saved saber with {ComponentCount} parts to {path}");
+            Plugin.Log.Info($"Saved saber with {ComponentCount} parts to {path}");
         }
         catch (Exception ex)
         {
-            Debug.LogError($"Failed to save saber to {path}: {ex.Message}");
+            Plugin.Log.Error($"Failed to save saber to {path}: {ex.Message}");
         }
     }
 
