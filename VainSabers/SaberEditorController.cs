@@ -100,6 +100,7 @@ class SaberEditorComponent : UIComponent
     private DropdownComponent m_partDropdown = null!;
     private TextButtonComponent m_addPartButton = null!;
     private TextButtonComponent m_removePartButton = null!;
+    private TextInputComponent m_partNameInput = null!;
 
     // advanced geometry
     private int m_selectedRingIndex = 0;
@@ -126,18 +127,23 @@ class SaberEditorComponent : UIComponent
 
         m_partSelectRow = m_partPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
 
-        m_partDropdown = m_partSelectRow.AddChild<DropdownComponent>().ToFill().InsetRight(10);
+        m_partDropdown = m_partSelectRow.AddChild<DropdownComponent>().ToFill().InsetRight(15);
         m_partDropdown.OnSelectionChanged += SelectedPartChanged;
 
-        m_addPartButton = m_partSelectRow.AddChild<TextButtonComponent>().ToRightEdge()
-            .ExtendLeft(4).WithText("+");
-        m_addPartButton.OnClick += AddPart;
-        m_addPartButton.Color = new Color(0.1f, 0.6f, 0.2f, 1.0f);
+        m_partNameInput = m_partSelectRow.AddChild<TextInputComponent>().ToRightEdge()
+            .ExtendLeft(4).Move(-10, 0);
+        m_partNameInput.MoveKeyboardX(-10);
+        m_partNameInput.OnValueChanged += OnPartNameChanged;
 
         m_removePartButton = m_partSelectRow.AddChild<TextButtonComponent>().ToRightEdge()
             .ExtendLeft(4).Move(-5, 0).WithText("-");
         m_removePartButton.OnClick += RemovePart;
         m_removePartButton.Color = new Color(0.7f, 0.1f, 0.25f, 1.0f);
+
+        m_addPartButton = m_partSelectRow.AddChild<TextButtonComponent>().ToRightEdge()
+            .ExtendLeft(4).WithText("+");
+        m_addPartButton.OnClick += AddPart;
+        m_addPartButton.Color = new Color(0.1f, 0.6f, 0.2f, 1.0f);
 
         UpdatePartDropdown();
 
@@ -178,6 +184,30 @@ class SaberEditorComponent : UIComponent
         UpdatePartDropdown();
     }
 
+    private void OnPartNameChanged(string newName)
+    {
+        if (m_selectedPartIndex < 0)
+            return;
+
+        if (string.IsNullOrWhiteSpace(newName))
+            return;
+
+        ApplyToBothSabers(saber =>
+        {
+            var part = saber.Data.Components[m_selectedPartIndex];
+            if (part != null)
+                part.gameObject.name = newName;
+        });
+
+        UpdatePartDropdown();
+
+        if (m_selectedPartIndex >= 0)
+        {
+            m_geometryPanel.Title = $"{newName} : Geometry";
+            m_materialPanel.Title = $"{newName} : Material";
+        }
+    }
+
     public void UpdatePartDropdown()
     {
         var parts = EditingSaber.Data.Components;
@@ -191,9 +221,15 @@ class SaberEditorComponent : UIComponent
         m_selectedPartIndex = index;
 
         if (parts.Count > 0)
+        {
             m_removePartButton.IsInteractable = true;
+            m_partNameInput.SetValue(parts[index].gameObject.name, false);
+        }
         else
+        {
             m_removePartButton.IsInteractable = false;
+            m_partNameInput.SetValue("", false);
+        }
     }
 
     private void SelectedPartChanged(int index)
