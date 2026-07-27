@@ -18,7 +18,7 @@ namespace VainSabers.Sabers
             Advanced
         }
 
-        private const int SampleCount = 16;
+        private const int SampleCount = 32;
         private Pose[] m_poseSamples = new Pose[SampleCount];
         private int RingCount =>
             GeometryHandling == GeometryType.Advanced
