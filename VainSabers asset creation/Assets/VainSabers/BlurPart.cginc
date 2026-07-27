@@ -101,7 +101,7 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
 
     // Sweep factor
     float sweepFactor = vertStage.uv.y * 1.5 * _VainSaberBlurSoftness;
-    float blurFac = sweepFactor * 0.5;
+    float blurFac = sweepFactor;
 
     // Distance to edge
     float distanceToEdge = min(vertStage.uv.x * 2.0, 2.0 - 2.0 * vertStage.uv.x);

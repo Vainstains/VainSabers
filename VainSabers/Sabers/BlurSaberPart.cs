@@ -345,15 +345,20 @@ namespace VainSabers.Sabers
             {
                 var t = (float)i / (mainRingCount - 1f);
 
-                var radius = Mathf.Lerp(startRad, endRad, t);
-                var bulge = 4 * (t - t * t);
-                radius *= 1 + bulge * BulgeAmount;
+                var linearRad = Mathf.Lerp(startRad, endRad, t);
+                var bulgeFactor = 1 + 4 * (t - t * t) * BulgeAmount;
+                var radius = linearRad * bulgeFactor;
                 
+                var dLinearRad_dt = endRad - startRad;
+                var dBulgeFactor_dt = 4 * (1 - 2 * t) * BulgeAmount;
+                var dRadius_dt = dLinearRad_dt * bulgeFactor + linearRad * dBulgeFactor_dt;
+                var radiusSlope = Length > 0.0001f ? dRadius_dt / Length : 0f;
+
                 BuildRing(samples, t * Length, radius,
                     false,
                     Color.Lerp(startCol, endCol, t),
                     Mathf.Lerp(StartOpacity, EndOpacity, t),
-                    ref idx);
+                    ref idx, default, radiusSlope);
             }
             if (EnableEndCaps)
                 BuildRing(samples, Length + EndRadius * 0.25f * EndCapExtension, endRad, true, endCol, EndOpacity, ref idx);
@@ -361,7 +366,8 @@ namespace VainSabers.Sabers
         
         void BuildAdvancedRings(Pose[] samples, ref int idx)
         {
-            for (var i = 0; i < RingParams.Count; i++)
+            var count = RingParams.Count;
+            for (var i = 0; i < count; i++)
             {
                 var ring = RingParams[i];
 
@@ -371,8 +377,30 @@ namespace VainSabers.Sabers
                 col.a = ring.Glow;
 
                 var rawRadius = ring.Inverted ? -ring.Radius : ring.Radius;
+                var isZero = Mathf.Abs(rawRadius) < 0.0002f;
 
-                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, Mathf.Abs(rawRadius) < 0.0002, col, ring.Opacity, ref idx, ring.Offset);
+                var radiusSlope = 0f;
+                if (!isZero && count > 1 && Length > 0.0001f)
+                {
+                    var prevRing = RingParams[(i - 1 + count) % count];
+                    var nextRing = RingParams[(i + 1) % count];
+
+                    var prevRad = prevRing.Inverted ? -prevRing.Radius : prevRing.Radius;
+                    var nextRad = nextRing.Inverted ? -nextRing.Radius : nextRing.Radius;
+
+                    var curT = ring.PosAlongPart01;
+                    
+                    var dtPrev = curT - prevRing.PosAlongPart01;
+                    if (dtPrev <= 0f) dtPrev += 1f;
+                    var dtNext = nextRing.PosAlongPart01 - curT;
+                    if (dtNext <= 0f) dtNext += 1f;
+
+                    var dt = dtPrev + dtNext;
+                    if (dt > 0.0001f)
+                        radiusSlope = (nextRad - prevRad) / (dt * Length);
+                }
+
+                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, isZero, col, ring.Opacity, ref idx, ring.Offset, radiusSlope);
             }
         }
         
@@ -395,7 +423,8 @@ namespace VainSabers.Sabers
             Color color,
             float opacity,
             ref int idx,
-            Vector2 offset = default)
+            Vector2 offset = default,
+            float radiusSlope = 0f)
         {
             var radius = Mathf.Abs(rawRadius);
 
@@ -441,7 +470,16 @@ namespace VainSabers.Sabers
                 ringCenter += interpSample.up * offset.y + interpSample.right * offset.x;
                 var normal = Mathf.Sign(rawRadius) * offsetDir;
                 if (EnableRoundedNormals)
-                    normal += avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)));
+                {
+                    if (isZero)
+                    {
+                        normal += avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)));
+                    }
+                    else
+                    {
+                        normal -= avgFwd * radiusSlope;
+                    }
+                }
 
                 var vertexPos = ringCenter + offsetDir * (isZero ? 0 : radius);
 
