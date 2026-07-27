@@ -209,6 +209,10 @@ public class BlurSaberData : MonoBehaviour
                 part.RenderQueueOffset = partData.RenderQueueOffset;
                 part.DepthOffset = partData.DepthOffset;
 
+                part.RimFactor = partData.RimFactor;
+                part.RimPower = partData.RimPower;
+                part.RimPerpendicular = partData.RimPerpendicular;
+
                 if (partData.Rings != null)
                 {
                     foreach (var ring in partData.Rings)
@@ -288,7 +292,11 @@ public class BlurSaberData : MonoBehaviour
                     BulgeAmount = part.BulgeAmount,
                     MinimumRings = part.MinimumRings,
                     RenderQueueOffset = part.RenderQueueOffset,
-                    DepthOffset = part.DepthOffset
+                    DepthOffset = part.DepthOffset,
+
+                    RimFactor = part.RimFactor,
+                    RimPower = part.RimPower,
+                    RimPerpendicular = part.RimPerpendicular
                 };
 
                 if (part.GeometryHandling == BlurSaberPart.GeometryType.Advanced && part.RingParams.Count > 0)
@@ -565,6 +573,10 @@ public class BlurSaberData : MonoBehaviour
         public int MinimumRings { get; set; } = 4;
         public int RenderQueueOffset { get; set; }
         public float DepthOffset { get; set; }
+
+        public float RimFactor { get; set; }
+        public float RimPower { get; set; } = 3f;
+        public float RimPerpendicular { get; set; }
 
         public List<RingData>? Rings { get; set; }
     }

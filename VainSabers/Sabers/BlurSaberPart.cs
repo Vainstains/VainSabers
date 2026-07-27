@@ -430,7 +430,7 @@ namespace VainSabers.Sabers
             for (var i = 0; i < ringVerts; i++)
             {
                 var theta = 2.0f * Mathf.PI * i / ringVerts;
-                var offsetDir = Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
+                var offsetDir = Mathf.Sign(rawRadius) * Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
 
                 var dot = Vector3.Dot(offsetDir, motionDir);
                 var tSample = (dot + 1.0f) * 0.5f;
@@ -439,7 +439,7 @@ namespace VainSabers.Sabers
 
                 var ringCenter = interpSample.position + interpSample.forward * zPos;
                 ringCenter += interpSample.up * offset.y + interpSample.right * offset.x;
-                var normal = offsetDir;
+                var normal = Mathf.Sign(rawRadius) * offsetDir;
                 if (EnableRoundedNormals)
                     normal += avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)));
 

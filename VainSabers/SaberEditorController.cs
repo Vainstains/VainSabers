@@ -575,7 +575,7 @@ class SaberEditorComponent : UIComponent
     {
         m_geometryPanel.Content.AddSubHeader("Start Properties");
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
+            .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.0001f, 0.05f, 0.0001f).WithSensitivityCoef(0.03f)
             .WithValue(referencePart.StartRadius).OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.StartRadius = val);
         if (!referencePart.Lit)
@@ -611,7 +611,7 @@ class SaberEditorComponent : UIComponent
         
         m_geometryPanel.Content.AddSubHeader("End Properties");
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
+            .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.0001f, 0.05f, 0.0001f).WithSensitivityCoef(0.03f)
             .WithValue(referencePart.EndRadius).OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.EndRadius = val);
         if (!referencePart.Lit)
@@ -772,18 +772,18 @@ class SaberEditorComponent : UIComponent
 
         m_geometryPanel.Content.AddSubHeader("Ring Properties");
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Position").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithLabel("Position").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 2f, 0.01f)
             .WithValue(ring.PosAlongPart01).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
                 ApplyToBothResolvedParts(part =>
                 {
                     if (i < part.RingParams.Count)
-                        part.RingParams[i] = part.RingParams[i] with { PosAlongPart01 = Mathf.Clamp01(val) };
+                        part.RingParams[i] = part.RingParams[i] with { PosAlongPart01 = val };
                 });
             };
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
+            .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.0001f, 0.05f, 0.0001f).WithSensitivityCoef(0.03f)
             .WithValue(ring.Radius).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
