@@ -83,6 +83,8 @@ public static class VainSabersAssets
     
     public static Shader? VertexGlowShader2Side { get; private set; }
     
+    public static ComputeShader? BlurTubeComputeShader { get; private set; }
+    
     public static Material? NormalSaberMaterial { get; private set; }
     public static Material? InvertedSaberMaterial { get; private set; }
     public static Material? NormalLitSaberMaterial { get; private set; }
@@ -112,10 +114,14 @@ public static class VainSabersAssets
             VertexGlowShader = assets.LoadAsset<Shader>("vs_flatglow");
             VertexGlowShader2Side = assets.LoadAsset<Shader>("vs_flatglow_2side");
             
+            BlurTubeComputeShader = assets.LoadAsset<ComputeShader>("blurtube");
+            
             NormalSaberMaterial = assets.LoadAsset<Material>("saber");
             InvertedSaberMaterial = assets.LoadAsset<Material>("saberinverted");
             NormalLitSaberMaterial = assets.LoadAsset<Material>("saberlit");
             InvertedLitSaberMaterial = assets.LoadAsset<Material>("saberlitinverted");
+            
+            Plugin.Log.Info(BlurTubeComputeShader?.ToString() ?? "not found");
             
             Plugin.Print("Loaded vs_assets ok");
         }
