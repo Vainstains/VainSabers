@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using HMUI;
 using IPA.Utilities;
 using TMPro;
@@ -113,6 +114,7 @@ public class DropdownComponent : UIComponent
 
     private readonly List<DropdownItemComponent> m_optionButtons = new();
     private List<string> m_options = new();
+    private Array? m_enumValues;
     private int m_selectedIndex = -1;
     private bool m_isOpen = false;
 
@@ -133,10 +135,38 @@ public class DropdownComponent : UIComponent
 
     public void SetOptions(IEnumerable<string> options, int selectedIndex = 0)
     {
+        m_enumValues = null;
         m_options = options?.ToList() ?? new List<string>();
         Close();
         RebuildOptionButtons();
         SetSelectedIndex(m_options.Count > 0 ? Mathf.Clamp(selectedIndex, 0, m_options.Count - 1) : -1, false);
+    }
+
+    public void SetEnumOptions<T>(T selected) where T : struct, Enum
+    {
+        var values = Enum.GetValues(typeof(T));
+        m_enumValues = values;
+
+        m_options = new List<string>();
+        for (int i = 0; i < values.Length; i++)
+        {
+            var field = typeof(T).GetField(values.GetValue(i)!.ToString()!);
+            var label = field?.GetCustomAttribute<LabelAttribute>()?.Text;
+            m_options.Add(label ?? values.GetValue(i)!.ToString()!);
+        }
+
+        int selectedIndex = Array.IndexOf(values, selected);
+        Close();
+        RebuildOptionButtons();
+        SetSelectedIndex(selectedIndex >= 0 ? selectedIndex : 0, false);
+    }
+
+    public T SelectedEnumValue<T>() where T : struct, Enum
+    {
+        if (m_enumValues == null || m_selectedIndex < 0 || m_selectedIndex >= m_enumValues.Length)
+            return default;
+
+        return (T)m_enumValues.GetValue(m_selectedIndex)!;
     }
 
     public void Open()

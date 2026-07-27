@@ -439,18 +439,12 @@ class SaberEditorComponent : UIComponent
             ApplyToBothParts(part => part.RenderQueueOffset = Mathf.RoundToInt(val));
         
         // Geometry panel
-        var options = new List<string>();
-        foreach (var value in Enum.GetValues(typeof(BlurSaberPart.GeometryType)))
-            options.Add(value.ToString());
-        
         var typeDropdown = m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Geometry Type").SetComponent<DropdownComponent>();
-        typeDropdown.SetOptions(options);
-        typeDropdown.SelectedIndex = options.IndexOf(referencePart.GeometryHandling.ToString());
+        typeDropdown.SetEnumOptions(referencePart.GeometryHandling);
         typeDropdown.OnSelectionChanged += index =>
         {
-            var value = Enum.Parse(typeof(BlurSaberPart.GeometryType), options[index]);
-            ApplyToBothParts(part => part.GeometryHandling = (BlurSaberPart.GeometryType)value);
+            ApplyToBothParts(part => part.GeometryHandling = typeDropdown.SelectedEnumValue<BlurSaberPart.GeometryType>());
             RebuildPanels();
         };
 

@@ -12,7 +12,9 @@ namespace VainSabers.Sabers
     {
         public enum GeometryType
         {
+            [Label("Simple (Interpolated)")]
             Simple,
+            [Label("Advanced (Per-Ring)")]
             Advanced
         }
 
