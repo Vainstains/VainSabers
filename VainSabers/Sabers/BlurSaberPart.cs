@@ -74,6 +74,8 @@ namespace VainSabers.Sabers
         public Vector3 LookDir = Vector3.zero;
         public bool UseLookDir = false;
         
+        public int LinkedPartIndex = -1;
+        
         public Material Material = null!;
         public Material InvertedMaterial = null!;
         public Material LitMaterial = null!;
@@ -139,6 +141,45 @@ namespace VainSabers.Sabers
             }
         }
 
+        public void CopyVisualPropertiesFrom(BlurSaberPart source)
+        {
+            Length = source.Length;
+            GeometryHandling = source.GeometryHandling;
+            RingParams = new List<BlurSaberRingParams>(source.RingParams);
+
+            StartRadius = source.StartRadius;
+            EndRadius = source.EndRadius;
+            StartColor = source.StartColor;
+            EndColor = source.EndColor;
+            StartCustomColorWeight = source.StartCustomColorWeight;
+            EndCustomColorWeight = source.EndCustomColorWeight;
+            HueShift = source.HueShift;
+            StartGlow = source.StartGlow;
+            EndGlow = source.EndGlow;
+            StartOpacity = source.StartOpacity;
+            EndOpacity = source.EndOpacity;
+            DepthOffset = source.DepthOffset;
+            Inverted = source.Inverted;
+            Lit = source.Lit;
+            BlurFactor = source.BlurFactor;
+            BlurFadeFactor = source.BlurFadeFactor;
+            EnableEndCaps = source.EnableEndCaps;
+            EndCapExtension = source.EndCapExtension;
+            BulgeAmount = source.BulgeAmount;
+            MinimumRings = source.MinimumRings;
+            EnableRoundedNormals = source.EnableRoundedNormals;
+            RimFactor = source.RimFactor;
+            RimPower = source.RimPower;
+            RimPerpendicular = source.RimPerpendicular;
+            LookDir = source.LookDir;
+            UseLookDir = source.UseLookDir;
+            Material = source.Material;
+            InvertedMaterial = source.InvertedMaterial;
+            LitMaterial = source.LitMaterial;
+            LitInvertedMaterial = source.LitInvertedMaterial;
+            RenderQueueOffset = source.RenderQueueOffset;
+        }
+
         void LateUpdate()
         {
             if (!this.Inject(ref m_injected))
@@ -146,6 +187,13 @@ namespace VainSabers.Sabers
                 m_blurTube?.Destroy();
                 m_blurTube = null;
                 return;
+            }
+
+            if (LinkedPartIndex >= 0 && LinkedPartIndex < m_saberData.ComponentCount)
+            {
+                var source = m_saberData.Components[LinkedPartIndex];
+                if (source != null && source != this)
+                    CopyVisualPropertiesFrom(source);
             }
 
             var ringCount = RingCount;

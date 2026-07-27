@@ -142,6 +142,40 @@ class SaberEditorComponent : UIComponent
         action(MenuStateHandler.Sabers.left.Data.Components[m_selectedPartIndex]);
     }
 
+    private void ApplyToBothResolvedParts(Action<BlurSaberPart> action)
+    {
+        if (m_selectedPartIndex < 0)
+            return;
+
+        ApplyToBothSabers(saber =>
+        {
+            var part = saber.Data.Components[m_selectedPartIndex];
+            if (part.LinkedPartIndex >= 0 && part.LinkedPartIndex < saber.Data.ComponentCount)
+            {
+                var source = saber.Data.Components[part.LinkedPartIndex];
+                if (source != null)
+                    action(source);
+                else
+                    action(part);
+            }
+            else
+            {
+                action(part);
+            }
+        });
+    }
+
+    private BlurSaberPart ResolveSource(BlurSaberPart part)
+    {
+        if (part.LinkedPartIndex >= 0 && part.LinkedPartIndex < EditingSaber.Data.ComponentCount)
+        {
+            var source = EditingSaber.Data.Components[part.LinkedPartIndex];
+            if (source != null)
+                return source;
+        }
+        return part;
+    }
+
     private BlurSaber EditingSaber => MenuStateHandler.Sabers.right;
     
     // panels
@@ -162,6 +196,10 @@ class SaberEditorComponent : UIComponent
     private TextComponent m_ringIndexText = null!;
 
     private UIComponent m_partSelectRow = null!;
+    private UIComponent m_partActionRow = null!;
+    private DropdownComponent m_linkDropdown = null!;
+    private TextButtonComponent m_duplicateButton = null!;
+    private TextButtonComponent m_consolidateButton = null!;
 
     protected override void Init()
     {
@@ -227,6 +265,21 @@ class SaberEditorComponent : UIComponent
         m_addPartButton.OnClick += AddPart;
         m_addPartButton.Color = new Color(0.1f, 0.6f, 0.2f, 1.0f);
 
+        m_partActionRow = m_partPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
+
+        m_linkDropdown = m_partActionRow.AddChild<DropdownComponent>().ToFill().InsetRight(15);
+        m_linkDropdown.OnSelectionChanged += OnLinkChanged;
+
+        m_consolidateButton = m_partActionRow.AddChild<TextButtonComponent>().ToRightEdge()
+            .ExtendLeft(4).Move(-5, 0).WithText("Cons");
+        m_consolidateButton.OnClick += ConsolidatePart;
+        m_consolidateButton.Color = new Color(0.6f, 0.5f, 0.2f, 1.0f);
+
+        m_duplicateButton = m_partActionRow.AddChild<TextButtonComponent>().ToRightEdge()
+            .ExtendLeft(4).WithText("Dup");
+        m_duplicateButton.OnClick += DuplicatePart;
+        m_duplicateButton.Color = new Color(0.2f, 0.5f, 0.7f, 1.0f);
+
         UpdatePartDropdown();
 
         base.Init();
@@ -290,6 +343,61 @@ class SaberEditorComponent : UIComponent
         }
     }
 
+    private void DuplicatePart()
+    {
+        if (m_selectedPartIndex < 0)
+            return;
+
+        ApplyToBothSabers(saber =>
+        {
+            var source = saber.Data.Components[m_selectedPartIndex];
+            saber.Data.DuplicateComponent(source);
+        });
+
+        m_selectedPartIndex = EditingSaber.Data.Components.Count - 1;
+        UpdatePartDropdown();
+    }
+
+    private void ConsolidatePart()
+    {
+        if (m_selectedPartIndex < 0)
+            return;
+
+        ApplyToBothParts(part => part.LinkedPartIndex = -1);
+        UpdateLinkDropdown();
+    }
+
+    private void OnLinkChanged(int index)
+    {
+        if (m_selectedPartIndex < 0)
+            return;
+
+        int linkIndex = index - 1;
+        ApplyToBothParts(part => part.LinkedPartIndex = linkIndex);
+    }
+
+    private void UpdateLinkDropdown()
+    {
+        var parts = EditingSaber.Data.Components;
+        var options = new List<string> { "None" };
+        foreach (var part in parts)
+            options.Add(part.gameObject.name);
+
+        m_linkDropdown.SetOptions(options);
+
+        if (m_selectedPartIndex >= 0 && m_selectedPartIndex < parts.Count)
+        {
+            int linkIndex = parts[m_selectedPartIndex].LinkedPartIndex;
+            m_linkDropdown.SelectedIndex = linkIndex + 1;
+            m_consolidateButton.IsInteractable = linkIndex >= 0;
+        }
+        else
+        {
+            m_linkDropdown.SelectedIndex = 0;
+            m_consolidateButton.IsInteractable = false;
+        }
+    }
+
     public void UpdatePartDropdown()
     {
         var parts = EditingSaber.Data.Components;
@@ -306,12 +414,15 @@ class SaberEditorComponent : UIComponent
         {
             m_removePartButton.IsInteractable = true;
             m_partNameInput.SetValue(parts[index].gameObject.name, false);
+            m_partActionRow.gameObject.SetActive(true);
         }
         else
         {
             m_removePartButton.IsInteractable = false;
             m_partNameInput.SetValue("", false);
+            m_partActionRow.gameObject.SetActive(false);
         }
+        UpdateLinkDropdown();
     }
 
     private void SelectedPartChanged(int index)
@@ -335,7 +446,7 @@ class SaberEditorComponent : UIComponent
 
     private void RebuildPanels()
     {
-        m_partPanel.Content.ClearChildren(m_partSelectRow);
+        m_partPanel.Content.ClearChildren(m_partSelectRow, m_partActionRow);
         m_geometryPanel.Content.ClearChildren();
         m_materialPanel.Content.ClearChildren();
 
@@ -343,6 +454,7 @@ class SaberEditorComponent : UIComponent
             return;
         
         var referencePart = EditingSaber.Data.Components[m_selectedPartIndex];
+        var sourcePart = ResolveSource(referencePart);
         
         // Part panel
 
@@ -387,74 +499,74 @@ class SaberEditorComponent : UIComponent
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Length").SetComponent<NumberInputComponent>()
             .WithMinMaxStep(0.001f, 1f, 0.001f)
-            .WithValue(referencePart.Length).OnValueChanged += val =>
-            ApplyToBothParts(part => part.Length = val);
+            .WithValue(sourcePart.Length).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.Length = val);
         
         // Material panel
         m_materialPanel.Content.AddSubHeader("General");
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Hue Shift").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.5f, 0.5f, 0.025f)
-            .WithValue(referencePart.HueShift).OnValueChanged += val =>
-            ApplyToBothParts(part => part.HueShift = val);
+            .WithValue(sourcePart.HueShift).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.HueShift = val);
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Use Lit Shader").SetComponent<ToggleComponent>().WithValue(referencePart.Lit)
+            .WithLabel("Use Lit Shader").SetComponent<ToggleComponent>().WithValue(sourcePart.Lit)
             .OnValueChanged += val =>
             {
-                ApplyToBothParts(part => part.Lit = val);
+                ApplyToBothResolvedParts(part => part.Lit = val);
                 RebuildPanels();
             };
 
         m_materialPanel.Content.AddSubHeader("Rim Shading");
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(-3f, 3f, 0.1f).WithSensitivityCoef(0.3f)
-            .WithValue(referencePart.RimFactor).OnValueChanged += val =>
-            ApplyToBothParts(part => part.RimFactor = val);
+            .WithValue(sourcePart.RimFactor).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.RimFactor = val);
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Falloff Power").SetComponent<NumberInputComponent>().WithMinMaxStep(0.25f, 6f, 0.25f)
-            .WithValue(referencePart.RimPower).OnValueChanged += val =>
-            ApplyToBothParts(part => part.RimPower = val);
+            .WithValue(sourcePart.RimPower).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.RimPower = val);
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Perpendicular Filter").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.1f).WithSensitivityCoef(0.3f)
-            .WithValue(referencePart.RimPerpendicular).OnValueChanged += val =>
-            ApplyToBothParts(part => part.RimPerpendicular = val);
+            .WithValue(sourcePart.RimPerpendicular).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.RimPerpendicular = val);
         
         m_materialPanel.Content.AddSubHeader("Blur");
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Time").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.1f).WithSensitivityCoef(0.3f)
-            .WithValue(referencePart.BlurFactor).OnValueChanged += val =>
-            ApplyToBothParts(part => part.BlurFactor = val);
+            .WithValue(sourcePart.BlurFactor).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.BlurFactor = val);
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Softness").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 5f, 0.1f).WithSensitivityCoef(0.3f)
-            .WithValue(referencePart.BlurFadeFactor).OnValueChanged += val =>
-            ApplyToBothParts(part => part.BlurFadeFactor = val);
+            .WithValue(sourcePart.BlurFadeFactor).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.BlurFadeFactor = val);
 
         m_materialPanel.Content.AddSubHeader("Rendering");
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Depth Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.02f, 0.02f, 0.001f).WithSensitivityCoef(0.03f)
-            .WithValue(referencePart.DepthOffset).OnValueChanged += val =>
-            ApplyToBothParts(part => part.DepthOffset = val);
+            .WithValue(sourcePart.DepthOffset).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.DepthOffset = val);
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Queue Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-10f, 10f, 1f)
-            .WithValue(referencePart.RenderQueueOffset).OnValueChanged += val =>
-            ApplyToBothParts(part => part.RenderQueueOffset = Mathf.RoundToInt(val));
+            .WithValue(sourcePart.RenderQueueOffset).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.RenderQueueOffset = Mathf.RoundToInt(val));
         
         // Geometry panel
         var typeDropdown = m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Geometry Type").SetComponent<DropdownComponent>();
-        typeDropdown.SetEnumOptions(referencePart.GeometryHandling);
+        typeDropdown.SetEnumOptions(sourcePart.GeometryHandling);
         typeDropdown.OnSelectionChanged += index =>
         {
-            ApplyToBothParts(part => part.GeometryHandling = typeDropdown.SelectedEnumValue<BlurSaberPart.GeometryType>());
+            ApplyToBothResolvedParts(part => part.GeometryHandling = typeDropdown.SelectedEnumValue<BlurSaberPart.GeometryType>());
             RebuildPanels();
         };
 
-        switch (referencePart.GeometryHandling)
+        switch (sourcePart.GeometryHandling)
         {
             case BlurSaberPart.GeometryType.Simple:
-                BuildSimpleGeometryPanel(referencePart);
+                BuildSimpleGeometryPanel(sourcePart);
                 break;
             case BlurSaberPart.GeometryType.Advanced:
-                BuildAdvancedGeometryPanel(referencePart);
+                BuildAdvancedGeometryPanel(sourcePart);
                 break;
         }
     }
@@ -465,98 +577,98 @@ class SaberEditorComponent : UIComponent
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
             .WithValue(referencePart.StartRadius).OnValueChanged += val =>
-            ApplyToBothParts(part => part.StartRadius = val);
+            ApplyToBothResolvedParts(part => part.StartRadius = val);
         if (!referencePart.Lit)
             m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
                 .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
                 .WithValue(referencePart.StartGlow).OnValueChanged += val =>
-                ApplyToBothParts(part => part.StartGlow = val);
+                ApplyToBothResolvedParts(part => part.StartGlow = val);
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
             .WithValue(referencePart.StartOpacity).OnValueChanged += val =>
-            ApplyToBothParts(part => part.StartOpacity = val);
+            ApplyToBothResolvedParts(part => part.StartOpacity = val);
         m_geometryPanel.Content.AddSpace(2);
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithTint(RedColor)
             .WithValue(referencePart.StartColor.r).OnValueChanged += val =>
-            ApplyToBothParts(part => part.StartColor = new Color(val, part.StartColor.g, part.StartColor.b, part.StartColor.a));
+            ApplyToBothResolvedParts(part => part.StartColor = new Color(val, part.StartColor.g, part.StartColor.b, part.StartColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithTint(GreenColor)
             .WithValue(referencePart.StartColor.g).OnValueChanged += val =>
-            ApplyToBothParts(part => part.StartColor = new Color(part.StartColor.r, val, part.StartColor.b, part.StartColor.a));
+            ApplyToBothResolvedParts(part => part.StartColor = new Color(part.StartColor.r, val, part.StartColor.b, part.StartColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithTint(BlueColor)
             .WithValue(referencePart.StartColor.b).OnValueChanged += val =>
-            ApplyToBothParts(part => part.StartColor = new Color(part.StartColor.r, part.StartColor.g, val, part.StartColor.a));
+            ApplyToBothResolvedParts(part => part.StartColor = new Color(part.StartColor.r, part.StartColor.g, val, part.StartColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
             .WithValue(referencePart.StartCustomColorWeight).OnValueChanged += val =>
-            ApplyToBothParts(part => part.StartCustomColorWeight = val);
+            ApplyToBothResolvedParts(part => part.StartCustomColorWeight = val);
         
         
         m_geometryPanel.Content.AddSubHeader("End Properties");
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.03f)
             .WithValue(referencePart.EndRadius).OnValueChanged += val =>
-            ApplyToBothParts(part => part.EndRadius = val);
+            ApplyToBothResolvedParts(part => part.EndRadius = val);
         if (!referencePart.Lit)
             m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
                 .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
                 .WithValue(referencePart.EndGlow).OnValueChanged += val =>
-                ApplyToBothParts(part => part.EndGlow = val);
+                ApplyToBothResolvedParts(part => part.EndGlow = val);
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
             .WithValue(referencePart.EndOpacity).OnValueChanged += val =>
-            ApplyToBothParts(part => part.EndOpacity = val);
+            ApplyToBothResolvedParts(part => part.EndOpacity = val);
         m_geometryPanel.Content.AddSpace(2);
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithTint(RedColor)
             .WithValue(referencePart.EndColor.r).OnValueChanged += val =>
-            ApplyToBothParts(part => part.EndColor = new Color(val, part.EndColor.g, part.EndColor.b, part.EndColor.a));
+            ApplyToBothResolvedParts(part => part.EndColor = new Color(val, part.EndColor.g, part.EndColor.b, part.EndColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithTint(GreenColor)
             .WithValue(referencePart.EndColor.g).OnValueChanged += val =>
-            ApplyToBothParts(part => part.EndColor = new Color(part.EndColor.r, val, part.EndColor.b, part.EndColor.a));
+            ApplyToBothResolvedParts(part => part.EndColor = new Color(part.EndColor.r, val, part.EndColor.b, part.EndColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithTint(BlueColor)
             .WithValue(referencePart.EndColor.b).OnValueChanged += val =>
-            ApplyToBothParts(part => part.EndColor = new Color(part.EndColor.r, part.EndColor.g, val, part.EndColor.a));
+            ApplyToBothResolvedParts(part => part.EndColor = new Color(part.EndColor.r, part.EndColor.g, val, part.EndColor.a));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
             .WithValue(referencePart.EndCustomColorWeight).OnValueChanged += val =>
-            ApplyToBothParts(part => part.EndCustomColorWeight = val);
+            ApplyToBothResolvedParts(part => part.EndCustomColorWeight = val);
         
         m_geometryPanel.Content.AddSubHeader("Common Properties");
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Bulge Amount").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithValue(referencePart.BulgeAmount).OnValueChanged += val =>
-            ApplyToBothParts(part => part.BulgeAmount = val);
+            ApplyToBothResolvedParts(part => part.BulgeAmount = val);
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Rings").SetComponent<NumberInputComponent>().WithMinMaxStep(2f, 10f, 1f)
             .WithValue(referencePart.MinimumRings).OnValueChanged += val =>
-            ApplyToBothParts(part => part.MinimumRings = Mathf.RoundToInt(Mathf.Clamp(val, 2f, 10f)));
+            ApplyToBothResolvedParts(part => part.MinimumRings = Mathf.RoundToInt(Mathf.Clamp(val, 2f, 10f)));
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Inverted").SetComponent<ToggleComponent>().WithValue(referencePart.Inverted)
             .OnValueChanged += val =>
-            ApplyToBothParts(part => part.Inverted = val);
+            ApplyToBothResolvedParts(part => part.Inverted = val);
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Use End Caps").SetComponent<ToggleComponent>().WithValue(referencePart.EnableEndCaps)
             .OnValueChanged += val =>
-            ApplyToBothParts(part => part.EnableEndCaps = val);
+            ApplyToBothResolvedParts(part => part.EnableEndCaps = val);
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("End Cap Extension").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 3f, 0.01f)
             .WithValue(referencePart.EndCapExtension).OnValueChanged += val =>
-            ApplyToBothParts(part => part.EndCapExtension = val);
+            ApplyToBothResolvedParts(part => part.EndCapExtension = val);
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Rounded Normals").SetComponent<ToggleComponent>().WithValue(referencePart.EnableRoundedNormals)
             .OnValueChanged += val =>
-            ApplyToBothParts(part => part.EnableRoundedNormals = val);
+            ApplyToBothResolvedParts(part => part.EnableRoundedNormals = val);
     }
 
     private void BuildAdvancedGeometryPanel(BlurSaberPart referencePart)
@@ -571,7 +683,7 @@ class SaberEditorComponent : UIComponent
                 1f, referencePart.EndRadius, referencePart.EndColor,
                 referencePart.EndCustomColorWeight, referencePart.EndGlow,
                 referencePart.EndOpacity, referencePart.Inverted);
-            ApplyToBothParts(part =>
+            ApplyToBothResolvedParts(part =>
             {
                 part.RingParams.Clear();
                 part.RingParams.Add(start);
@@ -625,7 +737,7 @@ class SaberEditorComponent : UIComponent
         {
             if (referencePart.RingParams.Count <= 1)
                 return;
-            ApplyToBothParts(part =>
+            ApplyToBothResolvedParts(part =>
             {
                 if (m_selectedRingIndex >= part.RingParams.Count)
                     m_selectedRingIndex = part.RingParams.Count - 1;
@@ -646,7 +758,7 @@ class SaberEditorComponent : UIComponent
                 Mathf.Clamp01(current.PosAlongPart01 + 0.1f),
                 current.Radius, current.Color, current.CustomWeight,
                 current.Glow, current.Opacity, current.Inverted);
-            ApplyToBothParts(part =>
+            ApplyToBothResolvedParts(part =>
             {
                 part.RingParams.Insert(m_selectedRingIndex + 1, newRing);
             });
@@ -664,7 +776,7 @@ class SaberEditorComponent : UIComponent
             .WithValue(ring.PosAlongPart01).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
-                ApplyToBothParts(part =>
+                ApplyToBothResolvedParts(part =>
                 {
                     if (i < part.RingParams.Count)
                         part.RingParams[i] = part.RingParams[i] with { PosAlongPart01 = Mathf.Clamp01(val) };
@@ -675,7 +787,7 @@ class SaberEditorComponent : UIComponent
             .WithValue(ring.Radius).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
-                ApplyToBothParts(part =>
+                ApplyToBothResolvedParts(part =>
                 {
                     if (i < part.RingParams.Count)
                         part.RingParams[i] = part.RingParams[i] with { Radius = val };
@@ -686,7 +798,7 @@ class SaberEditorComponent : UIComponent
             .OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
-                ApplyToBothParts(part =>
+                ApplyToBothResolvedParts(part =>
                 {
                     if (i < part.RingParams.Count)
                         part.RingParams[i] = part.RingParams[i] with { Inverted = val };
@@ -699,7 +811,7 @@ class SaberEditorComponent : UIComponent
                 .WithValue(ring.Glow).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
-                ApplyToBothParts(part =>
+                ApplyToBothResolvedParts(part =>
                 {
                     if (i < part.RingParams.Count)
                         part.RingParams[i] = part.RingParams[i] with { Glow = val };
@@ -710,7 +822,7 @@ class SaberEditorComponent : UIComponent
             .WithValue(ring.Opacity).OnValueChanged += val =>
         {
             var i = m_selectedRingIndex;
-            ApplyToBothParts(part =>
+            ApplyToBothResolvedParts(part =>
             {
                 if (i < part.RingParams.Count)
                     part.RingParams[i] = part.RingParams[i] with { Opacity = val };
@@ -725,7 +837,7 @@ class SaberEditorComponent : UIComponent
             .WithValue(ring.Color.r).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
-                ApplyToBothParts(part =>
+                ApplyToBothResolvedParts(part =>
                 {
                     if (i < part.RingParams.Count)
                     {
@@ -740,7 +852,7 @@ class SaberEditorComponent : UIComponent
             .WithValue(ring.Color.g).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
-                ApplyToBothParts(part =>
+                ApplyToBothResolvedParts(part =>
                 {
                     if (i < part.RingParams.Count)
                     {
@@ -755,7 +867,7 @@ class SaberEditorComponent : UIComponent
             .WithValue(ring.Color.b).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
-                ApplyToBothParts(part =>
+                ApplyToBothResolvedParts(part =>
                 {
                     if (i < part.RingParams.Count)
                     {
@@ -772,7 +884,7 @@ class SaberEditorComponent : UIComponent
             .WithValue(ring.CustomWeight).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;
-                ApplyToBothParts(part =>
+                ApplyToBothResolvedParts(part =>
                 {
                     if (i < part.RingParams.Count)
                         part.RingParams[i] = part.RingParams[i] with { CustomWeight = val };

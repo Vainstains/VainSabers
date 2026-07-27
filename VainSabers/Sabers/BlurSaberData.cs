@@ -126,6 +126,17 @@ public class BlurSaberData : MonoBehaviour
         return m_components.Contains(part);
     }
 
+    public BlurSaberPart DuplicateComponent(BlurSaberPart source)
+    {
+        var newPart = AddComponent($"{source.gameObject.name} Copy");
+        newPart.transform.localPosition = source.transform.localPosition;
+        newPart.RotX = source.RotX;
+        newPart.RotY = source.RotY;
+        newPart.RotZ = source.RotZ;
+        newPart.CopyVisualPropertiesFrom(source);
+        return newPart;
+    }
+
     public void ImportFromFile(string path)
     {
         if (string.IsNullOrEmpty(path) || !File.Exists(path))
@@ -191,6 +202,7 @@ public class BlurSaberData : MonoBehaviour
 
                 part.LookDir = ArrToVec3(partData.LookDir);
                 part.UseLookDir = partData.UseLookDir;
+                part.LinkedPartIndex = partData.LinkedPartIndex;
 
                 part.BulgeAmount = Mathf.Clamp(partData.BulgeAmount, -1f, 1f);
                 part.MinimumRings = Mathf.Clamp(partData.MinimumRings, 2, 10);
@@ -244,6 +256,7 @@ public class BlurSaberData : MonoBehaviour
                     Name = part.gameObject.name,
                     Position = new float[] { part.transform.localPosition.x, part.transform.localPosition.y, part.transform.localPosition.z },
                     Rotation = new float[] { part.RotX, part.RotY, part.RotZ },
+                    LinkedPartIndex = part.LinkedPartIndex,
                     Length = part.Length,
                     GeometryMode = part.GeometryHandling,
                     HueShift = part.HueShift,
@@ -516,6 +529,7 @@ public class BlurSaberData : MonoBehaviour
         public string? Name { get; set; }
         public float[] Position { get; set; } = new float[3];
         public float[] Rotation { get; set; } = new float[3];
+        public int LinkedPartIndex { get; set; } = -1;
         public float Length { get; set; } = 0.1f;
         public BlurSaberPart.GeometryType GeometryMode { get; set; }
         public float HueShift { get; set; }
