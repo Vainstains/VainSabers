@@ -256,7 +256,7 @@ namespace VainSabers.Sabers
             motionDir = Vector3.ProjectOnPlane(motionDir, avgFwd).normalized;
             Vector3 plane = Vector3.Cross(motionDir, avgFwd);
 
-            float sweepRatio = dst / (1.5f * radius);
+            float sweepRatio = dst / (2.0f * radius);
             
             if (isZero)
             {

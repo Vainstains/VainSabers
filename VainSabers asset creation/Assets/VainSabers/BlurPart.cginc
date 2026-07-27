@@ -72,6 +72,14 @@ float _RimFactor;
 float _RimPower;
 float _RimPerpendicular;
 
+// blur goes from 0 to 1
+float getFresnelBlurFadeFactor(float x, float blur)
+{
+    float p = 100.0 / (blur * blur + 0.005);
+    float base = max(1.0, 1.0 - 1.1 * pow(x, p));
+    return base * base * base;
+}
+
 SaberFragVariables GetCommonSaberVars(v2f vertStage)
 {
     // _Color: The color of the blade
@@ -93,6 +101,7 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
 
     // Sweep factor
     float sweepFactor = vertStage.uv.y * 1.5 * _VainSaberBlurSoftness;
+    float blurFac = sweepFactor * 0.5;
 
     // Distance to edge
     float distanceToEdge = min(vertStage.uv.x * 2.0, 2.0 - 2.0 * vertStage.uv.x);
@@ -137,7 +146,8 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float3 N = commonVars.normal;
     float3 V = commonVars.viewDir;
 
-    float fresnelFull = 1.0 - saturate(dot(N, V));
+    float fresnelFull = 1.0 - saturate(abs(dot(N, V)));
+    commonVars.alpha *= saturate(getFresnelBlurFadeFactor(fresnelFull, blurFac));
 
     float3 Nperp = N - blade * dot(N, blade);
     float3 Vperp = V - blade * dot(V, blade);
