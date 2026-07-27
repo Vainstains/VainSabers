@@ -407,8 +407,14 @@ namespace VainSabers.Sabers
             var dst = motionDir.magnitude;
 
             var avgFwd = (first.forward + last.forward).normalized;
-            var tangent = Vector3.Cross(avgFwd, transform.up).normalized;
+            var refUp = m_movementHistoryProvider.transform.up;
+            if (Vector3.Dot(refUp, avgFwd) > 0.99f)
+                refUp = m_movementHistoryProvider.transform.right;
+            var tangent = Vector3.Cross(avgFwd, refUp).normalized;
             var right = Vector3.Cross(avgFwd, tangent).normalized;
+            
+            tangent = (first.up + last.up).normalized;
+            right = (first.right + last.right).normalized;
 
             motionDir = Vector3.ProjectOnPlane(motionDir, avgFwd).normalized;
             var plane = Vector3.Cross(motionDir, avgFwd);
@@ -417,13 +423,13 @@ namespace VainSabers.Sabers
             
             if (isZero)
             {
-                radius = 0.0001f;
+                radius = 0.00001f;
             }
 
             for (var i = 0; i < ringVerts; i++)
             {
                 var theta = 2.0f * Mathf.PI * i / ringVerts;
-                var offsetDir = Mathf.Sign(-rawRadius) * Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
+                var offsetDir = Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
 
                 var dot = Vector3.Dot(offsetDir, motionDir);
                 var tSample = (dot + 1.0f) * 0.5f;
