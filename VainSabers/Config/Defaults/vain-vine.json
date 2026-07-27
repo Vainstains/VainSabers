@@ -1,0 +1,2847 @@
+{
+  "Version": 1,
+  "Parts": [
+    {
+      "Name": "handle core",
+      "Position": [
+        0.0,
+        0.0,
+        -0.0449999981
+      ],
+      "Rotation": [
+        180.0,
+        0.0,
+        0.0
+      ],
+      "LinkedPartIndex": -1,
+      "Length": 0.124000005,
+      "GeometryMode": 0,
+      "HueShift": 0.0,
+      "StartRadius": 0.009000001,
+      "StartColor": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "StartCustomWeight": 0.305,
+      "StartGlow": 0.0,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.009000001,
+      "EndColor": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "EndCustomWeight": 0.359999985,
+      "EndGlow": 0.0,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": false,
+      "EnableRoundedNormals": false,
+      "EndCapExtension": 0.25,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 0.01,
+      "MinimumRings": 6,
+      "RenderQueueOffset": -10,
+      "DepthOffset": 0.0,
+      "RimFactor": 3.0,
+      "RimPower": 2.25,
+      "RimPerpendicular": 1.0,
+      "Rings": null
+    },
+    {
+      "Name": "ball",
+      "Position": [
+        0.0,
+        0.0,
+        -0.02
+      ],
+      "Rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "LinkedPartIndex": -1,
+      "Length": 0.017,
+      "GeometryMode": 0,
+      "HueShift": 0.0,
+      "StartRadius": 0.00500000035,
+      "StartColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "StartCustomWeight": 1.0,
+      "StartGlow": 1.105,
+      "StartOpacity": 0.93,
+      "EndRadius": 0.00500000035,
+      "EndColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "EndCustomWeight": 1.0,
+      "EndGlow": 1.08499992,
+      "EndOpacity": 0.94,
+      "Inverted": true,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "EndCapExtension": 0.98999995,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 1.0,
+      "MinimumRings": 4,
+      "RenderQueueOffset": 0,
+      "DepthOffset": 0.0,
+      "RimFactor": 0.0,
+      "RimPower": 3.0,
+      "RimPerpendicular": 0.0,
+      "Rings": null
+    },
+    {
+      "Name": "ring",
+      "Position": [
+        0.0,
+        0.0,
+        -0.199999988
+      ],
+      "Rotation": [
+        90.0,
+        0.0,
+        0.0
+      ],
+      "LinkedPartIndex": -1,
+      "Length": 0.00500000035,
+      "GeometryMode": 1,
+      "HueShift": 0.0,
+      "StartRadius": 0.03,
+      "StartColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "StartCustomWeight": 1.0,
+      "StartGlow": 1.0,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.03,
+      "EndColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "EndCustomWeight": 1.0,
+      "EndGlow": 1.0,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "EndCapExtension": 0.25,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 0.0,
+      "MinimumRings": 4,
+      "RenderQueueOffset": 0,
+      "DepthOffset": 0.0,
+      "RimFactor": 1.6,
+      "RimPower": 3.0,
+      "RimPerpendicular": 0.0,
+      "Rings": [
+        {
+          "Position": -0.5,
+          "Radius": 0.024,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": -0.5,
+          "Radius": 0.0200000014,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.5,
+          "Radius": 0.0200000014,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.5,
+          "Radius": 0.024,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.5,
+          "Radius": 0.024,
+          "Color": [
+            0.005,
+            0.005,
+            0.005
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 1.0,
+          "Radius": 0.027,
+          "Color": [
+            0.005,
+            0.005,
+            0.005
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.032,
+          "Color": [
+            0.005,
+            0.005,
+            0.005
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": -1.0,
+          "Radius": 0.027,
+          "Color": [
+            0.005,
+            0.005,
+            0.005
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": -0.5,
+          "Radius": 0.024,
+          "Color": [
+            0.005,
+            0.005,
+            0.005
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        }
+      ]
+    },
+    {
+      "Name": "vine",
+      "Position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "LinkedPartIndex": -1,
+      "Length": 0.302000016,
+      "GeometryMode": 1,
+      "HueShift": 0.0,
+      "StartRadius": 0.03,
+      "StartColor": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "StartCustomWeight": 0.0,
+      "StartGlow": 0.0,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.03,
+      "EndColor": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "EndCustomWeight": 0.0,
+      "EndGlow": 0.0,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "EndCapExtension": 0.25,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 0.0,
+      "MinimumRings": 4,
+      "RenderQueueOffset": -7,
+      "DepthOffset": 0.0,
+      "RimFactor": 2.8,
+      "RimPower": 2.25,
+      "RimPerpendicular": 0.0,
+      "Rings": [
+        {
+          "Position": -0.58,
+          "Radius": 0.00500000035,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.008,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": -0.57,
+          "Radius": 0.0110000009,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.002,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": -0.48999998,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.008
+        },
+        {
+          "Position": -0.41,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.004,
+          "OffsetY": 0.006
+        },
+        {
+          "Position": -0.35,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.008,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": -0.28,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.03,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.00500000035,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.199999988,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.049999997,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": -0.149999991,
+          "Radius": 0.008,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.13,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.14,
+          "Radius": 0.009000001,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.145,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.13,
+          "Radius": 0.006,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.164999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.007,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": -0.08,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.164999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.014,
+          "OffsetY": -0.0300000012
+        },
+        {
+          "Position": -0.07,
+          "Radius": 0.006,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.19,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.0150000006,
+          "OffsetY": -0.033
+        },
+        {
+          "Position": -0.04,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.235,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.017,
+          "OffsetY": -0.0380000025
+        },
+        {
+          "Position": 0.01,
+          "Radius": 0.00500000035,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.255,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.0100000007,
+          "OffsetY": -0.025
+        },
+        {
+          "Position": 0.0899999961,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.755,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.008,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": 0.14,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0110000009,
+          "OffsetY": 0.003
+        },
+        {
+          "Position": 0.24000001,
+          "Radius": 0.002,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0100000007
+        },
+        {
+          "Position": 0.34,
+          "Radius": 0.003,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.009000001,
+          "OffsetY": -0.001
+        },
+        {
+          "Position": 0.47,
+          "Radius": 0.003,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.001,
+          "OffsetY": -0.008
+        },
+        {
+          "Position": 0.659999967,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 0.69,
+          "Inverted": false,
+          "OffsetX": 0.006,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.76,
+          "Radius": 0.00500000035,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 0.885,
+          "Opacity": 0.0,
+          "Inverted": false,
+          "OffsetX": 0.004,
+          "OffsetY": 0.0
+        }
+      ]
+    },
+    {
+      "Name": "vine Copy",
+      "Position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        0.0,
+        0.0,
+        72.0
+      ],
+      "LinkedPartIndex": -1,
+      "Length": 0.302000016,
+      "GeometryMode": 1,
+      "HueShift": 0.0,
+      "StartRadius": 0.03,
+      "StartColor": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "StartCustomWeight": 0.0,
+      "StartGlow": 0.0,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.03,
+      "EndColor": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "EndCustomWeight": 0.0,
+      "EndGlow": 0.0,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "EndCapExtension": 0.25,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 0.0,
+      "MinimumRings": 4,
+      "RenderQueueOffset": -7,
+      "DepthOffset": 0.0,
+      "RimFactor": 2.8,
+      "RimPower": 2.25,
+      "RimPerpendicular": 0.0,
+      "Rings": [
+        {
+          "Position": -0.599999964,
+          "Radius": 0.002,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.008,
+          "OffsetY": 0.0200000014
+        },
+        {
+          "Position": -0.57,
+          "Radius": 0.007,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.002,
+          "OffsetY": 0.013
+        },
+        {
+          "Position": -0.48999998,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.008
+        },
+        {
+          "Position": -0.41,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.004,
+          "OffsetY": 0.006
+        },
+        {
+          "Position": -0.35,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.008,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": -0.28,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.049999997,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.00500000035,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.199999988,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.095,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": -0.149999991,
+          "Radius": 0.008,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.16,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.14,
+          "Radius": 0.009000001,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.145,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.13,
+          "Radius": 0.006,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.164999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.007,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": -0.08,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.164999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.014,
+          "OffsetY": -0.0300000012
+        },
+        {
+          "Position": -0.07,
+          "Radius": 0.006,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.19,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.0150000006,
+          "OffsetY": -0.033
+        },
+        {
+          "Position": -0.04,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.235,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.017,
+          "OffsetY": -0.0380000025
+        },
+        {
+          "Position": 0.01,
+          "Radius": 0.00500000035,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.255,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.0100000007,
+          "OffsetY": -0.025
+        },
+        {
+          "Position": 0.0899999961,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.755,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.008,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": 0.14,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0110000009,
+          "OffsetY": 0.003
+        },
+        {
+          "Position": 0.24000001,
+          "Radius": 0.002,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0100000007
+        },
+        {
+          "Position": 0.34,
+          "Radius": 0.003,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.009000001,
+          "OffsetY": -0.001
+        },
+        {
+          "Position": 0.47,
+          "Radius": 0.003,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.001,
+          "OffsetY": -0.008
+        },
+        {
+          "Position": 0.659999967,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 0.69,
+          "Inverted": false,
+          "OffsetX": 0.006,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.76,
+          "Radius": 0.00500000035,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 0.885,
+          "Opacity": 0.0,
+          "Inverted": false,
+          "OffsetX": 0.004,
+          "OffsetY": 0.0
+        }
+      ]
+    },
+    {
+      "Name": "vine Copy Copy",
+      "Position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        0.0,
+        0.0,
+        144.0
+      ],
+      "LinkedPartIndex": -1,
+      "Length": 0.302000016,
+      "GeometryMode": 1,
+      "HueShift": 0.0,
+      "StartRadius": 0.03,
+      "StartColor": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "StartCustomWeight": 0.0,
+      "StartGlow": 0.0,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.03,
+      "EndColor": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "EndCustomWeight": 0.0,
+      "EndGlow": 0.0,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "EndCapExtension": 0.25,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 0.0,
+      "MinimumRings": 4,
+      "RenderQueueOffset": -7,
+      "DepthOffset": 0.0,
+      "RimFactor": 2.8,
+      "RimPower": 2.25,
+      "RimPerpendicular": 0.0,
+      "Rings": [
+        {
+          "Position": -0.599999964,
+          "Radius": 0.003,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.014,
+          "OffsetY": 0.013
+        },
+        {
+          "Position": -0.56,
+          "Radius": 0.007,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.003,
+          "OffsetY": 0.00500000035
+        },
+        {
+          "Position": -0.48999998,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.008
+        },
+        {
+          "Position": -0.41,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.004,
+          "OffsetY": 0.006
+        },
+        {
+          "Position": -0.35,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.008,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": -0.28,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.06,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.00500000035,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.199999988,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.099999994,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": -0.149999991,
+          "Radius": 0.008,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.179999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.14,
+          "Radius": 0.009000001,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.145,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.13,
+          "Radius": 0.006,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.164999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.007,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": -0.08,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.164999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.014,
+          "OffsetY": -0.0300000012
+        },
+        {
+          "Position": -0.07,
+          "Radius": 0.006,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.19,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.0150000006,
+          "OffsetY": -0.033
+        },
+        {
+          "Position": -0.04,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.235,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.017,
+          "OffsetY": -0.0380000025
+        },
+        {
+          "Position": 0.01,
+          "Radius": 0.00500000035,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.255,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.0100000007,
+          "OffsetY": -0.025
+        },
+        {
+          "Position": 0.0899999961,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.755,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.008,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": 0.14,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0110000009,
+          "OffsetY": 0.003
+        },
+        {
+          "Position": 0.24000001,
+          "Radius": 0.002,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0100000007
+        },
+        {
+          "Position": 0.34,
+          "Radius": 0.003,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.009000001,
+          "OffsetY": -0.001
+        },
+        {
+          "Position": 0.47,
+          "Radius": 0.003,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.001,
+          "OffsetY": -0.008
+        },
+        {
+          "Position": 0.659999967,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 0.69,
+          "Inverted": false,
+          "OffsetX": 0.006,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.76,
+          "Radius": 0.00500000035,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 0.885,
+          "Opacity": 0.0,
+          "Inverted": false,
+          "OffsetX": 0.004,
+          "OffsetY": 0.0
+        }
+      ]
+    },
+    {
+      "Name": "vine Copy Copy Copy",
+      "Position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        0.0,
+        0.0,
+        -144.0
+      ],
+      "LinkedPartIndex": -1,
+      "Length": 0.302000016,
+      "GeometryMode": 1,
+      "HueShift": 0.0,
+      "StartRadius": 0.03,
+      "StartColor": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "StartCustomWeight": 0.0,
+      "StartGlow": 0.0,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.03,
+      "EndColor": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "EndCustomWeight": 0.0,
+      "EndGlow": 0.0,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "EndCapExtension": 0.25,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 0.0,
+      "MinimumRings": 4,
+      "RenderQueueOffset": -7,
+      "DepthOffset": 0.0,
+      "RimFactor": 2.8,
+      "RimPower": 2.25,
+      "RimPerpendicular": 0.0,
+      "Rings": [
+        {
+          "Position": -0.62,
+          "Radius": 0.001,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.017,
+          "OffsetY": 0.0110000009
+        },
+        {
+          "Position": -0.56,
+          "Radius": 0.006,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.001,
+          "OffsetY": 0.00500000035
+        },
+        {
+          "Position": -0.48999998,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.008
+        },
+        {
+          "Position": -0.41,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.004,
+          "OffsetY": 0.006
+        },
+        {
+          "Position": -0.35,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.008,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": -0.28,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.06,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.00500000035,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.199999988,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.105,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": -0.149999991,
+          "Radius": 0.008,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.179999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.14,
+          "Radius": 0.009000001,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.145,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.13,
+          "Radius": 0.006,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.164999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.007,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": -0.08,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.164999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.014,
+          "OffsetY": -0.0300000012
+        },
+        {
+          "Position": -0.07,
+          "Radius": 0.006,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.19,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.0150000006,
+          "OffsetY": -0.033
+        },
+        {
+          "Position": -0.04,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.235,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.017,
+          "OffsetY": -0.0380000025
+        },
+        {
+          "Position": 0.01,
+          "Radius": 0.00500000035,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.255,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.0100000007,
+          "OffsetY": -0.025
+        },
+        {
+          "Position": 0.0899999961,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.755,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.008,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": 0.14,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0110000009,
+          "OffsetY": 0.003
+        },
+        {
+          "Position": 0.24000001,
+          "Radius": 0.002,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0100000007
+        },
+        {
+          "Position": 0.34,
+          "Radius": 0.003,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.009000001,
+          "OffsetY": -0.001
+        },
+        {
+          "Position": 0.47,
+          "Radius": 0.003,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.001,
+          "OffsetY": -0.008
+        },
+        {
+          "Position": 0.659999967,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 0.69,
+          "Inverted": false,
+          "OffsetX": 0.006,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.76,
+          "Radius": 0.00500000035,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 0.885,
+          "Opacity": 0.0,
+          "Inverted": false,
+          "OffsetX": 0.004,
+          "OffsetY": 0.0
+        }
+      ]
+    },
+    {
+      "Name": "vine Copy Copy Copy Copy",
+      "Position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        0.0,
+        0.0,
+        -72.0
+      ],
+      "LinkedPartIndex": -1,
+      "Length": 0.302000016,
+      "GeometryMode": 1,
+      "HueShift": 0.0,
+      "StartRadius": 0.03,
+      "StartColor": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "StartCustomWeight": 0.0,
+      "StartGlow": 0.0,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.03,
+      "EndColor": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "EndCustomWeight": 0.0,
+      "EndGlow": 0.0,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "EndCapExtension": 0.25,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 0.0,
+      "MinimumRings": 4,
+      "RenderQueueOffset": -7,
+      "DepthOffset": 0.0,
+      "RimFactor": 2.8,
+      "RimPower": 2.25,
+      "RimPerpendicular": 0.0,
+      "Rings": [
+        {
+          "Position": -0.61,
+          "Radius": 0.002,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.007,
+          "OffsetY": 0.0220000017
+        },
+        {
+          "Position": -0.56,
+          "Radius": 0.008,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.00500000035,
+          "OffsetY": 0.0110000009
+        },
+        {
+          "Position": -0.48999998,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.008
+        },
+        {
+          "Position": -0.41,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.004,
+          "OffsetY": 0.006
+        },
+        {
+          "Position": -0.35,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.008,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": -0.28,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0249999985,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.00500000035,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.199999988,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.0899999961,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": -0.149999991,
+          "Radius": 0.008,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.179999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.14,
+          "Radius": 0.009000001,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.145,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.003,
+          "OffsetY": -0.00500000035
+        },
+        {
+          "Position": -0.13,
+          "Radius": 0.006,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.164999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.007,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": -0.08,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.164999992,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.014,
+          "OffsetY": -0.0300000012
+        },
+        {
+          "Position": -0.07,
+          "Radius": 0.006,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.19,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.0150000006,
+          "OffsetY": -0.033
+        },
+        {
+          "Position": -0.04,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.235,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.017,
+          "OffsetY": -0.0380000025
+        },
+        {
+          "Position": 0.01,
+          "Radius": 0.00500000035,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.255,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.0100000007,
+          "OffsetY": -0.025
+        },
+        {
+          "Position": 0.0899999961,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 0.755,
+          "Glow": 0.0,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.008,
+          "OffsetY": -0.009000001
+        },
+        {
+          "Position": 0.14,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0110000009,
+          "OffsetY": 0.003
+        },
+        {
+          "Position": 0.24000001,
+          "Radius": 0.002,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0100000007
+        },
+        {
+          "Position": 0.34,
+          "Radius": 0.003,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": -0.009000001,
+          "OffsetY": -0.001
+        },
+        {
+          "Position": 0.47,
+          "Radius": 0.003,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.001,
+          "OffsetY": -0.008
+        },
+        {
+          "Position": 0.659999967,
+          "Radius": 0.004,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.5,
+          "Opacity": 0.69,
+          "Inverted": false,
+          "OffsetX": 0.006,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.76,
+          "Radius": 0.00500000035,
+          "Color": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 0.885,
+          "Opacity": 0.0,
+          "Inverted": false,
+          "OffsetX": 0.004,
+          "OffsetY": 0.0
+        }
+      ]
+    },
+    {
+      "Name": "Part 1",
+      "Position": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "Rotation": [
+        180.0,
+        0.0,
+        0.0
+      ],
+      "LinkedPartIndex": -1,
+      "Length": 0.869,
+      "GeometryMode": 1,
+      "HueShift": 0.0,
+      "StartRadius": 0.009000001,
+      "StartColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "StartCustomWeight": 1.0,
+      "StartGlow": 1.0,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.009000001,
+      "EndColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "EndCustomWeight": 1.0,
+      "EndGlow": 1.23,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "EndCapExtension": 0.25,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 0.0,
+      "MinimumRings": 2,
+      "RenderQueueOffset": -4,
+      "DepthOffset": 0.0,
+      "RimFactor": 0.0,
+      "RimPower": 3.0,
+      "RimPerpendicular": 0.0,
+      "Rings": [
+        {
+          "Position": 0.0,
+          "Radius": 0.004,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 0.305,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.909999967,
+          "Radius": 0.009000001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.02,
+          "Opacity": 1.0,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 1.0,
+          "Radius": 0.004,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.43,
+          "Opacity": 0.95,
+          "Inverted": false,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        }
+      ]
+    },
+    {
+      "Name": "Part 2",
+      "Position": [
+        0.0,
+        0.0,
+        -0.199999988
+      ],
+      "Rotation": [
+        90.0,
+        0.0,
+        0.0
+      ],
+      "LinkedPartIndex": -1,
+      "Length": 0.1,
+      "GeometryMode": 1,
+      "HueShift": 0.0,
+      "StartRadius": 0.03,
+      "StartColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "StartCustomWeight": 1.0,
+      "StartGlow": 1.0,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.03,
+      "EndColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "EndCustomWeight": 1.0,
+      "EndGlow": 1.0,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "EndCapExtension": 0.25,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 0.0,
+      "MinimumRings": 4,
+      "RenderQueueOffset": 0,
+      "DepthOffset": 0.0,
+      "RimFactor": 0.0,
+      "RimPower": 3.0,
+      "RimPerpendicular": 0.0,
+      "Rings": [
+        {
+          "Position": 0.0,
+          "Radius": 0.0001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.003,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.002,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.001,
+          "OffsetY": 0.002
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.002,
+          "OffsetY": 0.0110000009
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.002,
+          "OffsetY": 0.0150000006
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.017
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.002,
+          "OffsetY": 0.016
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.003,
+          "OffsetY": 0.014
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.0001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.001,
+          "OffsetY": 0.0110000009
+        }
+      ]
+    },
+    {
+      "Name": "Part 2 Copy",
+      "Position": [
+        0.0,
+        0.0,
+        -0.199999988
+      ],
+      "Rotation": [
+        90.0,
+        120.0,
+        0.0
+      ],
+      "LinkedPartIndex": 9,
+      "Length": 0.1,
+      "GeometryMode": 1,
+      "HueShift": 0.0,
+      "StartRadius": 0.03,
+      "StartColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "StartCustomWeight": 1.0,
+      "StartGlow": 1.0,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.03,
+      "EndColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "EndCustomWeight": 1.0,
+      "EndGlow": 1.0,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "EndCapExtension": 0.25,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 0.0,
+      "MinimumRings": 4,
+      "RenderQueueOffset": 0,
+      "DepthOffset": 0.0,
+      "RimFactor": 0.0,
+      "RimPower": 3.0,
+      "RimPerpendicular": 0.0,
+      "Rings": [
+        {
+          "Position": 0.0,
+          "Radius": 0.0001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.003,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.002,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.001,
+          "OffsetY": 0.002
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.002,
+          "OffsetY": 0.0110000009
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.002,
+          "OffsetY": 0.0150000006
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.017
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.002,
+          "OffsetY": 0.016
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.003,
+          "OffsetY": 0.014
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.0001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.001,
+          "OffsetY": 0.0110000009
+        }
+      ]
+    },
+    {
+      "Name": "Part 2 Copy Copy",
+      "Position": [
+        0.0,
+        0.0,
+        -0.199999988
+      ],
+      "Rotation": [
+        90.0,
+        -120.0,
+        0.0
+      ],
+      "LinkedPartIndex": 9,
+      "Length": 0.1,
+      "GeometryMode": 1,
+      "HueShift": 0.0,
+      "StartRadius": 0.03,
+      "StartColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "StartCustomWeight": 1.0,
+      "StartGlow": 1.0,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.03,
+      "EndColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "EndCustomWeight": 1.0,
+      "EndGlow": 1.0,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 5.0,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "EndCapExtension": 0.25,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 0.0,
+      "MinimumRings": 4,
+      "RenderQueueOffset": 0,
+      "DepthOffset": 0.0,
+      "RimFactor": 0.0,
+      "RimPower": 3.0,
+      "RimPerpendicular": 0.0,
+      "Rings": [
+        {
+          "Position": 0.0,
+          "Radius": 0.0001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.003,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.0
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.002,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.001,
+          "OffsetY": 0.002
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.002,
+          "OffsetY": 0.0110000009
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.002,
+          "OffsetY": 0.0150000006
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": 0.0,
+          "OffsetY": 0.017
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.002,
+          "OffsetY": 0.016
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.003,
+          "OffsetY": 0.014
+        },
+        {
+          "Position": 0.0,
+          "Radius": 0.0001,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "CustomWeight": 1.0,
+          "Glow": 1.0,
+          "Opacity": 1.0,
+          "Inverted": true,
+          "OffsetX": -0.001,
+          "OffsetY": 0.0110000009
+        }
+      ]
+    }
+  ]
+}
