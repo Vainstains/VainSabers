@@ -372,7 +372,7 @@ namespace VainSabers.Sabers
 
                 var rawRadius = ring.Inverted ? -ring.Radius : ring.Radius;
 
-                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, Mathf.Abs(rawRadius) < 0.0002, col, ring.Opacity, ref idx);
+                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, Mathf.Abs(rawRadius) < 0.0002, col, ring.Opacity, ref idx, ring.Offset);
             }
         }
         
@@ -394,7 +394,8 @@ namespace VainSabers.Sabers
             bool isZero,
             Color color,
             float opacity,
-            ref int idx)
+            ref int idx,
+            Vector2 offset = default)
         {
             var radius = Mathf.Abs(rawRadius);
 
@@ -437,6 +438,7 @@ namespace VainSabers.Sabers
                 var interpSample = SampleAlongCurve(samples, tSample);
 
                 var ringCenter = interpSample.position + interpSample.forward * zPos;
+                ringCenter += interpSample.up * offset.y + interpSample.right * offset.x;
                 var normal = offsetDir;
                 if (EnableRoundedNormals)
                     normal += avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)));
@@ -490,6 +492,7 @@ namespace VainSabers.Sabers
         float CustomWeight,
         float Glow,
         float Opacity,
-        bool Inverted
+        bool Inverted,
+        Vector2 Offset
     );
 }

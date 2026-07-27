@@ -678,11 +678,11 @@ class SaberEditorComponent : UIComponent
             var start = new BlurSaberRingParams(
                 0f, referencePart.StartRadius, referencePart.StartColor,
                 referencePart.StartCustomColorWeight, referencePart.StartGlow,
-                referencePart.StartOpacity, referencePart.Inverted);
+                referencePart.StartOpacity, referencePart.Inverted, Vector2.zero);
             var end = new BlurSaberRingParams(
                 1f, referencePart.EndRadius, referencePart.EndColor,
                 referencePart.EndCustomColorWeight, referencePart.EndGlow,
-                referencePart.EndOpacity, referencePart.Inverted);
+                referencePart.EndOpacity, referencePart.Inverted, Vector2.zero);
             ApplyToBothResolvedParts(part =>
             {
                 part.RingParams.Clear();
@@ -757,7 +757,7 @@ class SaberEditorComponent : UIComponent
             var newRing = new BlurSaberRingParams(
                 Mathf.Clamp01(current.PosAlongPart01 + 0.1f),
                 current.Radius, current.Color, current.CustomWeight,
-                current.Glow, current.Opacity, current.Inverted);
+                current.Glow, current.Opacity, current.Inverted, current.Offset);
             ApplyToBothResolvedParts(part =>
             {
                 part.RingParams.Insert(m_selectedRingIndex + 1, newRing);
@@ -804,7 +804,30 @@ class SaberEditorComponent : UIComponent
                         part.RingParams[i] = part.RingParams[i] with { Inverted = val };
                 });
             };
-        
+        m_geometryPanel.Content.AddSubHeader("Offset");
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Up").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.1f, 0.1f, 0.001f).WithSensitivityCoef(0.03f)
+            .WithValue(ring.Offset.y).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothResolvedParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                        part.RingParams[i] = part.RingParams[i] with { Offset = new Vector2(part.RingParams[i].Offset.x, val) };
+                });
+            };
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Right").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.1f, 0.1f, 0.001f).WithSensitivityCoef(0.03f)
+            .WithValue(ring.Offset.x).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothResolvedParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                        part.RingParams[i] = part.RingParams[i] with { Offset = new Vector2(val, part.RingParams[i].Offset.y) };
+                });
+            };
+
         if (!referencePart.Lit)
             m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
                 .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)

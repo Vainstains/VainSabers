@@ -220,7 +220,8 @@ public class BlurSaberData : MonoBehaviour
                             CustomWeight: ring.CustomWeight,
                             Glow: ring.Glow,
                             Opacity: ring.Opacity,
-                            Inverted: ring.Inverted
+                            Inverted: ring.Inverted,
+                            Offset: new Vector2(ring.OffsetX, ring.OffsetY)
                         ));
                     }
                 }
@@ -295,16 +296,18 @@ public class BlurSaberData : MonoBehaviour
                     partData.Rings = new List<RingData>();
                     foreach (var ring in part.RingParams)
                     {
-                        partData.Rings.Add(new RingData
-                        {
-                            Position = ring.PosAlongPart01,
-                            Radius = ring.Radius,
-                            Color = new float[] { ring.Color.r, ring.Color.g, ring.Color.b },
-                            CustomWeight = ring.CustomWeight,
-                            Glow = ring.Glow,
-                            Opacity = ring.Opacity,
-                            Inverted = ring.Inverted
-                        });
+                    partData.Rings.Add(new RingData
+                    {
+                        Position = ring.PosAlongPart01,
+                        Radius = ring.Radius,
+                        Color = new float[] { ring.Color.r, ring.Color.g, ring.Color.b },
+                        CustomWeight = ring.CustomWeight,
+                        Glow = ring.Glow,
+                        Opacity = ring.Opacity,
+                        Inverted = ring.Inverted,
+                        OffsetX = ring.Offset.x,
+                        OffsetY = ring.Offset.y
+                    });
                     }
                 }
 
@@ -385,7 +388,8 @@ public class BlurSaberData : MonoBehaviour
                         CustomWeight: vals[5],
                         Glow: vals[6],
                         Opacity: vals[7],
-                        Inverted: Mathf.Approximately(vals[8], 1f)
+                        Inverted: Mathf.Approximately(vals[8], 1f),
+                        Offset: Vector2.zero
                     ));
                     break;
                 case "startRad":
@@ -574,6 +578,8 @@ public class BlurSaberData : MonoBehaviour
         public float Glow { get; set; }
         public float Opacity { get; set; } = 1f;
         public bool Inverted { get; set; }
+        public float OffsetX { get; set; }
+        public float OffsetY { get; set; }
     }
 
     private static Vector3 ArrToVec3(float[] arr) =>
