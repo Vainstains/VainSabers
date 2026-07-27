@@ -82,7 +82,7 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
     }
     private static List<object> GetPresetNames()
     {
-        List<string> files = Directory.GetFiles(Config.ConfigUtil.ConfigDir, "*.txt").ToList();
+        var files = Directory.GetFiles(Config.ConfigUtil.ConfigDir, "*.json").ToList();
         files.Sort();
         Plugin.Log.Info($"Found {files.Count} Presets");
 
@@ -180,28 +180,23 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         if (!Directory.Exists(Config.ConfigUtil.ConfigDir))
             Directory.CreateDirectory(Config.ConfigUtil.ConfigDir);
         
-        // Generate a unique preset name
         string baseName = "NewPreset";
         string presetName = baseName;
         int counter = 0;
         
-        // Find a unique name
-        while (File.Exists(Path.Combine(Config.ConfigUtil.ConfigDir, $"{presetName}.txt")))
+        while (File.Exists(Path.Combine(Config.ConfigUtil.ConfigDir, $"{presetName}.json")))
         {
             counter++;
             presetName = $"{baseName}{counter}";
         }
         
-        // Create empty preset file
-        string presetPath = Path.Combine(Config.ConfigUtil.ConfigDir, $"{presetName}.txt");
-        File.WriteAllText(presetPath, string.Empty);
+        string presetPath = Path.Combine(Config.ConfigUtil.ConfigDir, $"{presetName}.json");
+        File.WriteAllText(presetPath, "{\"version\":1,\"parts\":[]}");
         
         Plugin.Log.Info($"Created new empty preset: {presetName} at {presetPath}");
         
-        // Refresh the dropdown
         UpdatePresetDropdown();
         
-        // Select the new preset
         SelectedPreset = presetName;
     }
     

@@ -1,0 +1,515 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "name": "outerRing",
+      "position": [
+        0,
+        0,
+        -0.005
+      ],
+      "rotation": [
+        -5E-06,
+        180,
+        180
+      ],
+      "length": 0.002345,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.024,
+      "startColor": [
+        -0.008575,
+        -0.002451,
+        0.005506
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 0.797432,
+      "startOpacity": 1,
+      "endRadius": 0.024,
+      "endColor": [
+        0.007375,
+        -0.003658,
+        0.009392
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 0.803775,
+      "endOpacity": 1,
+      "inverted": true,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": false,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.25,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": -0.1,
+      "minimumRings": 4,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "innerRing",
+      "position": [
+        0,
+        0,
+        -0.01
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.007448,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.026,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 0.759467,
+      "startOpacity": 1,
+      "endRadius": 0.026,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 0.689318,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 1,
+      "enableEndCaps": false,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.25,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0.1,
+      "minimumRings": 4,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "inner(er)Ring",
+      "position": [
+        0,
+        0,
+        -0.01
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.007413,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.026,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 0,
+      "startOpacity": 1,
+      "endRadius": 0.026,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 0.002265,
+      "endOpacity": 1,
+      "inverted": true,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 1,
+      "enableEndCaps": false,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.25,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": -0.1,
+      "minimumRings": 3,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 5",
+      "position": [
+        0,
+        0,
+        -0.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.033627,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.01,
+      "startColor": [
+        0.102138,
+        0.106815,
+        0.099575
+      ],
+      "startCustomWeight": 0.696183,
+      "startGlow": 0.142042,
+      "startOpacity": 1,
+      "endRadius": 0.008,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 0.851403,
+      "endGlow": 0.895009,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": false,
+      "enableRoundedNormals": true,
+      "endCapExtension": 1,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": -0.4,
+      "minimumRings": 4,
+      "renderQueueOffset": 4,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 6",
+      "position": [
+        0,
+        0,
+        -0.02
+      ],
+      "rotation": [
+        -5E-06,
+        180,
+        180
+      ],
+      "length": 0.102533,
+      "geometryMode": "Simple",
+      "hueShift": -0.275,
+      "startRadius": 0.009,
+      "startColor": [
+        -1,
+        -1,
+        -1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 0.610638,
+      "startOpacity": 1,
+      "endRadius": 0.009,
+      "endColor": [
+        -1,
+        -1,
+        -1
+      ],
+      "endCustomWeight": 0.783401,
+      "endGlow": 0.442656,
+      "endOpacity": 1,
+      "inverted": true,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 3.668335,
+      "enableEndCaps": false,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.25,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": -0.1,
+      "minimumRings": 4,
+      "renderQueueOffset": -4,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 7",
+      "position": [
+        0,
+        0,
+        -0.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.003743,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.011,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 0.390418,
+      "startOpacity": 1,
+      "endRadius": 0.011,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 0.128967,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 1,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0,
+      "minimumRings": 4,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 8",
+      "position": [
+        0,
+        0,
+        -0.12
+      ],
+      "rotation": [
+        -5E-06,
+        180,
+        180
+      ],
+      "length": 0.017594,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.01,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 0.553106,
+      "startOpacity": 1,
+      "endRadius": 0.006,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 0.239193,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 1,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.25,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0.2,
+      "minimumRings": 4,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "blade1",
+      "position": [
+        0,
+        0,
+        0.01
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.02702,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.007,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 1.068865,
+      "startOpacity": 1,
+      "endRadius": 0.008,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 0.964281,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.25,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0.5,
+      "minimumRings": 3,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 9",
+      "position": [
+        0,
+        0,
+        0.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.976705,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.009,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 1,
+      "startOpacity": 1,
+      "endRadius": 0.003,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 0.300583,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.25,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": -0.4,
+      "minimumRings": 4,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 10",
+      "position": [
+        0,
+        0,
+        -0.12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.1,
+      "geometryMode": "Simple",
+      "hueShift": -0.275,
+      "startRadius": 0.008,
+      "startColor": [
+        -0.003706,
+        -0.00219,
+        0.023983
+      ],
+      "startCustomWeight": 0.35195,
+      "startGlow": 0,
+      "startOpacity": 1,
+      "endRadius": 0.008,
+      "endColor": [
+        0.076078,
+        0.074017,
+        0.054427
+      ],
+      "endCustomWeight": 0.263143,
+      "endGlow": 0,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 1,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": -0.5,
+      "minimumRings": 5,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    }
+  ]
+}

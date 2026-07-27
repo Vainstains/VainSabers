@@ -1,0 +1,311 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "name": "PommelOutline",
+      "position": [
+        0,
+        0,
+        -0.122
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "length": 0.023267,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.013,
+      "startColor": [
+        -0.260836,
+        -0.262381,
+        -0.252242
+      ],
+      "startCustomWeight": 0.874232,
+      "startGlow": 0.657785,
+      "startOpacity": 1,
+      "endRadius": 0.008,
+      "endColor": [
+        -0.21673,
+        -0.239781,
+        -0.210086
+      ],
+      "endCustomWeight": 0.823074,
+      "endGlow": 0.590131,
+      "endOpacity": 1,
+      "inverted": true,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 1,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0.1,
+      "minimumRings": 5,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "PommelCore",
+      "position": [
+        0,
+        0,
+        -0.125
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "length": 0.017843,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.009,
+      "startColor": [
+        -0.3,
+        -0.3,
+        -0.3
+      ],
+      "startCustomWeight": 0.55,
+      "startGlow": 0.119112,
+      "startOpacity": 1,
+      "endRadius": 0.004,
+      "endColor": [
+        -0.3,
+        -0.3,
+        -0.303236
+      ],
+      "endCustomWeight": 0.545978,
+      "endGlow": 0.045271,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 0.566617,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.657068,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0.1,
+      "minimumRings": 4,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "BladeOutline",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 1,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.013,
+      "startColor": [
+        -0.195557,
+        -0.201548,
+        -0.187838
+      ],
+      "startCustomWeight": 0.843543,
+      "startGlow": 0.58911,
+      "startOpacity": 1,
+      "endRadius": 0.005,
+      "endColor": [
+        0,
+        0,
+        0
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 0.8,
+      "endOpacity": 1,
+      "inverted": true,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 1.05461,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 1,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": -0.4,
+      "minimumRings": 4,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "BladeCore",
+      "position": [
+        0,
+        0,
+        0.005
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.983829,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.007,
+      "startColor": [
+        -0.3,
+        -0.3,
+        -0.3
+      ],
+      "startCustomWeight": 0.596582,
+      "startGlow": 0.13428,
+      "startOpacity": 1,
+      "endRadius": 0.0001,
+      "endColor": [
+        -0.288369,
+        -0.263677,
+        -0.29253
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 0.736611,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 1,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 1,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": -0.6,
+      "minimumRings": 4,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Lower",
+      "position": [
+        0,
+        0,
+        -0.012
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "length": 0.1,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.012,
+      "startColor": [
+        0.06505,
+        0.071422,
+        0.083694
+      ],
+      "startCustomWeight": 0.605491,
+      "startGlow": 0.039972,
+      "startOpacity": 1,
+      "endRadius": 0.008,
+      "endColor": [
+        -0.713258,
+        -0.698842,
+        -0.683803
+      ],
+      "endCustomWeight": 0.78485,
+      "endGlow": 0.344593,
+      "endOpacity": 1,
+      "inverted": true,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 1,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0.2,
+      "minimumRings": 7,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "LowerCore",
+      "position": [
+        0,
+        0,
+        -0.016
+      ],
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "length": 0.0915,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.006,
+      "startColor": [
+        -0.289126,
+        -0.337931,
+        -0.306242
+      ],
+      "startCustomWeight": 0.781862,
+      "startGlow": 0.732548,
+      "startOpacity": 1,
+      "endRadius": 0.0045,
+      "endColor": [
+        0,
+        0,
+        0
+      ],
+      "endCustomWeight": 0.8,
+      "endGlow": 0.536495,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 1,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0.3,
+      "minimumRings": 3,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    }
+  ]
+}

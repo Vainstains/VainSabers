@@ -1,0 +1,209 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "name": "Blade",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 1,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.008,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 0.768432,
+      "startOpacity": 1,
+      "endRadius": 0.003,
+      "endColor": [
+        -0.461275,
+        -0.507008,
+        -0.499476
+      ],
+      "endCustomWeight": 0.83598,
+      "endGlow": 0.470669,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 1.765374,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.814861,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0,
+      "minimumRings": 9,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Handle",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        180,
+        0,
+        0
+      ],
+      "length": 0.12641,
+      "geometryMode": "Simple",
+      "hueShift": -0.05,
+      "startRadius": 0.011,
+      "startColor": [
+        -0.042865,
+        -0.095416,
+        -0.014959
+      ],
+      "startCustomWeight": 0.122283,
+      "startGlow": 0,
+      "startOpacity": 1,
+      "endRadius": 0.009,
+      "endColor": [
+        0.03796,
+        0.049346,
+        0.02355
+      ],
+      "endCustomWeight": 0.192428,
+      "endGlow": 0,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 0,
+      "enableEndCaps": false,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.25,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": -0.2,
+      "minimumRings": 9,
+      "renderQueueOffset": 6,
+      "depthOffset": 0
+    },
+    {
+      "name": "BladeBase",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.027072,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.011,
+      "startColor": [
+        -0.072328,
+        -0.080579,
+        -0.142241
+      ],
+      "startCustomWeight": 0.573277,
+      "startGlow": 0.729399,
+      "startOpacity": 1,
+      "endRadius": 0.008,
+      "endColor": [
+        -0.194872,
+        -0.128054,
+        -0.121079
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 0.766862,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.287349,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": -0.1,
+      "minimumRings": 4,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Pommel",
+      "position": [
+        0,
+        0,
+        -0.145
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.018585,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.005,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 0.197715,
+      "startOpacity": 1,
+      "endRadius": 0.01,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 1,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 1,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0.2,
+      "minimumRings": 3,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    }
+  ]
+}

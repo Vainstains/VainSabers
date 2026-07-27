@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Text;
+using Newtonsoft.Json;
 using UnityEngine;
 using VainSabers.Config;
 
@@ -10,6 +10,8 @@ namespace VainSabers.Sabers;
 
 public class BlurSaberData : MonoBehaviour
 {
+    private const int CurrentVersion = 1;
+
     private PluginConfig? m_config = null;
     public Color CustomColor;
     public float BlurTime => m_config != null ? m_config.BlurMS * 0.001f : 0.04f;
@@ -40,10 +42,14 @@ public class BlurSaberData : MonoBehaviour
         go.transform.SetParent(transform, false);
         
         var newPart = go.AddComponent<BlurSaberPart>();
-        newPart.Material = VainSabersAssets.NormalSaberMaterial!;
-        newPart.InvertedMaterial = VainSabersAssets.InvertedSaberMaterial!;
-        newPart.LitMaterial = VainSabersAssets.NormalLitSaberMaterial!;
-        newPart.LitInvertedMaterial = VainSabersAssets.InvertedLitSaberMaterial!;
+        if (VainSabersAssets.NormalSaberMaterial != null)
+            newPart.Material = VainSabersAssets.NormalSaberMaterial;
+        if (VainSabersAssets.InvertedSaberMaterial != null)
+            newPart.InvertedMaterial = VainSabersAssets.InvertedSaberMaterial;
+        if (VainSabersAssets.NormalLitSaberMaterial != null)
+            newPart.LitMaterial = VainSabersAssets.NormalLitSaberMaterial;
+        if (VainSabersAssets.InvertedLitSaberMaterial != null)
+            newPart.LitInvertedMaterial = VainSabersAssets.InvertedLitSaberMaterial;
         
         newPart.Length = 0.1f;
         newPart.StartRadius = 0.03f;
@@ -128,6 +134,188 @@ public class BlurSaberData : MonoBehaviour
             return;
         }
 
+        if (path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+        {
+            ImportFromLegacyTxt(path);
+            return;
+        }
+
+        ImportFromJson(path);
+    }
+
+    private void ImportFromJson(string path)
+    {
+        try
+        {
+            string json = File.ReadAllText(path);
+            var preset = JsonConvert.DeserializeObject<PresetData>(json);
+            if (preset?.Parts == null)
+            {
+                Debug.LogWarning($"No parts found in {path}");
+                return;
+            }
+
+            RemoveAllComponents();
+
+            foreach (var partData in preset.Parts)
+            {
+                var part = AddComponent(partData.Name ?? "Part");
+
+                part.transform.localPosition = ArrToVec3(partData.Position);
+                part.RotX = partData.Rotation[0];
+                part.RotY = partData.Rotation[1];
+                part.RotZ = partData.Rotation[2];
+                part.Length = partData.Length;
+                part.GeometryHandling = partData.GeometryMode;
+                part.HueShift = partData.HueShift;
+
+                part.StartRadius = partData.StartRadius;
+                part.StartColor = ArrToColor(partData.StartColor);
+                part.StartCustomColorWeight = partData.StartCustomWeight;
+                part.StartGlow = partData.StartGlow;
+                part.StartOpacity = partData.StartOpacity;
+
+                part.EndRadius = partData.EndRadius;
+                part.EndColor = ArrToColor(partData.EndColor);
+                part.EndCustomColorWeight = partData.EndCustomWeight;
+                part.EndGlow = partData.EndGlow;
+                part.EndOpacity = partData.EndOpacity;
+
+                part.Inverted = partData.Inverted;
+                part.Lit = partData.Lit;
+                part.BlurFactor = Mathf.Clamp01(partData.Blur);
+                part.BlurFadeFactor = Mathf.Clamp(partData.BlurFade, 0f, 10f);
+                part.EnableEndCaps = partData.EnableEndCaps;
+                part.EnableRoundedNormals = partData.EnableRoundedNormals;
+                part.EndCapExtension = Mathf.Clamp(partData.EndCapExtension, 0f, 3f);
+
+                part.LookDir = ArrToVec3(partData.LookDir);
+                part.UseLookDir = partData.UseLookDir;
+
+                part.BulgeAmount = Mathf.Clamp(partData.BulgeAmount, -1f, 1f);
+                part.MinimumRings = Mathf.Clamp(partData.MinimumRings, 2, 10);
+                part.RenderQueueOffset = partData.RenderQueueOffset;
+                part.DepthOffset = partData.DepthOffset;
+
+                if (partData.Rings != null)
+                {
+                    foreach (var ring in partData.Rings)
+                    {
+                        part.RingParams.Add(new BlurSaberRingParams(
+                            PosAlongPart01: ring.Position,
+                            Radius: ring.Radius,
+                            Color: ArrToColor(ring.Color),
+                            CustomWeight: ring.CustomWeight,
+                            Glow: ring.Glow,
+                            Opacity: ring.Opacity,
+                            Inverted: ring.Inverted
+                        ));
+                    }
+                }
+            }
+
+            Debug.Log($"Imported saber with {ComponentCount} parts from {path}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Failed to import JSON preset from {path}: {ex.Message}");
+        }
+    }
+
+    public void SaveToFile(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            Plugin.Log.Info("Save path cannot be null or empty");
+            return;
+        }
+
+        try
+        {
+            var preset = new PresetData { Version = CurrentVersion, Parts = new List<PartData>() };
+
+            for (int i = 0; i < m_components.Count; i++)
+            {
+                var part = m_components[i];
+                if (part == null) continue;
+
+                var partData = new PartData
+                {
+                    Name = part.gameObject.name,
+                    Position = new float[] { part.transform.localPosition.x, part.transform.localPosition.y, part.transform.localPosition.z },
+                    Rotation = new float[] { part.RotX, part.RotY, part.RotZ },
+                    Length = part.Length,
+                    GeometryMode = part.GeometryHandling,
+                    HueShift = part.HueShift,
+
+                    StartRadius = part.StartRadius,
+                    StartColor = new float[] { part.StartColor.r, part.StartColor.g, part.StartColor.b },
+                    StartCustomWeight = part.StartCustomColorWeight,
+                    StartGlow = part.StartGlow,
+                    StartOpacity = part.StartOpacity,
+
+                    EndRadius = part.EndRadius,
+                    EndColor = new float[] { part.EndColor.r, part.EndColor.g, part.EndColor.b },
+                    EndCustomWeight = part.EndCustomColorWeight,
+                    EndGlow = part.EndGlow,
+                    EndOpacity = part.EndOpacity,
+
+                    Inverted = part.Inverted,
+                    Lit = part.Lit,
+                    Blur = part.BlurFactor,
+                    BlurFade = part.BlurFadeFactor,
+                    EnableEndCaps = part.EnableEndCaps,
+                    EnableRoundedNormals = part.EnableRoundedNormals,
+                    EndCapExtension = part.EndCapExtension,
+
+                    LookDir = new float[] { part.LookDir.x, part.LookDir.y, part.LookDir.z },
+                    UseLookDir = part.UseLookDir,
+
+                    BulgeAmount = part.BulgeAmount,
+                    MinimumRings = part.MinimumRings,
+                    RenderQueueOffset = part.RenderQueueOffset,
+                    DepthOffset = part.DepthOffset
+                };
+
+                if (part.GeometryHandling == BlurSaberPart.GeometryType.Advanced && part.RingParams.Count > 0)
+                {
+                    partData.Rings = new List<RingData>();
+                    foreach (var ring in part.RingParams)
+                    {
+                        partData.Rings.Add(new RingData
+                        {
+                            Position = ring.PosAlongPart01,
+                            Radius = ring.Radius,
+                            Color = new float[] { ring.Color.r, ring.Color.g, ring.Color.b },
+                            CustomWeight = ring.CustomWeight,
+                            Glow = ring.Glow,
+                            Opacity = ring.Opacity,
+                            Inverted = ring.Inverted
+                        });
+                    }
+                }
+
+                preset.Parts.Add(partData);
+            }
+
+            string directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
+            string json = JsonConvert.SerializeObject(preset, Formatting.Indented);
+            File.WriteAllText(path, json);
+            Plugin.Log.Info($"Saved saber with {ComponentCount} parts to {path}");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"Failed to save saber to {path}: {ex.Message}");
+        }
+    }
+
+    #region Legacy .txt Format Support
+
+    private void ImportFromLegacyTxt(string path)
+    {
         string[] lines = File.ReadAllLines(path);
         RemoveAllComponents();
 
@@ -166,7 +354,6 @@ public class BlurSaberData : MonoBehaviour
                 case "length":
                     currentPart.Length = vals[0];
                     break;
-
                 case "geometryMode":
                     currentPart.GeometryHandling = Mathf.Approximately(vals[0], 1f)
                         ? BlurSaberPart.GeometryType.Advanced
@@ -188,7 +375,6 @@ public class BlurSaberData : MonoBehaviour
                         Inverted: Mathf.Approximately(vals[8], 1f)
                     ));
                     break;
-                
                 case "startRad":
                     currentPart.StartRadius = vals[0];
                     break;
@@ -204,7 +390,6 @@ public class BlurSaberData : MonoBehaviour
                 case "startOpacity":
                     currentPart.StartOpacity = vals[0];
                     break;
-                
                 case "endRad":
                     currentPart.EndRadius = vals[0];
                     break;
@@ -220,7 +405,6 @@ public class BlurSaberData : MonoBehaviour
                 case "endOpacity":
                     currentPart.EndOpacity = vals[0];
                     break;
-                
                 case "inverted":
                     currentPart.Inverted = Mathf.Approximately(vals[0], 1f);
                     break;
@@ -263,7 +447,6 @@ public class BlurSaberData : MonoBehaviour
                 case "hueShift":
                     currentPart.HueShift = vals[0];
                     break;
-
                 case "rimFactor":
                     currentPart.RimFactor = vals[0];
                     break;
@@ -276,103 +459,41 @@ public class BlurSaberData : MonoBehaviour
             }
         }
 
-        Debug.Log($"Imported saber with {ComponentCount} parts from {path}");
+        Debug.Log($"Imported saber with {ComponentCount} parts from legacy txt: {path}");
     }
 
-    public void SaveToFile(string path)
+    #endregion
+
+    #region Legacy Format Conversion
+
+    public static void ConvertLegacyFile(string txtPath)
     {
-        if (string.IsNullOrEmpty(path))
-        {
-            Plugin.Log.Info("Save path cannot be null or empty");
-            return;
-        }
-
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 0; i < m_components.Count; i++)
-        {
-            var part = m_components[i];
-            if (part == null) continue;
-
-            sb.AppendLine($".part {part.gameObject.name}");
-
-            Vector3 pos = part.transform.localPosition;
-            sb.AppendLine($"pos {FormatFloat(pos.x)} {FormatFloat(pos.y)} {FormatFloat(pos.z)}");
-
-            Vector3 rot = part.transform.localEulerAngles;
-            sb.AppendLine($"rot {FormatFloat(rot.x)} {FormatFloat(rot.y)} {FormatFloat(rot.z)}");
-
-            sb.AppendLine($"length {FormatFloat(part.Length)}");
-
-            sb.AppendLine($"geometryMode {(int)part.GeometryHandling}");
-            
-            sb.AppendLine($"hueShift {FormatFloat(part.HueShift)}");
-
-            sb.AppendLine($"startRad {FormatFloat(part.StartRadius)}");
-            sb.AppendLine($"startColor {FormatFloat(part.StartColor.r)} {FormatFloat(part.StartColor.g)} {FormatFloat(part.StartColor.b)}");
-            sb.AppendLine($"startCustomWeight {FormatFloat(part.StartCustomColorWeight)}");
-            sb.AppendLine($"startGlow {FormatFloat(part.StartGlow)}");
-            sb.AppendLine($"startOpacity {FormatFloat(part.StartOpacity)}");
-
-            sb.AppendLine($"endRad {FormatFloat(part.EndRadius)}");
-            sb.AppendLine($"endColor {FormatFloat(part.EndColor.r)} {FormatFloat(part.EndColor.g)} {FormatFloat(part.EndColor.b)}");
-            sb.AppendLine($"endCustomWeight {FormatFloat(part.EndCustomColorWeight)}");
-            sb.AppendLine($"endGlow {FormatFloat(part.EndGlow)}");
-            sb.AppendLine($"endOpacity {FormatFloat(part.EndOpacity)}");
-
-            sb.AppendLine($"inverted {(part.Inverted ? "1" : "0")}");
-            sb.AppendLine($"blur {FormatFloat(part.BlurFactor)}");
-            sb.AppendLine($"blurFade {FormatFloat(part.BlurFadeFactor)}");
-            sb.AppendLine($"enableEndCaps {(part.EnableEndCaps ? "1" : "0")}");
-            sb.AppendLine($"enableRoundedNormals {(part.EnableRoundedNormals ? "1" : "0")}");
-            sb.AppendLine($"endCapExtension {FormatFloat(part.EndCapExtension)}");
-            sb.AppendLine($"endOpacity {FormatFloat(part.EndOpacity)}");
-
-            sb.AppendLine($"lookDir {FormatFloat(part.LookDir.x)} {FormatFloat(part.LookDir.y)} {FormatFloat(part.LookDir.z)}");
-            sb.AppendLine($"useLookDir {(part.UseLookDir ? "1" : "0")}");
-            
-            sb.AppendLine($"bulgeAmount {FormatFloat(part.BulgeAmount)}");
-            sb.AppendLine($"minimumRings {part.MinimumRings}");
-            sb.AppendLine($"renderQueueOffset {part.RenderQueueOffset}");
-            sb.AppendLine($"depthOffset {FormatFloat(part.DepthOffset)}");
-
-            sb.AppendLine($"rimFactor {FormatFloat(part.RimFactor)}");
-            sb.AppendLine($"rimPower {FormatFloat(part.RimPower)}");
-            sb.AppendLine($"rimPerpendicular {FormatFloat(part.RimPerpendicular)}");
-            
-            sb.AppendLine($"lit {(part.Lit ? "1" : "0")}");
-
-            foreach (var ring in part.RingParams)
-            {
-                sb.AppendLine(
-                    $"ring {FormatFloat(ring.PosAlongPart01)} {FormatFloat(ring.Radius)} " +
-                    $"{FormatFloat(ring.Color.r)} {FormatFloat(ring.Color.g)} {FormatFloat(ring.Color.b)} " +
-                    $"{FormatFloat(ring.CustomWeight)} {FormatFloat(ring.Glow)} {FormatFloat(ring.Opacity)} " +
-                    $"{(ring.Inverted ? "1" : "0")}");
-            }
-
-            sb.AppendLine(); 
-        }
-
         try
         {
-            string directory = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
+            if (!File.Exists(txtPath))
+                return;
 
-            File.WriteAllText(path, sb.ToString());
-            Plugin.Log.Info($"Saved saber with {ComponentCount} parts to {path}");
+            string jsonPath = Path.ChangeExtension(txtPath, ".json");
+            if (File.Exists(jsonPath))
+                return;
+
+            var data = new GameObject().AddComponent<BlurSaberData>();
+            data.ImportFromLegacyTxt(txtPath);
+            data.SaveToFile(jsonPath);
+#if UNITY_EDITOR
+            DestroyImmediate(data.gameObject);
+#else
+            Destroy(data.gameObject);
+#endif
+            Plugin.Log.Debug($"Converted legacy preset: {Path.GetFileName(txtPath)} -> {Path.GetFileName(jsonPath)}");
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"Failed to save saber to {path}: {ex.Message}");
+            Plugin.Log.Error($"Failed to convert legacy preset {txtPath}: {ex.Message}");
         }
     }
 
-    private string FormatFloat(float value)
-    {
-        return value.ToString("F6", CultureInfo.InvariantCulture);
-    }
+    #endregion
 
     private float[] ParseFloats(string[] tokens)
     {
@@ -381,4 +502,71 @@ public class BlurSaberData : MonoBehaviour
             vals[i - 1] = float.Parse(tokens[i], CultureInfo.InvariantCulture);
         return vals;
     }
+
+    #region JSON Data Types
+
+    private class PresetData
+    {
+        public int Version { get; set; } = 1;
+        public List<PartData>? Parts { get; set; }
+    }
+
+    private class PartData
+    {
+        public string? Name { get; set; }
+        public float[] Position { get; set; } = new float[3];
+        public float[] Rotation { get; set; } = new float[3];
+        public float Length { get; set; } = 0.1f;
+        public BlurSaberPart.GeometryType GeometryMode { get; set; }
+        public float HueShift { get; set; }
+
+        public float StartRadius { get; set; }
+        public float[] StartColor { get; set; } = new float[3];
+        public float StartCustomWeight { get; set; } = 1f;
+        public float StartGlow { get; set; } = 1f;
+        public float StartOpacity { get; set; } = 1f;
+
+        public float EndRadius { get; set; }
+        public float[] EndColor { get; set; } = new float[3];
+        public float EndCustomWeight { get; set; } = 1f;
+        public float EndGlow { get; set; } = 1f;
+        public float EndOpacity { get; set; } = 1f;
+
+        public bool Inverted { get; set; }
+        public bool Lit { get; set; }
+        public float Blur { get; set; } = 1f;
+        public float BlurFade { get; set; } = 1f;
+        public bool EnableEndCaps { get; set; } = true;
+        public bool EnableRoundedNormals { get; set; } = true;
+        public float EndCapExtension { get; set; } = 0.25f;
+
+        public float[] LookDir { get; set; } = new float[3];
+        public bool UseLookDir { get; set; }
+
+        public float BulgeAmount { get; set; }
+        public int MinimumRings { get; set; } = 4;
+        public int RenderQueueOffset { get; set; }
+        public float DepthOffset { get; set; }
+
+        public List<RingData>? Rings { get; set; }
+    }
+
+    private class RingData
+    {
+        public float Position { get; set; }
+        public float Radius { get; set; }
+        public float[] Color { get; set; } = new float[3];
+        public float CustomWeight { get; set; }
+        public float Glow { get; set; }
+        public float Opacity { get; set; } = 1f;
+        public bool Inverted { get; set; }
+    }
+
+    private static Vector3 ArrToVec3(float[] arr) =>
+        arr.Length >= 3 ? new Vector3(arr[0], arr[1], arr[2]) : Vector3.zero;
+
+    private static Color ArrToColor(float[] arr) =>
+        arr.Length >= 3 ? new Color(arr[0], arr[1], arr[2], 1f) : Color.white;
+
+    #endregion
 }

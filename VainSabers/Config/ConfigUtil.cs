@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using IPA.Utilities;
 using UnityEngine;
+using VainSabers.Sabers;
 
 namespace VainSabers.Config;
 
@@ -16,14 +17,17 @@ public static class ConfigUtil
         try
         {
             Directory.CreateDirectory(ConfigDir);
-            bool hasConfigs = Directory
-                .EnumerateFiles(ConfigDir, "*.txt", SearchOption.TopDirectoryOnly)
+            
+            MigrateLegacyTxtFiles();
+
+            bool hasJsonConfigs = Directory
+                .EnumerateFiles(ConfigDir, "*.json", SearchOption.TopDirectoryOnly)
                 .Any();
 
-            if (hasConfigs)
+            if (hasJsonConfigs)
                 return;
 
-            Plugin.Log.Info("No configs found. Extracting default configs...");
+            Plugin.Log.Info("No JSON configs found. Extracting default configs...");
 
             Assembly asm = Assembly.GetExecutingAssembly();
             
@@ -32,7 +36,7 @@ public static class ConfigUtil
             foreach (string resourceName in asm.GetManifestResourceNames())
             {
                 if (!resourceName.StartsWith(resourcePrefix) ||
-                    !resourceName.EndsWith(".txt"))
+                    !resourceName.EndsWith(".json"))
                     continue;
 
                 string fileName = resourceName.Substring(resourcePrefix.Length);
@@ -54,14 +58,41 @@ public static class ConfigUtil
         }
     }
 
+    private static void MigrateLegacyTxtFiles()
+    {
+        try
+        {
+            var txtFiles = Directory.GetFiles(ConfigDir, "*.txt", SearchOption.TopDirectoryOnly);
+            foreach (var txtPath in txtFiles)
+            {
+                var jsonPath = Path.ChangeExtension(txtPath, ".json");
+                if (File.Exists(jsonPath))
+                {
+                    Plugin.Log.Debug($"Skipping migration of {Path.GetFileName(txtPath)} (JSON already exists)");
+                    continue;
+                }
+
+                Plugin.Log.Info($"Migrating legacy preset: {Path.GetFileName(txtPath)}");
+                BlurSaberData.ConvertLegacyFile(txtPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"Failed to migrate legacy txt files: {ex}");
+        }
+    }
+
     internal static string GetSaberProfile(string name)
     {
-        string path = Path.Combine(ConfigDir, $"{name}.txt");
-        if (!File.Exists(path))
-        {
-            Plugin.Log.Warn($"Saber profile '{name}' not found.");
-        }
+        string jsonPath = Path.Combine(ConfigDir, $"{name}.json");
+        if (File.Exists(jsonPath))
+            return jsonPath;
 
-        return path;
+        string txtPath = Path.Combine(ConfigDir, $"{name}.txt");
+        if (File.Exists(txtPath))
+            return txtPath;
+
+        Plugin.Log.Warn($"Saber profile '{name}' not found.");
+        return jsonPath;
     }
 }

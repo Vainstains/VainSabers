@@ -1,0 +1,413 @@
+{
+  "version": 1,
+  "parts": [
+    {
+      "name": "Part 1",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.010091,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.015,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 0.907306,
+      "startGlow": 5,
+      "startOpacity": 1,
+      "endRadius": 0.015,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 1.5,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 1,
+      "enableEndCaps": false,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0,
+      "minimumRings": 2,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 2",
+      "position": [
+        0,
+        0,
+        -0.115
+      ],
+      "rotation": [
+        -5E-06,
+        180,
+        180
+      ],
+      "length": 0.01,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.015,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 5,
+      "startOpacity": 1,
+      "endRadius": 0.015,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 1.5,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 1,
+      "enableEndCaps": false,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0,
+      "minimumRings": 2,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 3",
+      "position": [
+        0,
+        0,
+        -0.12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.120331,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.015,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 0.534899,
+      "startOpacity": 1,
+      "endRadius": 0.015,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 0.497763,
+      "endOpacity": 1,
+      "inverted": true,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 0,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0.513539,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0,
+      "minimumRings": 5,
+      "renderQueueOffset": -3,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 4",
+      "position": [
+        0,
+        0,
+        0.01
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.965666,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.015,
+      "startColor": [
+        1,
+        1,
+        1
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 1.473248,
+      "startOpacity": 1,
+      "endRadius": 0.015,
+      "endColor": [
+        1,
+        1,
+        1
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 1.5,
+      "endOpacity": 1,
+      "inverted": true,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 3,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0,
+      "minimumRings": 2,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 5",
+      "position": [
+        0,
+        0,
+        0.01
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.972876,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.007,
+      "startColor": [
+        0.32162,
+        0.254124,
+        0.275086
+      ],
+      "startCustomWeight": 0.883591,
+      "startGlow": 0.102233,
+      "startOpacity": 1,
+      "endRadius": 0.006,
+      "endColor": [
+        -0.000486,
+        -0.007724,
+        -0.003759
+      ],
+      "endCustomWeight": 0.309137,
+      "endGlow": 0.470726,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 3,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0,
+      "minimumRings": 2,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 6",
+      "position": [
+        0,
+        0,
+        -0.115
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.114013,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.011,
+      "startColor": [
+        0.416054,
+        0.406474,
+        0.406355
+      ],
+      "startCustomWeight": 0.804908,
+      "startGlow": 0,
+      "startOpacity": 1,
+      "endRadius": 0.012,
+      "endColor": [
+        0.444943,
+        0.444187,
+        0.446571
+      ],
+      "endCustomWeight": 0.894136,
+      "endGlow": 0,
+      "endOpacity": 1,
+      "inverted": true,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 4.240159,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 1,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0,
+      "minimumRings": 4,
+      "renderQueueOffset": -10,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 7",
+      "position": [
+        0,
+        0,
+        -0.115
+      ],
+      "rotation": [
+        0,
+        0,
+        355
+      ],
+      "length": 0.113608,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.007,
+      "startColor": [
+        0.031888,
+        0.047381,
+        0.059978
+      ],
+      "startCustomWeight": 0.648231,
+      "startGlow": 0,
+      "startOpacity": 1,
+      "endRadius": 0.007,
+      "endColor": [
+        0.056322,
+        0.015701,
+        0.049387
+      ],
+      "endCustomWeight": 0.681655,
+      "endGlow": 0,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 5,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 1,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0,
+      "minimumRings": 3,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    },
+    {
+      "name": "Part 8",
+      "position": [
+        0,
+        0,
+        -0.125
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "length": 0.000606,
+      "geometryMode": "Simple",
+      "hueShift": 0,
+      "startRadius": 0.015,
+      "startColor": [
+        0.00603,
+        -0.01227,
+        0.026614
+      ],
+      "startCustomWeight": 1,
+      "startGlow": 5,
+      "startOpacity": 1,
+      "endRadius": 0.015,
+      "endColor": [
+        0.029915,
+        0.005392,
+        0.039326
+      ],
+      "endCustomWeight": 1,
+      "endGlow": 1.5,
+      "endOpacity": 1,
+      "inverted": false,
+      "lit": false,
+      "blur": 1,
+      "blurFade": 1,
+      "enableEndCaps": true,
+      "enableRoundedNormals": true,
+      "endCapExtension": 0,
+      "lookDir": [
+        0,
+        0,
+        0
+      ],
+      "useLookDir": false,
+      "bulgeAmount": 0,
+      "minimumRings": 2,
+      "renderQueueOffset": 0,
+      "depthOffset": 0
+    }
+  ]
+}

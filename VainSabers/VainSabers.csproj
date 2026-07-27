@@ -33,7 +33,7 @@
     </ItemGroup>
     
     <ItemGroup>
-        <EmbeddedResource Include="Config\Defaults\*.txt" />
+        <EmbeddedResource Include="Config\Defaults\*.json" />
         <None Remove="ui_round.png" />
         <EmbeddedResource Include="**\*.png" />
     </ItemGroup>
