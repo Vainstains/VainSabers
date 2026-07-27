@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using VainSabers.Config;
 using VainSabers.Helpers;
@@ -103,9 +104,6 @@ namespace VainSabers.Sabers
         
         public PluginConfig Config = null!;
 
-        private readonly List<GpuRingParams> _gpuRingParams = new List<GpuRingParams>(64);
-        private GpuSampleData[] _gpuSampleData = new GpuSampleData[SampleCount];
-
         private void OnEnable()
         {
             m_injected = false;
@@ -201,6 +199,9 @@ namespace VainSabers.Sabers
             var ringCount = RingCount;
             if (ringCount < 2)
             {
+                // Fewer than two rings means there's no adjacent pair to build a quad strip
+                // between - nothing valid to render, so bail out cleanly rather than let
+                // BlurTube construct degenerate/negative-length buffers.
                 m_blurTube?.Destroy();
                 m_blurTube = null;
                 m_meshFilter.mesh = null;
@@ -208,23 +209,12 @@ namespace VainSabers.Sabers
             }
 
             ringVerts = ComputeRingVerts(GetProfileRadiusForRingVerts());
-
-            var computeShader = VainSabersAssets.BlurTubeComputeShader;
-            
-            if (computeShader == null)
-            {
-                m_blurTube?.Destroy();
-                m_blurTube = null;
-                m_meshFilter.mesh = null;
-                return;
-            }
-
-            m_blurTube ??= new BlurTube(ringVerts, ringCount, computeShader);
+            m_blurTube ??= new BlurTube(ringVerts, ringCount);
 
             if (m_blurTube.RingVerts != ringVerts || m_blurTube.RingCount != ringCount)
             {
                 m_blurTube.Destroy();
-                m_blurTube = new BlurTube(ringVerts, ringCount, computeShader);
+                m_blurTube = new BlurTube(ringVerts, ringCount);
             }
             
             EnsureRuntimeMaterial(ref m_runtimeMaterial, Material);
@@ -325,40 +315,14 @@ namespace VainSabers.Sabers
                 samples[i] = PoseHelpers.TransformPoseFromMatrix(combined);
             }
 
-            for (int i = 0; i < SampleCount; i++)
-            {
-                _gpuSampleData[i] = new GpuSampleData
-                {
-                    position = new Vector4(samples[i].position.x, samples[i].position.y, samples[i].position.z, 0),
-                    forward = new Vector4(samples[i].forward.x, samples[i].forward.y, samples[i].forward.z, 0),
-                    up = new Vector4(samples[i].up.x, samples[i].up.y, samples[i].up.z, 0),
-                    right = new Vector4(samples[i].right.x, samples[i].right.y, samples[i].right.z, 0),
-                };
-            }
-
-            var first = samples[0];
-            var last = samples[samples.Length - 1];
-            var avgFwd = (first.forward + last.forward).normalized;
-            var tangent = (first.up + last.up).normalized;
-            var right = (first.right + last.right).normalized;
-
-            _gpuRingParams.Clear();
+            var idx = 0;
 
             if (GeometryHandling == GeometryType.Advanced)
             {
-                BuildAdvancedRingParams(samples, first, last, avgFwd, tangent, right);
+                BuildAdvancedRings(samples, ref idx);
+                return;
             }
-            else
-            {
-                BuildSimpleRingParams(first, last, avgFwd, tangent, right);
-            }
-
-            m_blurTube?.SetSampleData(_gpuSampleData);
-            m_blurTube?.SetRingParams(_gpuRingParams.ToArray());
-        }
-
-        private void BuildSimpleRingParams(Pose first, Pose last, Vector3 avgFwd, Vector3 tangent, Vector3 right)
-        {
+            
             var startCol = Color.Lerp(StartColor, m_saberData.CustomColor, StartCustomColorWeight);
             var endCol = Color.Lerp(EndColor, m_saberData.CustomColor, EndCustomColorWeight);
             
@@ -373,11 +337,8 @@ namespace VainSabers.Sabers
             
             var startRad = Inverted ? -StartRadius : StartRadius;
             var endRad = Inverted ? -EndRadius : EndRadius;
-            
             if (EnableEndCaps)
-                _gpuRingParams.Add(CreateRingParams(first, last, avgFwd, tangent, right,
-                    0 - StartRadius * 0.25f * EndCapExtension, startRad, true, startCol, StartOpacity, default, 0f));
-            
+                BuildRing(samples, 0 - StartRadius * 0.25f * EndCapExtension, startRad, true, startCol, StartOpacity, ref idx);
             var mainRingCount = EnableEndCaps ? RingCount - 2 : RingCount;
 
             for (var i = 0; i < mainRingCount; i++)
@@ -393,19 +354,17 @@ namespace VainSabers.Sabers
                 var dRadius_dt = dLinearRad_dt * bulgeFactor + linearRad * dBulgeFactor_dt;
                 var radiusSlope = Length > 0.0001f ? dRadius_dt / Length : 0f;
 
-                _gpuRingParams.Add(CreateRingParams(first, last, avgFwd, tangent, right,
-                    t * Length, radius, false,
+                BuildRing(samples, t * Length, radius,
+                    false,
                     Color.Lerp(startCol, endCol, t),
                     Mathf.Lerp(StartOpacity, EndOpacity, t),
-                    default, radiusSlope));
+                    ref idx, default, radiusSlope);
             }
-            
             if (EnableEndCaps)
-                _gpuRingParams.Add(CreateRingParams(first, last, avgFwd, tangent, right,
-                    Length + EndRadius * 0.25f * EndCapExtension, endRad, true, endCol, EndOpacity, default, 0f));
+                BuildRing(samples, Length + EndRadius * 0.25f * EndCapExtension, endRad, true, endCol, EndOpacity, ref idx);
         }
         
-        void BuildAdvancedRingParams(Pose[] samples, Pose first, Pose last, Vector3 avgFwd, Vector3 tangent, Vector3 right)
+        void BuildAdvancedRings(Pose[] samples, ref int idx)
         {
             var count = RingParams.Count;
             for (var i = 0; i < count; i++)
@@ -441,41 +400,105 @@ namespace VainSabers.Sabers
                         radiusSlope = (nextRad - prevRad) / (dt * Length);
                 }
 
-                _gpuRingParams.Add(CreateRingParams(first, last, avgFwd, tangent, right,
-                    ring.PosAlongPart01 * Length, rawRadius, isZero, col, ring.Opacity, ring.Offset, radiusSlope));
+                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, isZero, col, ring.Opacity, ref idx, ring.Offset, radiusSlope);
             }
         }
-
-        GpuRingParams CreateRingParams(
-            Pose first, Pose last, Vector3 avgFwd, Vector3 tangent, Vector3 right,
-            float zPos, float rawRadius, bool isZero, Color color, float opacity,
-            Vector2 offset, float radiusSlope)
+        
+        Pose SampleAlongCurve(Pose[] samples, float t)
         {
-            var radius = Mathf.Abs(rawRadius);
-            var firstPos = first.position + first.forward * zPos;
-            var lastPos = last.position + last.forward * zPos;
-            var motionDirRaw = lastPos - firstPos;
-            var dst = motionDirRaw.magnitude;
-
-            var motionDir = Vector3.ProjectOnPlane(motionDirRaw, avgFwd).normalized;
-            var plane = Vector3.Cross(motionDir, avgFwd);
-
-            var sweepRatio = radius > 0.0001f ? Config.BlurSoftness * dst / radius : 0f;
-
-            return new GpuRingParams
-            {
-                colorAndGlow = new Vector4(color.r, color.g, color.b, color.a),
-                motionDirSign = new Vector4(motionDir.x, motionDir.y, motionDir.z, Mathf.Sign(rawRadius)),
-                avgFwdRadiusSlope = new Vector4(avgFwd.x, avgFwd.y, avgFwd.z, radiusSlope),
-                tangent = new Vector4(tangent.x, tangent.y, tangent.z, 0),
-                right = new Vector4(right.x, right.y, right.z, 0),
-                plane = new Vector4(plane.x, plane.y, plane.z, 0),
-                zPosRadiusIsZero = new Vector4(zPos, radius, isZero ? 1f : 0f, 0),
-                offsetSweepOpac = new Vector4(offset.x, offset.y, sweepRatio * BlurFadeFactor, opacity),
-                lengthRounded = new Vector4(Length, EnableRoundedNormals ? 1f : 0f, 0, 0)
-            };
+            if (samples.Length == 0)
+                return new Pose();
+    
+            t = Mathf.Clamp01(t);
+            var idx = Mathf.FloorToInt(t * (samples.Length - 1));
+    
+            return samples[idx];
         }
 
+        void BuildRing(
+            Pose[] samples,
+            float zPos,
+            float rawRadius,
+            bool isZero,
+            Color color,
+            float opacity,
+            ref int idx,
+            Vector2 offset = default,
+            float radiusSlope = 0f)
+        {
+            var radius = Mathf.Abs(rawRadius);
+
+            var first = samples[0];
+            var last = samples[samples.Length - 1];
+            var firstPos = first.position + first.forward * zPos;
+            var lastPos = last.position + last.forward * zPos;
+
+            var motionDir = lastPos - firstPos;
+            var dst = motionDir.magnitude;
+
+            var avgFwd = (first.forward + last.forward).normalized;
+            var refUp = m_movementHistoryProvider.transform.up;
+            if (Vector3.Dot(refUp, avgFwd) > 0.99f)
+                refUp = m_movementHistoryProvider.transform.right;
+            var tangent = Vector3.Cross(avgFwd, refUp).normalized;
+            var right = Vector3.Cross(avgFwd, tangent).normalized;
+            
+            tangent = (first.up + last.up).normalized;
+            right = (first.right + last.right).normalized;
+
+            motionDir = Vector3.ProjectOnPlane(motionDir, avgFwd).normalized;
+            var plane = Vector3.Cross(motionDir, avgFwd);
+
+            var sweepRatio = Config.BlurSoftness * 1.5f * dst / (1.5f * radius);
+            
+            if (isZero)
+            {
+                radius = 0.00001f;
+            }
+
+            for (var i = 0; i < ringVerts; i++)
+            {
+                var theta = 2.0f * Mathf.PI * i / ringVerts;
+                var offsetDir = Mathf.Sign(rawRadius) * Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
+
+                var dot = Vector3.Dot(offsetDir, motionDir);
+                var tSample = (dot + 1.0f) * 0.5f;
+
+                var interpSample = SampleAlongCurve(samples, tSample);
+
+                var ringCenter = interpSample.position + interpSample.forward * zPos;
+                ringCenter += interpSample.up * offset.y + interpSample.right * offset.x;
+                var normal = Mathf.Sign(rawRadius) * offsetDir;
+                if (EnableRoundedNormals)
+                {
+                    if (isZero)
+                    {
+                        normal += avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)));
+                    }
+                    else
+                    {
+                        normal -= avgFwd * radiusSlope;
+                    }
+                }
+
+                var vertexPos = ringCenter + offsetDir * (isZero ? 0 : radius);
+
+                m_blurTube!.SetVertex(
+                    idx + i,
+                    vertexPos,
+                    normal,
+                    tSample,
+                    color,
+                    plane,
+                    interpSample.forward,
+                    sweepRatio * BlurFadeFactor,
+                    opacity
+                );
+            }
+
+            idx += ringVerts;
+        }
+        
         private Pose[] InterpolateData(float time)
         {
             var present = m_movementHistoryProvider.GetPoseAgo(0.0f);
