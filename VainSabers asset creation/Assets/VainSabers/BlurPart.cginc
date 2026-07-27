@@ -1,20 +1,17 @@
 #pragma vertex vert
-#pragma target 3.0
+#pragma target 2.0
 
 #include "UnityCG.cginc"
 
-struct RingVertex {
-    float4 position;
-    float4 normal;
-    float4 tangent;
-    float4 color;
-    float4 uv;
-    float4 bladeDir;
+struct appdata_t {
+    float4 vertex : POSITION;
+    float3 trueNormal : NORMAL;
+    float4 planeNormal : TANGENT;  // tangent xyz vector in model space, w is sweepFactor
+    float2 uv : TEXCOORD0;
+    float4 color  : COLOR;
+    float4 bladeDir : TEXCOORD1;
+    UNITY_VERTEX_INPUT_INSTANCE_ID
 };
-
-StructuredBuffer<RingVertex> _RingVertices;
-int _RingVerts;
-int _RingCount;
 
 struct v2f {
     float4 vertex   : SV_POSITION;
@@ -30,48 +27,28 @@ struct v2f {
 float _Glow;
 float _DepthOffset;
 
-v2f vert (uint vid : SV_VertexID)
+v2f vert (appdata_t v)
 {
     v2f o;
+    UNITY_SETUP_INSTANCE_ID(v);
     UNITY_INITIALIZE_OUTPUT(v2f, o);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-    uint rv = (uint)_RingVerts;
-
-    uint quadIndex = vid / 6;
-    uint vertexInQuad = vid % 6;
-    uint ringIdx = quadIndex / rv;
-    uint vertIdx = quadIndex % rv;
-    uint nextVertIdx = (vertIdx + 1) % rv;
-
-    uint idxA = ringIdx * rv + vertIdx;
-    uint idxB = ringIdx * rv + nextVertIdx;
-    uint idxC = (ringIdx + 1) * rv + vertIdx;
-    uint idxD = (ringIdx + 1) * rv + nextVertIdx;
-
-    uint readIdx;
-    if (vertexInQuad == 0) readIdx = idxA;
-    else if (vertexInQuad == 1) readIdx = idxC;
-    else if (vertexInQuad == 2) readIdx = idxB;
-    else if (vertexInQuad == 3) readIdx = idxB;
-    else if (vertexInQuad == 4) readIdx = idxC;
-    else readIdx = idxD;
-
-    RingVertex rv_data = _RingVertices[readIdx];
-
-    float3 objectPos = rv_data.position.xyz;
-    o.vertex = UnityObjectToClipPos(float4(objectPos, 1.0));
+    // standard position + uv
+    o.vertex = UnityObjectToClipPos(v.vertex);
     o.vertex.z += _DepthOffset;
-    o.uv = rv_data.uv.xy;
+    o.uv = v.uv;
 
-    o.planeNormal = float4(UnityObjectToWorldNormal(rv_data.tangent.xyz), rv_data.tangent.w);
-    o.normal = UnityObjectToWorldNormal(rv_data.normal.xyz);
+    // world normal
+    o.planeNormal = float4(UnityObjectToWorldNormal(v.planeNormal), v.planeNormal.w);
+    o.normal = UnityObjectToWorldNormal(v.trueNormal);
+    
+    o.color = v.color;
 
-    o.color = rv_data.color;
-
-    float3 worldPos = mul(unity_ObjectToWorld, float4(objectPos, 1.0)).xyz;
+    // compute view direction (fragment → camera)
+    float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
     o.worldPos = worldPos;
-    o.bladeDir = float4(UnityObjectToWorldNormal(rv_data.bladeDir.xyz), rv_data.bladeDir.w);
+    o.bladeDir = float4(UnityObjectToWorldNormal(v.bladeDir.xyz), v.bladeDir.w);
 
     return o;
 }
@@ -84,7 +61,7 @@ struct SaberFragVariables {
     float3 viewDir;
     float3 normal;
     float sweepRatio;
-    float rimFactor;
+    float rimFactor; 
 };
 
 #define MINIMUM_EDGE_SOFTNESS 0.05
@@ -95,6 +72,7 @@ float _RimFactor;
 float _RimPower;
 float _RimPerpendicular;
 
+// blur goes from 0 to 1
 float getFresnelBlurFadeFactor(float x, float blur)
 {
     float p = 100.0 / (blur * blur + 0.005);
@@ -104,17 +82,33 @@ float getFresnelBlurFadeFactor(float x, float blur)
 
 SaberFragVariables GetCommonSaberVars(v2f vertStage)
 {
+    // _Color: The color of the blade
+    // _HandleColor: The color of the handle
+    // _BlurAmount: How much the saber sweep is in motion and should blur
+    // viewGraze: How much of a grazing angle (to the saber sweep plane)
+    // sweepPosition: The horizontal position in the sweep
+    // glowFactor: How much the blade should glow
+    // whiteFactor: How much the blade color is blended to solid white
+    // fadeFactor: How much the blade should fade out when in motion
+    // bladeFactor: How much this fragment is the blade or the handle (0 is handle, 1 is blade)
+    // edgeSoftness: The percent from the edge to the middle that the "blurry" part of the fade takes up
+    // the final opacity multiplier is the w component of the bladeDir vector
+    
+    // Safe viewDir
     float3 viewDelta = _WorldSpaceCameraPos.xyz - vertStage.worldPos;
     float viewDeltaLenSq = dot(viewDelta, viewDelta);
     float3 viewDir = (viewDeltaLenSq > 1e-6) ? normalize(viewDelta) : float3(0,0,1);
 
+    // Sweep factor
     float sweepFactor = vertStage.uv.y * 1.5 * _VainSaberBlurSoftness;
     float blurFac = sweepFactor;
 
+    // Distance to edge
     float distanceToEdge = min(vertStage.uv.x * 2.0, 2.0 - 2.0 * vertStage.uv.x);
     distanceToEdge += 0.1 / max(sweepFactor, 0.01);
     distanceToEdge *= 2;
 
+    // Safe plane normal
     float3 planeNormal = (dot(vertStage.planeNormal.xyz, vertStage.planeNormal.xyz) > 1e-6)
                          ? normalize(vertStage.planeNormal.xyz)
                          : float3(0,0,1);
@@ -124,27 +118,31 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float3 motionDir = (dot(motionDirRaw, motionDirRaw) > 1e-6)
                        ? normalize(motionDirRaw)
                        : float3(0,0,1);
-
+                       
     float blurStrength = saturate(1.3 - 1.5 * abs(dot(motionDir, viewDir)));
-
+    
+    // Build return vars
     SaberFragVariables commonVars;
     commonVars.color = vertStage.color;
     commonVars.glowStrength = _Glow * vertStage.color.w;
     commonVars.sweepRatio = 1 - sweepFactor;
 
+    // Alpha calculation with clamp
     float denom = max(sweepFactor, 0.01);
     commonVars.alpha = saturate(distanceToEdge * distanceToEdge / (1.9 * denom));
     commonVars.alpha = 1.0 - blurStrength * (commonVars.alpha - 1.0) * (commonVars.alpha - 1.0);
     commonVars.alpha /= denom + 1;
     commonVars.alpha *= 1.1;
     commonVars.alpha = saturate(commonVars.alpha);
-    commonVars.alpha *= pow(vertStage.bladeDir.w, 1.5);
+    commonVars.alpha *= pow(vertStage.bladeDir.w, 1.5); // looks better with ^1.5 i think
     commonVars.alpha = saturate(commonVars.alpha);
+    // Safe normals
     commonVars.viewDir = viewDir;
     commonVars.normal = (dot(vertStage.normal, vertStage.normal) > 1e-6)
                         ? normalize(vertStage.normal)
                         : float3(0,0,1);
 
+    // Rim stuff
     float3 N = commonVars.normal;
     float3 V = commonVars.viewDir;
 

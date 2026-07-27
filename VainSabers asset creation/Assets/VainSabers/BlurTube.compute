@@ -2,6 +2,7 @@
 
 #define SAMPLE_COUNT 16
 #define PI 3.14159265359
+#define VERTEX_STRIDE 80
 
 struct SampleData {
     float4 position;
@@ -22,18 +23,17 @@ struct RingParams {
     float4 lengthRounded;
 };
 
-struct RingVertex {
-    float4 position;
-    float4 normal;
-    float4 tangent;
-    float4 color;
-    float4 uv;
-    float4 bladeDir;
-};
-
 StructuredBuffer<SampleData> _Samples;
 StructuredBuffer<RingParams> _Rings;
-RWStructuredBuffer<RingVertex> _RingVertices;
+struct VertexData {
+    float3 position;
+    float3 normal;
+    float4 tangent;   // xyz = planeNormal, w = 0
+    float4 color;
+    float2 uv;        // x = sweep, y = clamped sweep ratio
+    float4 bladeDir;  // xyz = blade forward, w = opacity
+};
+RWStructuredBuffer<VertexData> _Vertices;
 
 int _RingVerts;
 int _RingCount;
@@ -118,14 +118,14 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 
     uint outIdx = ringIdx * (uint)_RingVerts + vertIdx;
 
-    RingVertex v;
-    v.position = float4(vertexPos, 1.0);
-    v.normal = float4(normal, 0.0);
+    VertexData v;
+    v.position = vertexPos;
+    v.normal = normal;
     v.tangent = float4(planeNormal, 0.0);
     v.color = color;
     float sweepFade = clamp((sweepRatio - 0.7) * 0.01, 0.0, 5.0);
     v.uv = float2(tSample, sweepFade);
     v.bladeDir = float4(interpSample.forward.xyz, opacity);
 
-    _RingVertices[outIdx] = v;
+    _Vertices[outIdx] = v;
 }

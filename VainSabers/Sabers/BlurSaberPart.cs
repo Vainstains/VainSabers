@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 using VainSabers.Config;
 using VainSabers.Helpers;
 
@@ -31,6 +30,7 @@ namespace VainSabers.Sabers
         public float Length;
 
         public GeometryType GeometryHandling = GeometryType.Simple;
+        // for advanced geometry handling, just use these directly and ignore everything else
         public List<BlurSaberRingParams> RingParams = new();
 
         public float StartRadius;
@@ -87,6 +87,11 @@ namespace VainSabers.Sabers
         [FindComponent(ComponentLocation.InParent)]
         private BlurSaberData m_saberData = null!;
         
+        [RequiredComponent]
+        private MeshRenderer m_meshRenderer = null!;
+        [RequiredComponent]
+        private MeshFilter m_meshFilter = null!;
+        
         private bool m_injected = false;
         private BlurTube? m_blurTube;
         
@@ -94,7 +99,7 @@ namespace VainSabers.Sabers
         private Material? m_runtimeInvertedMaterial;
         private Material? m_runtimeLitMaterial;
         private Material? m_runtimeLitInvertedMaterial;
-        private CommandBuffer? m_commandBuffer;
+        private MaterialPropertyBlock m_propertyBlock = null!;
         
         public PluginConfig Config = null!;
 
@@ -198,6 +203,7 @@ namespace VainSabers.Sabers
             {
                 m_blurTube?.Destroy();
                 m_blurTube = null;
+                m_meshFilter.mesh = null;
                 return;
             }
 
@@ -209,6 +215,7 @@ namespace VainSabers.Sabers
             {
                 m_blurTube?.Destroy();
                 m_blurTube = null;
+                m_meshFilter.mesh = null;
                 return;
             }
 
@@ -229,42 +236,21 @@ namespace VainSabers.Sabers
             if (activeMat != null)
             {
                 activeMat.renderQueue = 3600 + RenderQueueOffset;
+                
+                m_propertyBlock ??= new MaterialPropertyBlock();
+                m_propertyBlock.SetFloat("_DepthOffset", DepthOffset + (Inverted ? 0f : 0.001f));
+
+                m_propertyBlock.SetFloat("_RimFactor", RimFactor);
+                m_propertyBlock.SetFloat("_RimPower", RimPower);
+                m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
+                m_meshRenderer.SetPropertyBlock(m_propertyBlock);
             }
+
+            m_meshRenderer.sharedMaterial = activeMat;
+            m_meshFilter.mesh = m_blurTube.TubeMesh;
 
             RebuildVerts();
-            m_blurTube.Dispatch();
-        }
-
-        void OnRenderObject()
-        {
-            if (m_blurTube == null) return;
-
-            var activeMat = GetActiveMaterial();
-            if (activeMat == null) return;
-
-            var triCount = m_blurTube.TriangleVertexCount;
-            if (triCount <= 0) return;
-
-            Shader.SetGlobalFloat("_DepthOffset", DepthOffset + (Inverted ? 0f : 0.001f));
-            Shader.SetGlobalFloat("_RimFactor", RimFactor);
-            Shader.SetGlobalFloat("_RimPower", RimPower);
-            Shader.SetGlobalFloat("_RimPerpendicular", RimPerpendicular);
-            Shader.SetGlobalBuffer("_RingVertices", m_blurTube.RingVertexBuffer);
-            Shader.SetGlobalInt("_RingVerts", m_blurTube.RingVerts);
-            Shader.SetGlobalInt("_RingCount", m_blurTube.RingCount);
-
-            m_commandBuffer ??= new CommandBuffer { name = "BlurSaber" };
-            m_commandBuffer.Clear();
-
-            var matrix = transform.localToWorldMatrix;
-            var passCount = activeMat.passCount;
-
-            for (int pass = 0; pass < passCount; pass++)
-            {
-                m_commandBuffer.DrawProcedural(matrix, activeMat, pass, MeshTopology.Triangles, triCount);
-            }
-
-            Graphics.ExecuteCommandBuffer(m_commandBuffer);
+            m_blurTube.RefreshMesh();
         }
 
         private void Update()
@@ -310,9 +296,6 @@ namespace VainSabers.Sabers
         {
             m_blurTube?.Destroy();
             m_blurTube = null!;
-            
-            m_commandBuffer?.Release();
-            m_commandBuffer = null;
             
             if (m_runtimeMaterial != null) DestroyImmediate(m_runtimeMaterial);
             if (m_runtimeInvertedMaterial != null) DestroyImmediate(m_runtimeInvertedMaterial);
