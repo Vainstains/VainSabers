@@ -143,14 +143,14 @@ public class BlurSaberData : MonoBehaviour
     public void AddTipTrail()
     {
         TipTrails.Add(new SaberTrailData(
-            Position: new float[] { 0f, 0f, 1f },
-            Color: new float[] { 1f, 1f, 1f },
-            CustomBlend: 1f,
-            Glow: 1f,
-            Opacity: 1f,
-            Width: 0.008f,
-            Length: 140,
-            QueueOffset: 0
+            position: new float[] { 0f, 0f, 1f },
+            color: new float[] { 1f, 1f, 1f },
+            customBlend: 1f,
+            glow: 1f,
+            opacity: 1f,
+            width: 0.008f,
+            length: 140,
+            queueOffset: 0
         ));
         TrailsChanged?.Invoke();
     }
@@ -182,28 +182,28 @@ public class BlurSaberData : MonoBehaviour
         if (TipTrails.Count == 0)
         {
             TipTrails.Add(new SaberTrailData(
-                Position: new float[] { 0f, 0f, 1f },
-                Color: new float[] { 1f, 1f, 1f },
-                CustomBlend: 1f,
-                Glow: 1f,
-                Opacity: 1f,
-                Width: 0.008f,
-                Length: m_config?.TipTrailMS ?? 140,
-                QueueOffset: 0
+                position: new float[] { 0f, 0f, 1f },
+                color: new float[] { 1f, 1f, 1f },
+                customBlend: 1f,
+                glow: 1f,
+                opacity: 1f,
+                width: 0.008f,
+                length: m_config?.TipTrailMS ?? 140,
+                queueOffset: 0
             ));
         }
 
         if (BladeTrail == null)
         {
             BladeTrail = new SaberTrailData(
-                Position: new float[] { 0f, 0f, 1f },
-                Color: new float[] { 1f, 1f, 1f },
-                CustomBlend: 1f,
-                Glow: 1f,
-                Opacity: 0.3f,
-                Width: 0.01f,
-                Length: m_config?.BladeTrailMS ?? 60,
-                QueueOffset: 0
+                position: new float[] { 0f, 0f, 1f },
+                color: new float[] { 1f, 1f, 1f },
+                customBlend: 1f,
+                glow: 1f,
+                opacity: 0.3f,
+                width: 0.01f,
+                length: m_config?.BladeTrailMS ?? 60,
+                queueOffset: 0
             );
         }
     }
@@ -302,14 +302,14 @@ public class BlurSaberData : MonoBehaviour
                     foreach (var ring in partData.Rings)
                     {
                         part.RingParams.Add(new BlurSaberRingParams(
-                            PosAlongPart01: ring.Position,
-                            Radius: ring.Radius,
-                            Color: ArrToColor(ring.Color),
-                            CustomWeight: ring.CustomWeight,
-                            Glow: ring.Glow,
-                            Opacity: ring.Opacity,
-                            Inverted: ring.Inverted,
-                            Offset: new Vector2(ring.OffsetX, ring.OffsetY)
+                            posAlongPart01: ring.Position,
+                            radius: ring.Radius,
+                            color: ArrToColor(ring.Color),
+                            customWeight: ring.CustomWeight,
+                            glow: ring.Glow,
+                            opacity: ring.Opacity,
+                            inverted: ring.Inverted,
+                            offset: new Vector2(ring.OffsetX, ring.OffsetY)
                         ));
                     }
                 }
@@ -324,14 +324,14 @@ public class BlurSaberData : MonoBehaviour
                 foreach (var td in preset.TipTrails)
                 {
                     TipTrails.Add(new SaberTrailData(
-                        Position: td.Position ?? new float[] { 0, 0, 1 },
-                        Color: td.Color ?? new float[] { 1, 1, 1 },
-                        CustomBlend: td.CustomBlend,
-                        Glow: td.Glow,
-                        Opacity: td.Opacity,
-                        Width: td.Width,
-                        Length: td.Length,
-                        QueueOffset: td.QueueOffset
+                        position: td.Position ?? new float[] { 0, 0, 1 },
+                        color: td.Color ?? new float[] { 1, 1, 1 },
+                        customBlend: td.CustomBlend,
+                        glow: td.Glow,
+                        opacity: td.Opacity,
+                        width: td.Width,
+                        length: td.Length,
+                        queueOffset: td.QueueOffset
                     ));
                 }
             }
@@ -340,14 +340,14 @@ public class BlurSaberData : MonoBehaviour
             {
                 var bt = preset.BladeTrail;
                 BladeTrail = new SaberTrailData(
-                    Position: bt.Position ?? new float[] { 0, 0, 1 },
-                    Color: bt.Color ?? new float[] { 1, 1, 1 },
-                    CustomBlend: bt.CustomBlend,
-                    Glow: bt.Glow,
-                    Opacity: bt.Opacity,
-                    Width: bt.Width,
-                    Length: bt.Length,
-                    QueueOffset: bt.QueueOffset
+                    position: bt.Position ?? new float[] { 0, 0, 1 },
+                    color: bt.Color ?? new float[] { 1, 1, 1 },
+                    customBlend: bt.CustomBlend,
+                    glow: bt.Glow,
+                    opacity: bt.Opacity,
+                    width: bt.Width,
+                    length: bt.Length,
+                    queueOffset: bt.QueueOffset
                 );
             }
             else
@@ -548,14 +548,14 @@ public class BlurSaberData : MonoBehaviour
                         break;
                     }
                     currentPart.RingParams.Add(new BlurSaberRingParams(
-                        PosAlongPart01: vals[0],
-                        Radius: vals[1],
-                        Color: new Color(vals[2], vals[3], vals[4], 1f),
-                        CustomWeight: vals[5],
-                        Glow: vals[6],
-                        Opacity: vals[7],
-                        Inverted: Mathf.Approximately(vals[8], 1f),
-                        Offset: Vector2.zero
+                        posAlongPart01: vals[0],
+                        radius: vals[1],
+                        color: new Color(vals[2], vals[3], vals[4], 1f),
+                        customWeight: vals[5],
+                        glow: vals[6],
+                        opacity: vals[7],
+                        inverted: Mathf.Approximately(vals[8], 1f),
+                        offset: Vector2.zero
                     ));
                     break;
                 case "startRad":

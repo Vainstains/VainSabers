@@ -93,14 +93,14 @@ internal class BlurSaber : MonoBehaviour
     private void CreateDefaultTrails()
     {
         var tipData = new SaberTrailData(
-            Position: new float[] { 0f, 0f, 1f },
-            Color: new float[] { 1f, 1f, 1f },
-            CustomBlend: 1f,
-            Glow: 1f,
-            Opacity: 1f,
-            Width: 0.008f,
-            Length: m_config.TipTrailMS,
-            QueueOffset: 0
+            position: new float[] { 0f, 0f, 1f },
+            color: new float[] { 1f, 1f, 1f },
+            customBlend: 1f,
+            glow: 1f,
+            opacity: 1f,
+            width: 0.008f,
+            length: m_config.TipTrailMS,
+            queueOffset: 0
         );
         var tipGo = new GameObject("DefaultTipTrail");
         tipGo.transform.SetParent(transform, false);
@@ -108,14 +108,14 @@ internal class BlurSaber : MonoBehaviour
         m_defaultTipTrail.Init(m_historyProvider, tipData, m_saberTransform);
 
         var bladeData = new SaberTrailData(
-            Position: new float[] { 0f, 0f, 1f },
-            Color: new float[] { 1f, 1f, 1f },
-            CustomBlend: 1f,
-            Glow: 1f,
-            Opacity: 0.3f,
-            Width: 0.01f,
-            Length: m_config.BladeTrailMS,
-            QueueOffset: 0
+            position: new float[] { 0f, 0f, 1f },
+            color: new float[] { 1f, 1f, 1f },
+            customBlend: 1f,
+            glow: 1f,
+            opacity: 0.3f,
+            width: 0.01f,
+            length: m_config.BladeTrailMS,
+            queueOffset: 0
         );
         var bladeGo = new GameObject("DefaultRibbonTrail");
         bladeGo.transform.SetParent(transform, false);
@@ -132,24 +132,24 @@ internal class BlurSaber : MonoBehaviour
         }
         
         m_defaultTipTrail!.ApplyConfig(new SaberTrailData(
-            Position: new float[] { 0f, 0f, 1f },
-            Color: new float[] { 1f, 1f, 1f },
-            CustomBlend: 1f,
-            Glow: 1f,
-            Opacity: 1f,
-            Width: 0.008f,
-            Length: m_config.TipTrailMS,
-            QueueOffset: 0
+            position: new float[] { 0f, 0f, 1f },
+            color: new float[] { 1f, 1f, 1f },
+            customBlend: 1f,
+            glow: 1f,
+            opacity: 1f,
+            width: 0.008f,
+            length: m_config.TipTrailMS,
+            queueOffset: 0
         ));
         m_defaultRibbonTrail!.ApplyConfig(new SaberTrailData(
-            Position: new float[] { 0f, 0f, 1f },
-            Color: new float[] { 1f, 1f, 1f },
-            CustomBlend: 1f,
-            Glow: 1f,
-            Opacity: 0.3f,
-            Width: 0.01f,
-            Length: m_config.BladeTrailMS,
-            QueueOffset: 0
+            position: new float[] { 0f, 0f, 1f },
+            color: new float[] { 1f, 1f, 1f },
+            customBlend: 1f,
+            glow: 1f,
+            opacity: 0.3f,
+            width: 0.01f,
+            length: m_config.BladeTrailMS,
+            queueOffset: 0
         ));
     }
 
