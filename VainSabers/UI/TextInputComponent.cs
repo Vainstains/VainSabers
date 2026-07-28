@@ -109,7 +109,7 @@ public class TextInputComponent : UIComponent
 
     public void SetValue(string value, bool invokeEvent)
     {
-        var clamped = value?.Length > MaxLength ? value[..MaxLength] : value ?? "";
+        var clamped = value?.Length > MaxLength ? value!.Substring(0, MaxLength) : value ?? "";
 
         if (m_value == clamped)
             return;
@@ -351,7 +351,7 @@ public class TextInputComponent : UIComponent
     {
         if (m_inputBuffer.Length > 0)
         {
-            m_inputBuffer = m_inputBuffer[..^1];
+            m_inputBuffer = m_inputBuffer.Substring(0, m_inputBuffer.Length - 1);
             m_popupDisplayText.Text = m_inputBuffer;
         }
     }

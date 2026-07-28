@@ -527,7 +527,10 @@ namespace VainSabers.Sabers
         float Opacity,
         bool Inverted,
         Vector2 Offset
-    );
+    )
+    {
+        public override string ToString() => nameof(BlurSaberRingParams);
+    }
 
     public record struct SaberTrailData (
         float[] Position,
@@ -538,5 +541,8 @@ namespace VainSabers.Sabers
         float Width,
         int Length,
         int QueueOffset
-    );
+    )
+    {
+        public override string ToString() => nameof(SaberTrailData);
+    }
 }

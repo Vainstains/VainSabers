@@ -199,4 +199,6 @@ public record struct VainColor(float r, float g, float b, float a = 1f)
     public static VainColor operator *(VainColor a, (float r, float g, float b) b) => a * MakeColor(b);
     public static VainColor operator *((float r, float g, float b) a, VainColor b) => MakeColor(a) * b;
     #endregion
+
+    public override string ToString() => $"({r:0.00}, {g:0.00}, {b:0.00}, {a:0.00})";
 }

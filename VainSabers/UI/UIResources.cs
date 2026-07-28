@@ -32,7 +32,7 @@ internal static class UIResources
         stream.Read(data, 0, data.Length);
         texture.LoadImage(data);
         
-        var pivotVal = pivot ?? Vector2.one * 0.5f;
+        var pivotVal = pivot.HasValue ? pivot.Value : Vector2.one * 0.5f;
         
         Vector4 border;
         if (borderRatio != null)
@@ -54,7 +54,7 @@ internal static class UIResources
         }
         else
         {
-            border = borderPixels ?? Vector4.zero;
+            border = borderPixels.HasValue ? borderPixels.Value : Vector4.zero;
         }
         
         var rect = new Rect(0, 0, texture.width, texture.height);

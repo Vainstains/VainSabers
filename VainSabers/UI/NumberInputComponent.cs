@@ -506,7 +506,7 @@ public class NumberInputComponent : UIComponent
         }
         else if (m_inputBuffer.StartsWith('-'))
         {
-            m_inputBuffer = m_inputBuffer[1..];
+            m_inputBuffer = m_inputBuffer.Substring(1);
         }
         else
         {
@@ -535,7 +535,7 @@ public class NumberInputComponent : UIComponent
     {
         if (m_inputBuffer.Length > 0)
         {
-            m_inputBuffer = m_inputBuffer[..^1];
+            m_inputBuffer = m_inputBuffer.Substring(0, m_inputBuffer.Length - 1);
             if (m_inputBuffer == "-")
                 m_inputBuffer = "";
             m_popupDisplayText.Text = m_inputBuffer;
