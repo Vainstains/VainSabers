@@ -57,8 +57,21 @@ public class UnityConstructorAttribute : Attribute;
 
 // not needed at all but I really wanna be lazy and have implicit conversions
 // with tuples and strings :p
-public record struct VainColor(float r, float g, float b, float a = 1f)
+public struct VainColor
 {
+    public float r;
+    public float g;
+    public float b;
+    public float a;
+
+    public VainColor(float r, float g, float b, float a = 1f)
+    {
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = a;
+    }
+
     private static VainColor MakeColor((float r, float g, float b, float a) tuple) => new(tuple.r, tuple.g, tuple.b, tuple.a);
     private static VainColor MakeColor((float r, float g, float b) tuple) => new(tuple.r, tuple.g, tuple.b, 1f);
     

@@ -518,31 +518,68 @@ namespace VainSabers.Sabers
         }
     }
 
-    public record struct BlurSaberRingParams (
-        float PosAlongPart01,
-        float Radius,
-        Color Color,
-        float CustomWeight,
-        float Glow,
-        float Opacity,
-        bool Inverted,
-        Vector2 Offset
-    )
+    [Serializable]
+    public struct BlurSaberRingParams
     {
-        public override string ToString() => nameof(BlurSaberRingParams);
+        public float PosAlongPart01;
+        public float Radius;
+        public Color Color;
+        public float CustomWeight;
+        public float Glow;
+        public float Opacity;
+        public bool Inverted;
+        public Vector2 Offset;
+        public BlurSaberRingParams(
+            float posAlongPart01,
+            float radius,
+            Color color,
+            float customWeight,
+            float glow,
+            float opacity,
+            bool inverted,
+            Vector2 offset)
+        {
+            PosAlongPart01 = posAlongPart01;
+            Radius = radius;
+            Color = color;
+            CustomWeight = customWeight;
+            Glow = glow;
+            Opacity = opacity;
+            Inverted = inverted;
+            Offset = offset;
+        }
     }
 
-    public record struct SaberTrailData (
-        float[] Position,
-        float[] Color,
-        float CustomBlend,
-        float Glow,
-        float Opacity,
-        float Width,
-        int Length,
-        int QueueOffset
-    )
+    [Serializable]
+    public struct SaberTrailData
     {
-        public override string ToString() => nameof(SaberTrailData);
+        public float[] Position;
+        public float[] Color;
+        public float CustomBlend;
+        public float Glow;
+        public float Opacity;
+        public float Width;
+        public int Length;
+        public int QueueOffset;
+
+        public SaberTrailData(
+            float[] position,
+            float[] color,
+            float customBlend,
+            float glow,
+            float opacity,
+            float width,
+            int length,
+            int queueOffset)
+        {
+            Position = position;
+            Color = color;
+            CustomBlend = customBlend;
+            Glow = glow;
+            Opacity = opacity;
+            Width = width;
+            Length = length;
+            QueueOffset = queueOffset;
+        }
     }
 }

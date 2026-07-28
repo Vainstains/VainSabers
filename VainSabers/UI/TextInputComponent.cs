@@ -109,7 +109,9 @@ public class TextInputComponent : UIComponent
 
     public void SetValue(string value, bool invokeEvent)
     {
-        var clamped = value?.Length > MaxLength ? value!.Substring(0, MaxLength) : value ?? "";
+        var clamped = value;
+        if (MaxLength > 0 && clamped.Length > MaxLength)
+            clamped = clamped.Substring(0, MaxLength);
 
         if (m_value == clamped)
             return;
