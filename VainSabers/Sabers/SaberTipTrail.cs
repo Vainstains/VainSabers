@@ -12,34 +12,56 @@ internal class SaberTipTrail : MonoBehaviour
     private const int CoarseSampleCount = 24; 
     private const int RefinedSampleCount = CoarseSampleCount * 2 - 1;
     private const int RefinedSampleCount2 = RefinedSampleCount * 2 - 1; 
+    
+    private readonly Pose[] _poseBuffer = new Pose[CoarseSampleCount];
 
-    // Pre-allocated arrays to avoid GC allocations
     private readonly Vector3[] _coarsePositions = new Vector3[CoarseSampleCount];
     private readonly Vector3[] _refinedPositions = new Vector3[RefinedSampleCount];
     private readonly Vector3[] _refinedPositions2 = new Vector3[RefinedSampleCount2];
 
     private float m_opacity = 0.0f;
-    private Color m_color = Color.clear;
-    PluginConfig m_config = null!;
+    private Color m_trailColor = Color.white;
+    private Color m_gameColor = Color.white;
+    private SaberTrailData m_trailData;
 
-    public void Init(PluginConfig conf, Transform saberTransform, MovementHistoryProvider sweepData)
+    public void Init(MovementHistoryProvider sweepData, SaberTrailData trailData, Transform saberTransform)
     {
-        m_config = conf;
-        _saber = saberTransform;
         _sweepData = sweepData;
+        _saber = saberTransform;
+        m_trailData = trailData;
 
         _lineRenderer = gameObject.AddComponent<LineRenderer>();
         _lineRenderer.material = new Material(VainSabersAssets.VertexGlowShader);
-        _lineRenderer.widthMultiplier = 0.008f;
         _lineRenderer.useWorldSpace = true;
         _lineRenderer.positionCount = RefinedSampleCount;
 
-        // Width curve over trail lifetime
         AnimationCurve curve = new AnimationCurve();
         curve.AddKey(0.0f, 0.0f);
         curve.AddKey(0.3f, 1.0f);
         curve.AddKey(1.0f, 0.0f);
         _lineRenderer.widthCurve = curve;
+
+        ApplyConfig(trailData);
+    }
+
+    public void ApplyConfig(SaberTrailData trailData)
+    {
+        m_trailData = trailData;
+        _lineRenderer.widthMultiplier = trailData.Width;
+        _lineRenderer.material.renderQueue = 3100 + trailData.QueueOffset;
+        m_trailColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
+        UpdateFinalColor();
+    }
+
+    public void SetGameColor(Color color)
+    {
+        m_gameColor = color;
+        UpdateFinalColor();
+    }
+
+    private void UpdateFinalColor()
+    {
+        m_trailColor = Color.Lerp(m_trailColor, m_gameColor, m_trailData.CustomBlend);
     }
 
     private void LateUpdate()
@@ -48,38 +70,31 @@ internal class SaberTipTrail : MonoBehaviour
             return;
 
         float tipSpeed = EstimateTipSpeed();
+        Vector3 localOffset = new Vector3(m_trailData.Position[0], m_trailData.Position[1], m_trailData.Position[2]);
 
-        // Step 1: Sample coarse positions
-        for (int i = 0; i < CoarseSampleCount; i++)
-        {
-            float t = (i / (float)(CoarseSampleCount - 1)) * m_config.TipTrailMS * 0.001f;
-            Pose pose = _sweepData.GetPoseAgo(t);
-            _coarsePositions[i] = pose.position + pose.forward;
-        }
+        _sweepData.SampleNonAlloc(CoarseSampleCount, m_trailData.Length * 0.001f, _poseBuffer);
+        for (var i = 0; i < CoarseSampleCount; i++)
+            _coarsePositions[i] = _poseBuffer[i].position + _poseBuffer[i].rotation * localOffset;
 
-        _lineRenderer.enabled = m_config.TipTrailMS > 0;
+        _lineRenderer.enabled = m_trailData.Length > 0;
 
-        // Step 2: Refine for smoothness
         RefinePositions(_coarsePositions, _refinedPositions);
         RefinePositions(_refinedPositions, _refinedPositions2);
 
-        // Step 3: Set positions
         _lineRenderer.SetPositions(_refinedPositions2);
 
-        // Opacity based on speed
         tipSpeed *= 0.8f;
         m_opacity = Mathf.Max(
             Mathf.Clamp01(tipSpeed - 0.8f),
             Mathf.MoveTowards(m_opacity, 0.0f, Time.deltaTime * 3.0f));
 
-        // Update gradient
-        UpdateGradient(m_opacity);
+        UpdateGradient(m_opacity * m_trailData.Opacity);
     }
 
     private float EstimateTipSpeed()
     {
         Pose now = _sweepData.GetPoseAgo(0.0f);
-        Pose prev = _sweepData.GetPoseAgo(0.02f); // ~20 ms ago
+        Pose prev = _sweepData.GetPoseAgo(0.02f);
         return (now.position - prev.position).magnitude / 0.02f;
     }
 
@@ -101,29 +116,19 @@ internal class SaberTipTrail : MonoBehaviour
             refined[index] = (refined[index] + midpointAverage) * 0.5f;
         }
     }
+    
+    private readonly Gradient _cachedGradient = new Gradient();
+    private readonly GradientColorKey[] _colorKeys = new GradientColorKey[2];
+    private readonly GradientAlphaKey[] _alphaKeys = new GradientAlphaKey[2];
 
     private void UpdateGradient(float opacity)
     {
-        if (Mathf.Abs(_lineRenderer.colorGradient.alphaKeys[0].alpha - (0.5f * opacity)) > 0.01f)
-        {
-            Gradient gradient = new Gradient();
-            gradient.SetKeys(
-                new GradientColorKey[] {
-                    new GradientColorKey(m_color, 0.0f),
-                    new GradientColorKey(m_color, 1.0f)
-                },
-                new GradientAlphaKey[] {
-                    new GradientAlphaKey(0.9f * opacity, 0.0f),
-                    new GradientAlphaKey(0.0f, 1.0f)
-                }
-            );
-            _lineRenderer.colorGradient = gradient;
-        }
-    }
-
-    public void SetColor(Color color)
-    {
-        m_color = color;
+        _colorKeys[0] = new GradientColorKey(m_trailColor, 0f);
+        _colorKeys[1] = new GradientColorKey(m_trailColor, 1f);
+        _alphaKeys[0] = new GradientAlphaKey(0.9f * opacity, 0f);
+        _alphaKeys[1] = new GradientAlphaKey(0f, 1f);
+        _cachedGradient.SetKeys(_colorKeys, _alphaKeys);
+        _lineRenderer.colorGradient = _cachedGradient;
     }
 }
 public class SaberRibbonTrail : MonoBehaviour
@@ -134,60 +139,74 @@ public class SaberRibbonTrail : MonoBehaviour
     private MeshFilter _meshFilter = null!;
     private Mesh _mesh = null!;
     
-    // Mesh data arrays
     private Vector3[] _vertices = null!;
     private Color[] _colors = null!;
     private int[] _triangles = null!;
     
     private float _opacity = 0.0f;
-    private Color _color = Color.white;
+    private Color m_trailColor = Color.white;
+    private Color m_gameColor = Color.white;
+    private SaberTrailData m_trailData;
     
     private MovementHistoryProvider _movementHistory = null!;
     private Transform _saberTransform = null!;
-    private PluginConfig m_config = null!;
 
-    public void Init(PluginConfig conf, Transform saberTransform, MovementHistoryProvider movementHistory)
+    public void Init(MovementHistoryProvider movementHistory, SaberTrailData trailData, Transform saberTransform)
     {
-        m_config = conf;
-        _saberTransform = saberTransform;
         _movementHistory = movementHistory;
+        _saberTransform = saberTransform;
+        m_trailData = trailData;
 
-        // Create mesh components
         _meshFilter = gameObject.AddComponent<MeshFilter>();
         _meshRenderer = gameObject.AddComponent<MeshRenderer>();
         
-        // Create mesh
         _mesh = new Mesh();
         _mesh.name = "SaberRibbonTrail";
         _meshFilter.mesh = _mesh;
         
-        // Setup material (using same shader as tip trail)
         _meshRenderer.material = new Material(VainSabersAssets.VertexGlowShader2Side);
         
         InitializeMeshData();
+        ApplyConfig(trailData);
+    }
+
+    public void ApplyConfig(SaberTrailData trailData)
+    {
+        m_trailData = trailData;
+        _meshRenderer.material.renderQueue = 3100 + trailData.QueueOffset;
+        m_trailColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
+        UpdateFinalColor();
+    }
+
+    public void SetGameColor(Color color)
+    {
+        m_gameColor = color;
+        UpdateFinalColor();
+    }
+
+    private void UpdateFinalColor()
+    {
+        m_trailColor = Color.Lerp(m_trailColor, m_gameColor, m_trailData.CustomBlend);
     }
 
     private void InitializeMeshData()
     {
-        int vertexCount = (SegmentCount + 1) * 2; // +1 for present time, ×2 for both edges
-        int triangleCount = SegmentCount * 2 * 3; // 2 tris per segment × 3 indices each
+        int vertexCount = (SegmentCount + 1) * 2;
+        int triangleCount = SegmentCount * 2 * 3;
         
         _vertices = new Vector3[vertexCount];
         _colors = new Color[vertexCount];
         _triangles = new int[triangleCount];
         
-        // Pre-calculate triangles (strip topology)
         for (int i = 0; i < SegmentCount; i++)
         {
             int triIndex = i * 6;
             int vertIndex = i * 2;
             
-            // First triangle
             _triangles[triIndex] = vertIndex;
             _triangles[triIndex + 1] = vertIndex + 2;
             _triangles[triIndex + 2] = vertIndex + 1;
             
-            // Second triangle
             _triangles[triIndex + 3] = vertIndex + 1;
             _triangles[triIndex + 4] = vertIndex + 2;
             _triangles[triIndex + 5] = vertIndex + 3;
@@ -203,7 +222,7 @@ public class SaberRibbonTrail : MonoBehaviour
         UpdateOpacity(tipSpeed);
         UpdateMesh();
         
-        _meshRenderer.enabled = m_config.BladeTrailMS > 0;
+        _meshRenderer.enabled = m_trailData.Length > 0;
     }
 
     private float EstimateTipSpeed()
@@ -215,7 +234,6 @@ public class SaberRibbonTrail : MonoBehaviour
 
     private void UpdateOpacity(float tipSpeed)
     {
-        // Exact same logic as SaberTipTrail
         tipSpeed *= 0.5f;
         _opacity = Mathf.Max(
             Mathf.Clamp01(tipSpeed - 0.7f),
@@ -224,42 +242,37 @@ public class SaberRibbonTrail : MonoBehaviour
 
     private void UpdateMesh()
     {
+        Vector3 localOffset = new Vector3(m_trailData.Position[0], m_trailData.Position[1], m_trailData.Position[2]);
+        float baseFraction = Mathf.Clamp01(m_trailData.Width);
 
         int vertexIndex = 0;
         
-        // Sample positions along trail history
         for (int i = 0; i <= SegmentCount; i++)
         {
             float t = (float)i / SegmentCount;
-            float timeAgo = t * m_config.BladeTrailMS * 0.001f;
+            float timeAgo = t * m_trailData.Length * 0.001f;
             
             Pose pose = _movementHistory.GetPoseAgo(timeAgo);
             
-            // Calculate vertex positions in world space.
-            Vector3 basePosWorld = pose.position + pose.forward * 0.01f;
-            Vector3 tipPosWorld = pose.position + pose.forward;
+            Vector3 tipPosWorld = pose.position + pose.rotation * localOffset;
+            Vector3 basePosWorld = pose.position + pose.rotation * (localOffset * baseFraction);
 
-            // Mesh vertices are local-space, so convert sampled world positions
-            // into this trail object's local space.
             Vector3 basePos = transform.InverseTransformPoint(basePosWorld);
             Vector3 tipPos = transform.InverseTransformPoint(tipPosWorld);
             
-            // Set vertices - base edge (always transparent) and tip edge (animated opacity)
-            _vertices[vertexIndex] = basePos;     // Base edge vertex
-            _vertices[vertexIndex + 1] = tipPos;  // Tip edge vertex
+            _vertices[vertexIndex] = basePos;
+            _vertices[vertexIndex + 1] = tipPos;
             
-            // Exact same opacity logic as SaberTipTrail's gradient
             float segmentOpacity = CalculateSegmentOpacity(t);
-            Color baseColor = new Color(_color.r, _color.g, _color.b, 0f);
-            Color tipColor = new Color(_color.r, _color.g, _color.b, segmentOpacity * _opacity * 0.3f);
+            Color baseColor = new Color(m_trailColor.r, m_trailColor.g, m_trailColor.b, 0f);
+            Color tipColor = new Color(m_trailColor.r, m_trailColor.g, m_trailColor.b, segmentOpacity * _opacity * m_trailData.Opacity);
             
-            _colors[vertexIndex] = baseColor;     // Base edge - always transparent
-            _colors[vertexIndex + 1] = tipColor;  // Tip edge - animated opacity
+            _colors[vertexIndex] = baseColor;
+            _colors[vertexIndex + 1] = tipColor;
             
             vertexIndex += 2;
         }
 
-        // Update mesh
         _mesh.Clear();
         _mesh.vertices = _vertices;
         _mesh.colors = _colors;
@@ -271,11 +284,6 @@ public class SaberRibbonTrail : MonoBehaviour
     {
         var a = Mathf.Lerp(0.9f, 0.0f, t) * Mathf.Pow(t, 0.02f);
         return a * a;
-    }
-
-    public void SetColor(Color color)
-    {
-        _color = color;
     }
 
     private void OnDestroy()

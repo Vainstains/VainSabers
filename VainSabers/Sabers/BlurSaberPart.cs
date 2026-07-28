@@ -437,14 +437,9 @@ namespace VainSabers.Sabers
             var dst = motionDir.magnitude;
 
             var avgFwd = (first.forward + last.forward).normalized;
-            var refUp = m_movementHistoryProvider.transform.up;
-            if (Vector3.Dot(refUp, avgFwd) > 0.99f)
-                refUp = m_movementHistoryProvider.transform.right;
-            var tangent = Vector3.Cross(avgFwd, refUp).normalized;
-            var right = Vector3.Cross(avgFwd, tangent).normalized;
-            
-            tangent = (first.up + last.up).normalized;
-            right = (first.right + last.right).normalized;
+            var tangent = (first.up + last.up).normalized;
+            var right = (first.right + last.right).normalized;
+           
 
             motionDir = Vector3.ProjectOnPlane(motionDir, avgFwd).normalized;
             var plane = Vector3.Cross(motionDir, avgFwd);
@@ -455,31 +450,31 @@ namespace VainSabers.Sabers
             {
                 radius = 0.00001f;
             }
+            
+            var sign = Mathf.Sign(rawRadius);
+            
+            var normalAdjustment = Vector3.zero;
+            if (EnableRoundedNormals)
+            {
+                normalAdjustment = isZero
+                    ? avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)))
+                    : avgFwd * -radiusSlope;
+            }
 
             for (var i = 0; i < ringVerts; i++)
             {
                 var theta = 2.0f * Mathf.PI * i / ringVerts;
-                var offsetDir = Mathf.Sign(rawRadius) * Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
+                var offsetDir = sign * Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
 
                 var dot = Vector3.Dot(offsetDir, motionDir);
                 var tSample = (dot + 1.0f) * 0.5f;
 
                 var interpSample = SampleAlongCurve(samples, tSample);
-
-                var ringCenter = interpSample.position + interpSample.forward * zPos;
+                var fwd = interpSample.forward;
+                var ringCenter = interpSample.position + fwd * zPos;
                 ringCenter += interpSample.up * offset.y + interpSample.right * offset.x;
-                var normal = Mathf.Sign(rawRadius) * offsetDir;
-                if (EnableRoundedNormals)
-                {
-                    if (isZero)
-                    {
-                        normal += avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)));
-                    }
-                    else
-                    {
-                        normal -= avgFwd * radiusSlope;
-                    }
-                }
+                var normal = sign * offsetDir;
+                normal += normalAdjustment;
 
                 var vertexPos = ringCenter + offsetDir * (isZero ? 0 : radius);
 
@@ -490,7 +485,7 @@ namespace VainSabers.Sabers
                     tSample,
                     color,
                     plane,
-                    interpSample.forward,
+                    fwd,
                     sweepRatio * BlurFadeFactor,
                     opacity
                 );
@@ -532,5 +527,16 @@ namespace VainSabers.Sabers
         float Opacity,
         bool Inverted,
         Vector2 Offset
+    );
+
+    public record struct SaberTrailData (
+        float[] Position,
+        float[] Color,
+        float CustomBlend,
+        float Glow,
+        float Opacity,
+        float Width,
+        int Length,
+        int QueueOffset
     );
 }

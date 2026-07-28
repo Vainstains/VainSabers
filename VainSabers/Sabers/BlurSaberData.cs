@@ -20,6 +20,12 @@ public class BlurSaberData : MonoBehaviour
     public IReadOnlyList<BlurSaberPart> Components => m_components.AsReadOnly();
     public int ComponentCount => m_components.Count;
 
+    public bool UseCustomTrails { get; private set; }
+    public List<SaberTrailData> TipTrails { get; private set; } = new();
+    public SaberTrailData? BladeTrail { get; private set; }
+
+    public event Action? TrailsChanged;
+
     public void Init(PluginConfig config)
     {
         m_config = config;
@@ -125,6 +131,84 @@ public class BlurSaberData : MonoBehaviour
     {
         return m_components.Contains(part);
     }
+
+    #region Trail Management
+
+    public void SetUseCustomTrails(bool value)
+    {
+        UseCustomTrails = value;
+        TrailsChanged?.Invoke();
+    }
+
+    public void AddTipTrail()
+    {
+        TipTrails.Add(new SaberTrailData(
+            Position: new float[] { 0f, 0f, 1f },
+            Color: new float[] { 1f, 1f, 1f },
+            CustomBlend: 1f,
+            Glow: 1f,
+            Opacity: 1f,
+            Width: 0.008f,
+            Length: 140,
+            QueueOffset: 0
+        ));
+        TrailsChanged?.Invoke();
+    }
+
+    public void RemoveTipTrail(int index)
+    {
+        if (index < 0 || index >= TipTrails.Count)
+            return;
+        TipTrails.RemoveAt(index);
+        TrailsChanged?.Invoke();
+    }
+
+    public void SetTipTrail(int index, SaberTrailData data)
+    {
+        if (index < 0 || index >= TipTrails.Count)
+            return;
+        TipTrails[index] = data;
+        TrailsChanged?.Invoke();
+    }
+
+    public void SetBladeTrail(SaberTrailData data)
+    {
+        BladeTrail = data;
+        TrailsChanged?.Invoke();
+    }
+
+    public void EnsureDefaultTrails()
+    {
+        if (TipTrails.Count == 0)
+        {
+            TipTrails.Add(new SaberTrailData(
+                Position: new float[] { 0f, 0f, 1f },
+                Color: new float[] { 1f, 1f, 1f },
+                CustomBlend: 1f,
+                Glow: 1f,
+                Opacity: 1f,
+                Width: 0.008f,
+                Length: m_config?.TipTrailMS ?? 140,
+                QueueOffset: 0
+            ));
+        }
+
+        if (BladeTrail == null)
+        {
+            BladeTrail = new SaberTrailData(
+                Position: new float[] { 0f, 0f, 1f },
+                Color: new float[] { 1f, 1f, 1f },
+                CustomBlend: 1f,
+                Glow: 1f,
+                Opacity: 0.3f,
+                Width: 0.01f,
+                Length: m_config?.BladeTrailMS ?? 60,
+                QueueOffset: 0
+            );
+        }
+    }
+
+    #endregion
 
     public BlurSaberPart DuplicateComponent(BlurSaberPart source)
     {
@@ -232,6 +316,44 @@ public class BlurSaberData : MonoBehaviour
             }
 
             Debug.Log($"Imported saber with {ComponentCount} parts from {path}");
+
+            UseCustomTrails = preset.UseCustomTrails;
+            TipTrails.Clear();
+            if (preset.TipTrails != null)
+            {
+                foreach (var td in preset.TipTrails)
+                {
+                    TipTrails.Add(new SaberTrailData(
+                        Position: td.Position ?? new float[] { 0, 0, 1 },
+                        Color: td.Color ?? new float[] { 1, 1, 1 },
+                        CustomBlend: td.CustomBlend,
+                        Glow: td.Glow,
+                        Opacity: td.Opacity,
+                        Width: td.Width,
+                        Length: td.Length,
+                        QueueOffset: td.QueueOffset
+                    ));
+                }
+            }
+
+            if (preset.BladeTrail != null)
+            {
+                var bt = preset.BladeTrail;
+                BladeTrail = new SaberTrailData(
+                    Position: bt.Position ?? new float[] { 0, 0, 1 },
+                    Color: bt.Color ?? new float[] { 1, 1, 1 },
+                    CustomBlend: bt.CustomBlend,
+                    Glow: bt.Glow,
+                    Opacity: bt.Opacity,
+                    Width: bt.Width,
+                    Length: bt.Length,
+                    QueueOffset: bt.QueueOffset
+                );
+            }
+            else
+            {
+                BladeTrail = null;
+            }
         }
         catch (Exception ex)
         {
@@ -320,6 +442,42 @@ public class BlurSaberData : MonoBehaviour
                 }
 
                 preset.Parts.Add(partData);
+            }
+
+            preset.UseCustomTrails = UseCustomTrails;
+            if (TipTrails.Count > 0)
+            {
+                preset.TipTrails = new List<TrailData>();
+                foreach (var td in TipTrails)
+                {
+                    preset.TipTrails.Add(new TrailData
+                    {
+                        Position = td.Position,
+                        Color = td.Color,
+                        CustomBlend = td.CustomBlend,
+                        Glow = td.Glow,
+                        Opacity = td.Opacity,
+                        Width = td.Width,
+                        Length = td.Length,
+                        QueueOffset = td.QueueOffset
+                    });
+                }
+            }
+
+            if (BladeTrail.HasValue)
+            {
+                var td = BladeTrail.Value;
+                preset.BladeTrail = new TrailData
+                {
+                    Position = td.Position,
+                    Color = td.Color,
+                    CustomBlend = td.CustomBlend,
+                    Glow = td.Glow,
+                    Opacity = td.Opacity,
+                    Width = td.Width,
+                    Length = td.Length,
+                    QueueOffset = td.QueueOffset
+                };
             }
 
             string directory = Path.GetDirectoryName(path);
@@ -534,6 +692,9 @@ public class BlurSaberData : MonoBehaviour
     {
         public int Version { get; set; } = 1;
         public List<PartData>? Parts { get; set; }
+        public bool UseCustomTrails { get; set; }
+        public List<TrailData>? TipTrails { get; set; }
+        public TrailData? BladeTrail { get; set; }
     }
 
     private class PartData
@@ -592,6 +753,18 @@ public class BlurSaberData : MonoBehaviour
         public bool Inverted { get; set; }
         public float OffsetX { get; set; }
         public float OffsetY { get; set; }
+    }
+
+    private class TrailData
+    {
+        public float[] Position { get; set; } = new float[] { 0, 0, 1 };
+        public float[] Color { get; set; } = new float[] { 1, 1, 1 };
+        public float CustomBlend { get; set; } = 1f;
+        public float Glow { get; set; } = 1f;
+        public float Opacity { get; set; } = 1f;
+        public float Width { get; set; } = 0.008f;
+        public int Length { get; set; } = 140;
+        public int QueueOffset { get; set; } = 0;
     }
 
     private static Vector3 ArrToVec3(float[] arr) =>

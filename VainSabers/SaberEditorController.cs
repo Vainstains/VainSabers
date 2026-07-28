@@ -26,16 +26,6 @@ internal class SaberEditorController : MonoBehaviour
         MenuStateHandler.ModPanelStateChanged += StateChanged;
     }
 
-    private void Start()
-    {
-        Invoke(nameof(UpdateUI), 0.1f);
-    }
-
-    private void UpdateUI()
-    {
-        
-    }
-
     private void OnDestroy()
     {
         MenuStateHandler.ModPanelStateChanged -= StateChanged;
@@ -92,15 +82,23 @@ internal class SaberEditorController : MonoBehaviour
             Plugin.Log.Info($"Renaming preset: {editingPreset} -> {newName}");
             var oldPath = ConfigUtil.GetSaberProfile(editingPreset);
             var newPath = ConfigUtil.GetSaberProfile(newName);
-            if (File.Exists(oldPath) && !File.Exists(newPath))
-            {
+
+            if (File.Exists(newPath))
+                return;
+
+            if (editingPreset != "")
+                MenuStateHandler.Sabers.right.Data.SaveToFile(oldPath);
+
+            if (File.Exists(oldPath))
                 File.Move(oldPath, newPath);
-                editingPreset = newName;
-                config.CurrentSaber = newName;
-                editor.ConfigTitle = $"Config : {newName}";
-                MenuStateHandler.SetEditingPreset(newName);
-                MenuStateHandler.NotifyPresetListChanged();
-            }
+            else
+                MenuStateHandler.Sabers.right.Data.SaveToFile(newPath);
+
+            editingPreset = newName;
+            config.CurrentSaber = newName;
+            editor.ConfigTitle = $"Config : {newName}";
+            MenuStateHandler.SetEditingPreset(newName);
+            MenuStateHandler.NotifyPresetListChanged();
         };
     }
 }
@@ -183,6 +181,7 @@ class SaberEditorComponent : UIComponent
     private SubPanelComponent m_partPanel = null!;
     private SubPanelComponent m_geometryPanel = null!;
     private SubPanelComponent m_materialPanel = null!;
+    private SubPanelComponent m_trailPanel = null!;
 
     // part panel stuff
     private DropdownComponent m_partDropdown = null!;
@@ -190,6 +189,11 @@ class SaberEditorComponent : UIComponent
     private TextButtonComponent m_removePartButton = null!;
     private TextInputComponent m_partNameInput = null!;
     private TextButtonComponent m_revertButton = null!;
+    
+    private readonly string[] m_deleteLabels = { "Delete", "Delete (Sure?)", "Delete (Really sure?)" };
+    private readonly string[] m_revertLabels = { "Revert", "Revert (Sure?)", "Revert (Really sure?)" };
+    private int m_deleteStage = 0;
+    private int m_revertStage = 0;
 
     // advanced geometry
     private int m_selectedRingIndex = 0;
@@ -199,7 +203,12 @@ class SaberEditorComponent : UIComponent
     private UIComponent m_partActionRow = null!;
     private DropdownComponent m_linkDropdown = null!;
     private TextButtonComponent m_duplicateButton = null!;
-    private TextButtonComponent m_consolidateButton = null!;
+
+    // trail editor
+    private int m_selectedTipTrailIndex = 0;
+    private int m_selectedTrailMode = 0;
+    private TextComponent m_tipTrailIndexText = null!;
+    private DropdownComponent m_trailModeDropdown = null!;
 
     protected override void Init()
     {
@@ -224,13 +233,21 @@ class SaberEditorComponent : UIComponent
         m_saveButton.OnClick += () => OnSave?.Invoke();
         m_saveButton.Color = new Color(0.3f, 0.5f, 0.7f, 1.0f);
 
-        m_revertButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Revert");
-        m_revertButton.OnClick += () => OnRevert?.Invoke();
-        m_revertButton.Color = new Color(0.6f, 0.5f, 0.2f, 1.0f);
-
         m_deleteButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Delete");
-        m_deleteButton.OnClick += () => OnDelete?.Invoke();
+        m_deleteButton.OnClick += () =>
+            HandleConfirmClick(m_deleteButton, m_deleteLabels,
+                () => m_deleteStage, v => m_deleteStage = v,
+                () => OnDelete?.Invoke(),
+                () => { m_revertStage = 0; m_revertButton.Text.Text = m_revertLabels[0]; });
         m_deleteButton.Color = new Color(0.7f, 0.15f, 0.15f, 1.0f);
+
+        m_revertButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Revert");
+        m_revertButton.OnClick += () =>
+            HandleConfirmClick(m_revertButton, m_revertLabels,
+                () => m_revertStage, v => m_revertStage = v,
+                () => OnRevert?.Invoke(),
+                () => { m_deleteStage = 0; m_deleteButton.Text.Text = m_deleteLabels[0]; });
+        m_revertButton.Color = new Color(0.6f, 0.5f, 0.2f, 1.0f);
 
         m_renameInput = configContent.AddChild<TextInputComponent>().WithPreferredHeight(4);
         m_renameInput.OnValueChanged += name =>
@@ -244,6 +261,7 @@ class SaberEditorComponent : UIComponent
 
         m_geometryPanel = layout.AddChild<SubPanelComponent>().WithLabel("Geometry");
         m_materialPanel = layout.AddChild<SubPanelComponent>().WithLabel("Material");
+        m_trailPanel = layout.AddChild<SubPanelComponent>().WithLabel("Trails");
 
         m_partSelectRow = m_partPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
 
@@ -267,13 +285,9 @@ class SaberEditorComponent : UIComponent
 
         m_partActionRow = m_partPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
 
-        m_linkDropdown = m_partActionRow.AddChild<DropdownComponent>().ToFill().InsetRight(15);
+        m_linkDropdown = m_partActionRow.AddChild<FieldComponent>().ToFill().InsetRight(10)
+            .WithLabel("Link").SetComponent<DropdownComponent>();
         m_linkDropdown.OnSelectionChanged += OnLinkChanged;
-
-        m_consolidateButton = m_partActionRow.AddChild<TextButtonComponent>().ToRightEdge()
-            .ExtendLeft(4).Move(-5, 0).WithText("Cons");
-        m_consolidateButton.OnClick += ConsolidatePart;
-        m_consolidateButton.Color = new Color(0.6f, 0.5f, 0.2f, 1.0f);
 
         m_duplicateButton = m_partActionRow.AddChild<TextButtonComponent>().ToRightEdge()
             .ExtendLeft(4).WithText("Dup");
@@ -283,6 +297,26 @@ class SaberEditorComponent : UIComponent
         UpdatePartDropdown();
 
         base.Init();
+    }
+    
+    private void HandleConfirmClick(
+        TextButtonComponent button, string[] labels,
+        Func<int> getStage, Action<int> setStage,
+        Action onConfirmed, Action resetOther)
+    {
+        int stage = getStage() + 1;
+        if (stage >= labels.Length)
+        {
+            setStage(0);
+            button.Text.Text = labels[0];
+            resetOther();
+            onConfirmed();
+        }
+        else
+        {
+            setStage(stage);
+            button.Text.Text = labels[stage];
+        }
     }
 
     private void AddPart()
@@ -358,15 +392,6 @@ class SaberEditorComponent : UIComponent
         UpdatePartDropdown();
     }
 
-    private void ConsolidatePart()
-    {
-        if (m_selectedPartIndex < 0)
-            return;
-
-        ApplyToBothParts(part => part.LinkedPartIndex = -1);
-        UpdateLinkDropdown();
-    }
-
     private void OnLinkChanged(int index)
     {
         if (m_selectedPartIndex < 0)
@@ -389,12 +414,10 @@ class SaberEditorComponent : UIComponent
         {
             int linkIndex = parts[m_selectedPartIndex].LinkedPartIndex;
             m_linkDropdown.SelectedIndex = linkIndex + 1;
-            m_consolidateButton.IsInteractable = linkIndex >= 0;
         }
         else
         {
             m_linkDropdown.SelectedIndex = 0;
-            m_consolidateButton.IsInteractable = false;
         }
     }
 
@@ -449,6 +472,7 @@ class SaberEditorComponent : UIComponent
         m_partPanel.Content.ClearChildren(m_partSelectRow, m_partActionRow);
         m_geometryPanel.Content.ClearChildren();
         m_materialPanel.Content.ClearChildren();
+        m_trailPanel.Content.ClearChildren();
 
         if (m_selectedPartIndex < 0)
             return;
@@ -569,6 +593,8 @@ class SaberEditorComponent : UIComponent
                 BuildAdvancedGeometryPanel(sourcePart);
                 break;
         }
+
+        RebuildTrailPanel();
     }
 
     private void BuildSimpleGeometryPanel(BlurSaberPart referencePart)
@@ -912,6 +938,331 @@ class SaberEditorComponent : UIComponent
                     if (i < part.RingParams.Count)
                         part.RingParams[i] = part.RingParams[i] with { CustomWeight = val };
                 });
+            };
+    }
+
+    private void RebuildTrailPanel()
+    {
+        m_trailPanel.Content.ClearChildren();
+        var data = EditingSaber.Data;
+
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Use Custom Trails").SetComponent<ToggleComponent>().WithValue(data.UseCustomTrails)
+            .OnValueChanged += val =>
+            {
+                ApplyToBothSabers(s => s.Data.SetUseCustomTrails(val));
+                RebuildTrailPanel();
+            };
+
+        if (!data.UseCustomTrails)
+            return;
+
+        m_trailModeDropdown = m_trailPanel.Content.AddChild<DropdownComponent>().WithPreferredHeight(4);
+        m_trailModeDropdown.SetOptions(new List<string> { "Tip Trails", "Blade Trail" }, m_selectedTrailMode);
+        m_trailModeDropdown.OnSelectionChanged += index =>
+        {
+            m_selectedTrailMode = index;
+            RebuildTrailPanel();
+        };
+
+        m_trailPanel.Content.AddSpace(1);
+
+        switch (m_selectedTrailMode)
+        {
+            case 0:
+                BuildTipTrailEditor();
+                break;
+            case 1:
+                BuildBladeTrailEditor();
+                break;
+        }
+    }
+
+    private void BuildTipTrailEditor()
+    {
+        var data = EditingSaber.Data;
+        ApplyToBothSabers(s => s.Data.EnsureDefaultTrails());
+
+        if (m_selectedTipTrailIndex >= data.TipTrails.Count)
+            m_selectedTipTrailIndex = data.TipTrails.Count - 1;
+        if (m_selectedTipTrailIndex < 0)
+            m_selectedTipTrailIndex = 0;
+
+        var navRow = m_trailPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
+        var navLayout = navRow.AddChild<HorizontalLayoutGroupComponent>().ToFill();
+        navLayout.WithSpacing(0.5f).WithPadding(0);
+        navLayout.ChildControlWidth = true;
+        navLayout.ChildControlHeight = true;
+        navLayout.ChildForceExpandWidth = true;
+        navLayout.ChildForceExpandHeight = true;
+
+        var prevBtn = navLayout.AddChild<TextButtonComponent>().WithText("<");
+        prevBtn.Color = new Color(0.3f, 0.3f, 0.35f, 1f);
+        prevBtn.OnClick += () =>
+        {
+            if (m_selectedTipTrailIndex > 0)
+            {
+                m_selectedTipTrailIndex--;
+                RebuildTrailPanel();
+            }
+        };
+
+        m_tipTrailIndexText = navLayout.AddChild<TextComponent>();
+        m_tipTrailIndexText.Alignment = TextAlignmentOptions.Center;
+        m_tipTrailIndexText.Color = new Color(0.9f, 0.9f, 0.9f, 1f);
+        m_tipTrailIndexText.FontSize = 3.5f;
+        m_tipTrailIndexText.Text = data.TipTrails.Count > 0
+            ? $"{m_selectedTipTrailIndex + 1}/{data.TipTrails.Count}"
+            : "0/0";
+
+        var nextBtn = navLayout.AddChild<TextButtonComponent>().WithText(">");
+        nextBtn.Color = new Color(0.3f, 0.3f, 0.35f, 1f);
+        nextBtn.OnClick += () =>
+        {
+            if (m_selectedTipTrailIndex < data.TipTrails.Count - 1)
+            {
+                m_selectedTipTrailIndex++;
+                RebuildTrailPanel();
+            }
+        };
+
+        var removeBtn = navLayout.AddChild<TextButtonComponent>().WithText("-");
+        removeBtn.Color = new Color(0.6f, 0.2f, 0.2f, 1f);
+        removeBtn.OnClick += () =>
+        {
+            data.RemoveTipTrail(m_selectedTipTrailIndex);
+            RebuildTrailPanel();
+        };
+        removeBtn.IsInteractable = data.TipTrails.Count > 0;
+
+        var addBtn = navLayout.AddChild<TextButtonComponent>().WithText("+");
+        addBtn.Color = new Color(0.2f, 0.5f, 0.2f, 1f);
+        addBtn.OnClick += () =>
+        {
+            data.AddTipTrail();
+            m_selectedTipTrailIndex = data.TipTrails.Count - 1;
+            RebuildTrailPanel();
+        };
+
+        if (data.TipTrails.Count == 0)
+            return;
+
+        var trail = data.TipTrails[m_selectedTipTrailIndex];
+
+        m_trailPanel.Content.AddSubHeader("Position");
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithTint(RedColor)
+            .WithValue(trail.Position[0]).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.Position[0] = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithTint(GreenColor)
+            .WithValue(trail.Position[1]).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.Position[1] = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithTint(BlueColor)
+            .WithValue(trail.Position[2]).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.Position[2] = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+
+        m_trailPanel.Content.AddSubHeader("Color");
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(RedColor)
+            .WithValue(trail.Color[0]).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.Color[0] = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(GreenColor)
+            .WithValue(trail.Color[1]).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.Color[1] = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(BlueColor)
+            .WithValue(trail.Color[2]).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.Color[2] = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Custom Blend").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(trail.CustomBlend).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.CustomBlend = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+
+        m_trailPanel.Content.AddSubHeader("Properties");
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
+            .WithValue(trail.Glow).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.Glow = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(trail.Opacity).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.Opacity = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Width").SetComponent<NumberInputComponent>().WithMinMaxStep(0.001f, 0.05f, 0.001f).WithSensitivityCoef(0.02f)
+            .WithValue(trail.Width).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.Width = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Length (ms)").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 500f, 1f).WithSensitivityCoef(200)
+            .WithValue(trail.Length).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.Length = Mathf.RoundToInt(val);
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Queue Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-10f, 10f, 1f)
+            .WithValue(trail.QueueOffset).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.QueueOffset = Mathf.RoundToInt(val);
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
+    }
+
+    private void BuildBladeTrailEditor()
+    {
+        var data = EditingSaber.Data;
+        data.EnsureDefaultTrails();
+
+        var trail = data.BladeTrail!.Value;
+
+        m_trailPanel.Content.AddSubHeader("Position");
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithTint(RedColor)
+            .WithValue(trail.Position[0]).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.Position[0] = val;
+                data.SetBladeTrail(t);
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithTint(GreenColor)
+            .WithValue(trail.Position[1]).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.Position[1] = val;
+                data.SetBladeTrail(t);
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithTint(BlueColor)
+            .WithValue(trail.Position[2]).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.Position[2] = val;
+                data.SetBladeTrail(t);
+            };
+
+        m_trailPanel.Content.AddSubHeader("Color");
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(RedColor)
+            .WithValue(trail.Color[0]).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.Color[0] = val;
+                data.SetBladeTrail(t);
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(GreenColor)
+            .WithValue(trail.Color[1]).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.Color[1] = val;
+                data.SetBladeTrail(t);
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(BlueColor)
+            .WithValue(trail.Color[2]).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.Color[2] = val;
+                data.SetBladeTrail(t);
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Custom Blend").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(trail.CustomBlend).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.CustomBlend = val;
+                data.SetBladeTrail(t);
+            };
+
+        m_trailPanel.Content.AddSubHeader("Properties");
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
+            .WithValue(trail.Glow).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.Glow = val;
+                data.SetBladeTrail(t);
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(trail.Opacity).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.Opacity = val;
+                data.SetBladeTrail(t);
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Length (ms)").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 500f, 1f)
+            .WithValue(trail.Length).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.Length = Mathf.RoundToInt(val);
+                data.SetBladeTrail(t);
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Queue Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-10f, 10f, 1f)
+            .WithValue(trail.QueueOffset).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.QueueOffset = Mathf.RoundToInt(val);
+                data.SetBladeTrail(t);
             };
     }
 }

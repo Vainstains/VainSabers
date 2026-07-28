@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using VainSabers.Config;
 using VainSabers.Helpers;
@@ -9,8 +10,16 @@ internal class BlurSaber : MonoBehaviour
 {
     private PluginConfig m_config = null!;
     private BlurSaberData m_blurSaberData = null!;
-    private SaberTipTrail m_tipTrail = null!;
-    private SaberRibbonTrail m_ribbonTrail = null!;
+    
+    private SaberTipTrail m_defaultTipTrail = null!;
+    private SaberRibbonTrail m_defaultRibbonTrail = null!;
+    
+    private readonly List<SaberTipTrail> m_customTipTrails = new();
+    private SaberRibbonTrail? m_customBladeTrail;
+
+    private Transform m_saberTransform = null!;
+    private MovementHistoryProvider m_historyProvider = null!;
+    private Color m_gameColor = Color.white;
     
     public BlurSaberData Data => m_blurSaberData!;
 
@@ -19,28 +28,215 @@ internal class BlurSaber : MonoBehaviour
     public void Init(Transform target, PluginConfig config)
     {
         m_config = config;
+        m_saberTransform = target;
         
-        var historyProvider = gameObject.AddInitComponent<MovementTracker>(target);
+        m_historyProvider = gameObject.AddInitComponent<MovementTracker>(target);
         m_blurSaberData = gameObject.AddInitComponent<BlurSaberData>(m_config);
+        m_blurSaberData.TrailsChanged += OnTrailsChanged;
         
-        m_tipTrail = gameObject.AddInitComponent<SaberTipTrail>(m_config, target, historyProvider);
-        m_ribbonTrail = gameObject.AddInitComponent<SaberRibbonTrail>(m_config, target, historyProvider);
+        CreateDefaultTrails();
     }
 
     public void SetPreset(string preset)
     {
         m_blurSaberData?.ImportFromFile(Config.ConfigUtil.GetSaberProfile(preset));
         m_currentPreset = preset;
+        RebuildTrails();
     }
 
     public void SetColor(Color color)
     {
+        m_gameColor = color;
         if (m_blurSaberData != null)
             m_blurSaberData.CustomColor = SquarePreserveLuminance(color * 0.8f);
-        if (m_tipTrail != null)
-            m_tipTrail.SetColor(color);
-        if (m_ribbonTrail != null)
-            m_ribbonTrail.SetColor(color);
+        
+        if (m_blurSaberData == null || !m_blurSaberData.UseCustomTrails)
+        {
+            if (m_defaultTipTrail != null)
+                m_defaultTipTrail.SetGameColor(color);
+            if (m_defaultRibbonTrail != null)
+                m_defaultRibbonTrail.SetGameColor(color);
+        }
+        else
+        {
+            foreach (var trail in m_customTipTrails)
+                trail?.SetGameColor(color);
+            m_customBladeTrail?.SetGameColor(color);
+        }
+    }
+    
+    private void OnTrailsChanged()
+    {
+        RebuildTrails();
+    }
+
+    private void RebuildTrails()
+    {
+        if (m_blurSaberData == null)
+            return;
+
+        if (!m_blurSaberData.UseCustomTrails)
+        {
+            DestroyCustomTrails();
+            EnsureDefaultTrails();
+            m_defaultTipTrail.SetGameColor(m_gameColor);
+            m_defaultRibbonTrail.SetGameColor(m_gameColor);
+        }
+        else
+        {
+            DestroyDefaultTrails();
+            m_blurSaberData.EnsureDefaultTrails();
+            CreateCustomTrails();
+        }
+    }
+
+    private void CreateDefaultTrails()
+    {
+        var tipData = new SaberTrailData(
+            Position: new float[] { 0f, 0f, 1f },
+            Color: new float[] { 1f, 1f, 1f },
+            CustomBlend: 1f,
+            Glow: 1f,
+            Opacity: 1f,
+            Width: 0.008f,
+            Length: m_config.TipTrailMS,
+            QueueOffset: 0
+        );
+        var tipGo = new GameObject("DefaultTipTrail");
+        tipGo.transform.SetParent(transform, false);
+        m_defaultTipTrail = tipGo.AddComponent<SaberTipTrail>();
+        m_defaultTipTrail.Init(m_historyProvider, tipData, m_saberTransform);
+
+        var bladeData = new SaberTrailData(
+            Position: new float[] { 0f, 0f, 1f },
+            Color: new float[] { 1f, 1f, 1f },
+            CustomBlend: 1f,
+            Glow: 1f,
+            Opacity: 0.3f,
+            Width: 0.01f,
+            Length: m_config.BladeTrailMS,
+            QueueOffset: 0
+        );
+        var bladeGo = new GameObject("DefaultRibbonTrail");
+        bladeGo.transform.SetParent(transform, false);
+        m_defaultRibbonTrail = bladeGo.AddComponent<SaberRibbonTrail>();
+        m_defaultRibbonTrail.Init(m_historyProvider, bladeData, m_saberTransform);
+    }
+
+    private void EnsureDefaultTrails()
+    {
+        if (m_defaultTipTrail == null || m_defaultRibbonTrail == null)
+        {
+            DestroyDefaultTrails();
+            CreateDefaultTrails();
+        }
+        
+        m_defaultTipTrail!.ApplyConfig(new SaberTrailData(
+            Position: new float[] { 0f, 0f, 1f },
+            Color: new float[] { 1f, 1f, 1f },
+            CustomBlend: 1f,
+            Glow: 1f,
+            Opacity: 1f,
+            Width: 0.008f,
+            Length: m_config.TipTrailMS,
+            QueueOffset: 0
+        ));
+        m_defaultRibbonTrail!.ApplyConfig(new SaberTrailData(
+            Position: new float[] { 0f, 0f, 1f },
+            Color: new float[] { 1f, 1f, 1f },
+            CustomBlend: 1f,
+            Glow: 1f,
+            Opacity: 0.3f,
+            Width: 0.01f,
+            Length: m_config.BladeTrailMS,
+            QueueOffset: 0
+        ));
+    }
+
+    private void DestroyDefaultTrails()
+    {
+        if (m_defaultTipTrail != null)
+        {
+#if UNITY_EDITOR
+            if (Application.isEditor)
+                DestroyImmediate(m_defaultTipTrail.gameObject);
+            else
+                Destroy(m_defaultTipTrail.gameObject);
+#else
+            Destroy(m_defaultTipTrail.gameObject);
+#endif
+            m_defaultTipTrail = null!;
+        }
+        if (m_defaultRibbonTrail != null)
+        {
+#if UNITY_EDITOR
+            if (Application.isEditor)
+                DestroyImmediate(m_defaultRibbonTrail.gameObject);
+            else
+                Destroy(m_defaultRibbonTrail.gameObject);
+#else
+            Destroy(m_defaultRibbonTrail.gameObject);
+#endif
+            m_defaultRibbonTrail = null!;
+        }
+    }
+
+    private void CreateCustomTrails()
+    {
+        DestroyCustomTrails();
+
+        for (int i = 0; i < m_blurSaberData.TipTrails.Count; i++)
+        {
+            var data = m_blurSaberData.TipTrails[i];
+            var go = new GameObject($"TipTrail_{i}");
+            go.transform.SetParent(transform, false);
+            var trail = go.AddComponent<SaberTipTrail>();
+            trail.Init(m_historyProvider, data, m_saberTransform);
+            trail.SetGameColor(m_gameColor);
+            m_customTipTrails.Add(trail);
+        }
+
+        if (m_blurSaberData.BladeTrail.HasValue)
+        {
+            var data = m_blurSaberData.BladeTrail.Value;
+            var go = new GameObject("CustomBladeTrail");
+            go.transform.SetParent(transform, false);
+            m_customBladeTrail = go.AddComponent<SaberRibbonTrail>();
+            m_customBladeTrail.Init(m_historyProvider, data, m_saberTransform);
+            m_customBladeTrail.SetGameColor(m_gameColor);
+        }
+    }
+
+    private void DestroyCustomTrails()
+    {
+        foreach (var trail in m_customTipTrails)
+        {
+            if (trail != null)
+            {
+#if UNITY_EDITOR
+                if (Application.isEditor)
+                    DestroyImmediate(trail.gameObject);
+                else
+                    Destroy(trail.gameObject);
+#else
+                Destroy(trail.gameObject);
+#endif
+            }
+        }
+        m_customTipTrails.Clear();
+
+        if (m_customBladeTrail != null)
+        {
+#if UNITY_EDITOR
+            if (Application.isEditor)
+                DestroyImmediate(m_customBladeTrail.gameObject);
+            else
+                Destroy(m_customBladeTrail.gameObject);
+#else
+            Destroy(m_customBladeTrail.gameObject);
+#endif
+            m_customBladeTrail = null;
+        }
     }
     
     Color SquarePreserveLuminance(Color c)
