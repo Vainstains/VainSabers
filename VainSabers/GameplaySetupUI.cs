@@ -167,7 +167,7 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         set
         {
             m_config.ActiveInMenu = value;
-            m_menuSaberManager.SetActive(value);
+            // m_menuSaberManager.SetActive(value);
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowInMenu)));
         }
     }
