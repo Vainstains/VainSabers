@@ -1,11 +1,12 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using VainSabers.Config;
 using VainSabers.Helpers;
 using VainSabers.Sabers;
 
 namespace VainSabers.Menu;
 
-public class MenuSaberManager
+public class MenuSaberManager : IDisposable
 {
     private readonly PluginConfig m_config;
     private readonly MenuPointers m_menuPointers;
@@ -27,10 +28,15 @@ public class MenuSaberManager
         m_rightSaber = SetupSaber(right);
         m_colorSchemesSettings = colorSchemesSettings;
         
-        MenuStateHandler.ModPanelStateChanged += state => SetActive(state.ConfigOpen);
+        MenuStateHandler.ModPanelStateChanged += OnModPanelStateChanged;
         MenuStateHandler.Sabers = Sabers;
         
         SetActive(false);
+    }
+
+    private void OnModPanelStateChanged(MenuStateHandler.ModPanelState state)
+    {
+        SetActive(state.ConfigOpen);
     }
 
     private BlurSaber SetupSaber(Transform parent)
@@ -82,5 +88,10 @@ public class MenuSaberManager
             : (selectedColorScheme.saberAColor, selectedColorScheme.saberBColor);
         
         SetColor(colorLeft, colorRight);
+    }
+    
+    public void Dispose()
+    {
+        MenuStateHandler.ModPanelStateChanged -= OnModPanelStateChanged;
     }
 }

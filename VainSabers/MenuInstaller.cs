@@ -9,7 +9,7 @@ public class MenuInstaller : Installer
     {
         Container.BindInterfacesAndSelfTo<ColorOverrideSettingsHook>().AsSingle();
         Container.BindInterfacesAndSelfTo<MenuPointers>().AsSingle();
-        Container.Bind<MenuSaberManager>().AsSingle();
+        Container.BindInterfacesAndSelfTo<MenuSaberManager>().AsSingle();
         Container.BindInterfacesAndSelfTo<VRPointerManager>().AsSingle();
         Container.BindInterfacesAndSelfTo<GameplaySetupUI>().AsSingle();
     }
