@@ -237,6 +237,7 @@ namespace VainSabers.Sabers
             }
 
             m_meshRenderer.sharedMaterial = activeMat;
+            m_meshRenderer.sortingOrder = 100; // always render above canvases smh
             m_meshFilter.mesh = m_blurTube.TubeMesh;
 
             RebuildVerts();
