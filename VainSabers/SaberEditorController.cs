@@ -264,6 +264,21 @@ class SaberEditorComponent : UIComponent
     }
 
     private BlurSaber EditingSaber => MenuStateHandler.Sabers.right;
+
+    private static List<string> GetTextureFileNames()
+    {
+        var names = new List<string> { "None" };
+        if (!Directory.Exists(ConfigUtil.ConfigDir))
+            return names;
+        var textures = Directory.GetFiles(ConfigUtil.ConfigDir, "*.png")
+            .Concat(Directory.GetFiles(ConfigUtil.ConfigDir, "*.jpg"))
+            .Concat(Directory.GetFiles(ConfigUtil.ConfigDir, "*.jpeg"))
+            .Select(Path.GetFileName)
+            .OrderBy(x => x)
+            .ToList();
+        names.AddRange(textures!);
+        return names;
+    }
     
     // panels
     private SubPanelComponent m_configPanel = null!;
@@ -643,6 +658,29 @@ class SaberEditorComponent : UIComponent
                 ApplyToBothResolvedParts(part => part.Lit = val);
                 RebuildPanels();
             };
+
+        m_materialPanel.Content.AddSubHeader("Textures");
+        var textureFiles = GetTextureFileNames();
+        var colorTexDropdown = m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Color / Opacity").SetComponent<DropdownComponent>();
+        var colorTexIdx = textureFiles.IndexOf(sourcePart.ColorTextureName ?? "");
+        if (colorTexIdx < 0) colorTexIdx = 0;
+        colorTexDropdown.SetOptions(textureFiles, colorTexIdx);
+        colorTexDropdown.OnSelectionChanged += idx =>
+        {
+            var name = idx > 0 ? textureFiles[idx] : null;
+            ApplyToBothResolvedParts(part => part.ColorTextureName = name);
+        };
+        var glowTexDropdown = m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Glow").SetComponent<DropdownComponent>();
+        var glowTexIdx = textureFiles.IndexOf(sourcePart.GlowTextureName ?? "");
+        if (glowTexIdx < 0) glowTexIdx = 0;
+        glowTexDropdown.SetOptions(textureFiles, glowTexIdx);
+        glowTexDropdown.OnSelectionChanged += idx =>
+        {
+            var name = idx > 0 ? textureFiles[idx] : null;
+            ApplyToBothResolvedParts(part => part.GlowTextureName = name);
+        };
 
         m_materialPanel.Content.AddSubHeader("Rim Shading");
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)

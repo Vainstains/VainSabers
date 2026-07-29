@@ -7,13 +7,9 @@
         _ColorBoost ("RGB Multiplier", Range(0,4)) = 1
         _Glow ("Glow", Range(0,1)) = 0.5
         _DepthOffset("Depth Offset", Float) = 0.0
-        
-        // Fresnel Rim Lighting Properties
-        _FresnelPower ("Fresnel Power", Range(0.1, 10)) = 3.0
-        _FresnelStrength ("Fresnel Strength", Range(0, 2)) = 0.5
-        _RimColor ("Rim Color", Color) = (1,1,1,1)
-        
-        // Cubemap Properties
+        _ColorTex ("Color", 2D) = "white" {}
+        _GlowTex ("Glow Texture", 2D) = "white" {}
+
         _FresnelCubemap ("Fresnel Cubemap", Cube) = "" {}
         _CubemapStrength ("Cubemap Strength", Range(0, 2)) = 1.0
         _CubemapRotation ("Cubemap Rotation", Range(0, 360)) = 0.0

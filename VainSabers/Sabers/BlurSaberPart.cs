@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using VainSabers.Config;
@@ -70,6 +71,9 @@ namespace VainSabers.Sabers
         public float RimFactor = 0;
         public float RimPower = 3;
         public float RimPerpendicular = 0;
+
+        public string? ColorTextureName;
+        public string? GlowTextureName;
         
         public Vector3 LookDir = Vector3.zero;
         public bool UseLookDir = false;
@@ -103,6 +107,34 @@ namespace VainSabers.Sabers
         private MaterialPropertyBlock m_propertyBlock = null!;
         
         public PluginConfig Config = null!;
+
+        private static readonly Dictionary<string, Texture2D> s_loadedTextures = new();
+
+        internal static Texture2D? LoadTexture(string? fileName)
+        {
+            if (string.IsNullOrEmpty(fileName))
+                return null;
+
+            if (s_loadedTextures.TryGetValue(fileName!, out var tex))
+                return tex;
+
+            var path = Path.Combine(ConfigUtil.ConfigDir, fileName!);
+            if (!File.Exists(path))
+                return null;
+
+            var data = File.ReadAllBytes(path);
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, true);
+            if (texture.LoadImage(data))
+            {
+                texture.wrapMode = TextureWrapMode.Clamp;
+                texture.filterMode = FilterMode.Trilinear;
+                s_loadedTextures[fileName!] = texture;
+                return texture;
+            }
+
+            DestroyImmediate(texture);
+            return null;
+        }
 
         private void OnEnable()
         {
@@ -171,6 +203,8 @@ namespace VainSabers.Sabers
             RimFactor = source.RimFactor;
             RimPower = source.RimPower;
             RimPerpendicular = source.RimPerpendicular;
+            ColorTextureName = source.ColorTextureName;
+            GlowTextureName = source.GlowTextureName;
             LookDir = source.LookDir;
             UseLookDir = source.UseLookDir;
             Material = source.Material;
@@ -233,6 +267,17 @@ namespace VainSabers.Sabers
                 m_propertyBlock.SetFloat("_RimFactor", RimFactor);
                 m_propertyBlock.SetFloat("_RimPower", RimPower);
                 m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
+
+                var colorTex = LoadTexture(ColorTextureName);
+                var glowTex = LoadTexture(GlowTextureName);
+                if (colorTex != null) m_propertyBlock.SetTexture("_ColorTex", colorTex);
+                else m_propertyBlock.SetTexture("_ColorTex", Texture2D.whiteTexture);
+                if (glowTex != null) m_propertyBlock.SetTexture("_GlowTex", glowTex);
+                else m_propertyBlock.SetTexture("_GlowTex", Texture2D.whiteTexture);
+
+                m_propertyBlock.SetFloat("_ColorTexEnabled", colorTex != null ? 1f : 0f);
+                m_propertyBlock.SetFloat("_GlowTexEnabled", glowTex != null ? 1f : 0f);
+
                 m_meshRenderer.SetPropertyBlock(m_propertyBlock);
             }
 
@@ -339,7 +384,7 @@ namespace VainSabers.Sabers
             var startRad = Inverted ? -StartRadius : StartRadius;
             var endRad = Inverted ? -EndRadius : EndRadius;
             if (EnableEndCaps)
-                BuildRing(samples, 0 - StartRadius * 0.25f * EndCapExtension, startRad, true, startCol, StartOpacity, ref idx);
+                BuildRing(samples, 0 - StartRadius * 0.25f * EndCapExtension, startRad, true, 0f, startCol, StartOpacity, ref idx);
             var mainRingCount = EnableEndCaps ? RingCount - 2 : RingCount;
 
             for (var i = 0; i < mainRingCount; i++)
@@ -356,13 +401,13 @@ namespace VainSabers.Sabers
                 var radiusSlope = Length > 0.0001f ? dRadius_dt / Length : 0f;
 
                 BuildRing(samples, t * Length, radius,
-                    false,
+                    false, t,
                     Color.Lerp(startCol, endCol, t),
                     Mathf.Lerp(StartOpacity, EndOpacity, t),
                     ref idx, default, radiusSlope);
             }
             if (EnableEndCaps)
-                BuildRing(samples, Length + EndRadius * 0.25f * EndCapExtension, endRad, true, endCol, EndOpacity, ref idx);
+                BuildRing(samples, Length + EndRadius * 0.25f * EndCapExtension, endRad, true, 1f, endCol, EndOpacity, ref idx);
         }
         
         void BuildAdvancedRings(Pose[] samples, ref int idx)
@@ -401,7 +446,7 @@ namespace VainSabers.Sabers
                         radiusSlope = (nextRad - prevRad) / (dt * Length);
                 }
 
-                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, isZero, col, ring.Opacity, ref idx, ring.Offset, radiusSlope);
+                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, isZero, ring.PosAlongPart01, col, ring.Opacity, ref idx, ring.Offset, radiusSlope);
             }
         }
         
@@ -421,6 +466,7 @@ namespace VainSabers.Sabers
             float zPos,
             float rawRadius,
             bool isZero,
+            float ringT,
             Color color,
             float opacity,
             ref int idx,
@@ -440,7 +486,6 @@ namespace VainSabers.Sabers
             var avgFwd = (first.forward + last.forward).normalized;
             var tangent = (first.up + last.up).normalized;
             var right = (first.right + last.right).normalized;
-           
 
             motionDir = Vector3.ProjectOnPlane(motionDir, avgFwd).normalized;
             var plane = Vector3.Cross(motionDir, avgFwd);
@@ -479,14 +524,19 @@ namespace VainSabers.Sabers
 
                 var vertexPos = ringCenter + offsetDir * (isZero ? 0 : radius);
 
+                var u = (float)i / ringVerts;
+                var v = ringT;
+
                 m_blurTube!.SetVertex(
                     idx + i,
                     vertexPos,
                     normal,
-                    tSample,
+                    u,
+                    v,
                     color,
                     plane,
                     fwd,
+                    tSample,
                     sweepRatio * BlurFadeFactor,
                     opacity
                 );

@@ -296,6 +296,8 @@ public class BlurSaberData : MonoBehaviour
                 part.RimFactor = partData.RimFactor;
                 part.RimPower = partData.RimPower;
                 part.RimPerpendicular = partData.RimPerpendicular;
+                part.ColorTextureName = partData.ColorTexture;
+                part.GlowTextureName = partData.GlowTexture;
 
                 if (partData.Rings != null)
                 {
@@ -418,7 +420,10 @@ public class BlurSaberData : MonoBehaviour
 
                     RimFactor = part.RimFactor,
                     RimPower = part.RimPower,
-                    RimPerpendicular = part.RimPerpendicular
+                    RimPerpendicular = part.RimPerpendicular,
+
+                    ColorTexture = part.ColorTextureName,
+                    GlowTexture = part.GlowTextureName
                 };
 
                 if (part.GeometryHandling == BlurSaberPart.GeometryType.Advanced && part.RingParams.Count > 0)
@@ -738,6 +743,9 @@ public class BlurSaberData : MonoBehaviour
         public float RimFactor { get; set; }
         public float RimPower { get; set; } = 3f;
         public float RimPerpendicular { get; set; }
+
+        public string? ColorTexture { get; set; }
+        public string? GlowTexture { get; set; }
 
         public List<RingData>? Rings { get; set; }
     }

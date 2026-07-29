@@ -6,6 +6,8 @@ Shader "VainSabers/Blur Part"
 	{
 		_Glow ("Glow", Range (0, 1)) = 0
 	    _DepthOffset("Depth Offset", Float) = 0.0
+		_ColorTex ("Color", 2D) = "white" {}
+		_GlowTex ("Glow Texture", 2D) = "white" {}
 	}
 	SubShader
 	{
