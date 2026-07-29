@@ -20,6 +20,8 @@ internal class BlurSaber : MonoBehaviour
     private Transform m_saberTransform = null!;
     private MovementHistoryProvider m_historyProvider = null!;
     private Color m_gameColor = Color.white;
+    private bool m_inPreviewMode;
+    private Transform m_savedTrackerTarget = null!;
     
     public BlurSaberData Data => m_blurSaberData!;
 
@@ -254,6 +256,27 @@ internal class BlurSaber : MonoBehaviour
             Mathf.Clamp01(b2 * scale),
             c.a
         );
+    }
+
+    public void SetPreviewTransform(Transform? previewTransform)
+    {
+        if (m_historyProvider is not MovementTracker tracker) return;
+
+        if (previewTransform != null)
+        {
+            if (!m_inPreviewMode)
+            {
+                m_savedTrackerTarget = tracker.Target;
+                m_inPreviewMode = true;
+            }
+            tracker.Target = previewTransform;
+        }
+        else if (m_inPreviewMode)
+        {
+            tracker.Target = m_savedTrackerTarget;
+            m_savedTrackerTarget = null!;
+            m_inPreviewMode = false;
+        }
     }
 
     private void FixedUpdate()

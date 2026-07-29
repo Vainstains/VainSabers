@@ -17,6 +17,10 @@ internal class SaberEditorController : MonoBehaviour
 
     private PluginConfig config = null!;
 
+    private GameObject? m_leftPreviewAnchor;
+    private GameObject? m_rightPreviewAnchor;
+    private bool m_inPreviewMode;
+
     public void Init(PluginConfig config)
     {
         this.config = config;
@@ -33,16 +37,31 @@ internal class SaberEditorController : MonoBehaviour
 
     private void StateChanged(MenuStateHandler.ModPanelState state)
     {
+        ExitPreviewMode();
+
         if (panel != null)
             panel.Destroy(); // just yeet it, we can make ui very easily at the call site. (See below)
         
         if (!state.EditorOpen)
             return;
         
-        panel = SimpleFloatingPanel.Create(new Vector2(200, 126), new Vector3(0, 1.2f, 1.5f));
+        panel = SimpleFloatingPanel.Create(new Vector2(250, 126), new Vector3(0, 1.2f, 2.0f));
         panel.Show();
 
+        var fpfc = FindObjectOfType<FirstPersonFlyingController>();
+        bool isFpfc = fpfc != null && fpfc.enabled;
+        bool holdSabers = !isFpfc;
+
+        if (!holdSabers)
+            EnterPreviewMode();
+
         var editor = panel.AddChild<SaberEditorComponent>().ToFill();
+        editor.HoldSabers = holdSabers;
+        editor.OnHoldSabersToggled += hold =>
+        {
+            if (hold) ExitPreviewMode();
+            else EnterPreviewMode();
+        };
         var editingPreset = string.IsNullOrEmpty(state.EditingPreset) ? config.CurrentSaber : state.EditingPreset;
         editor.ConfigTitle = $"Config : {editingPreset}";
         editor.OnSave += () =>
@@ -101,6 +120,61 @@ internal class SaberEditorController : MonoBehaviour
             MenuStateHandler.NotifyPresetListChanged();
         };
     }
+
+    private void EnterPreviewMode()
+    {
+        if (m_inPreviewMode) return;
+
+        var (leftSaber, rightSaber) = MenuStateHandler.Sabers;
+        if (leftSaber == null || rightSaber == null) return;
+
+        m_leftPreviewAnchor = new GameObject("LeftSaberPreviewAnchor");
+        m_leftPreviewAnchor.transform.position = new Vector3(-0.1f, 0.8f, 1.2f);
+        m_leftPreviewAnchor.transform.rotation = Quaternion.LookRotation(Vector3.up);
+
+        m_rightPreviewAnchor = new GameObject("RightSaberPreviewAnchor");
+        m_rightPreviewAnchor.transform.position = new Vector3(0.1f, 0.8f, 1.2f);
+        m_rightPreviewAnchor.transform.rotation = Quaternion.LookRotation(Vector3.up);
+
+        leftSaber.transform.position = m_leftPreviewAnchor.transform.position;
+        leftSaber.transform.rotation = m_leftPreviewAnchor.transform.rotation;
+        rightSaber.transform.position = m_rightPreviewAnchor.transform.position;
+        rightSaber.transform.rotation = m_rightPreviewAnchor.transform.rotation;
+
+        leftSaber.SetPreviewTransform(m_leftPreviewAnchor.transform);
+        rightSaber.SetPreviewTransform(m_rightPreviewAnchor.transform);
+
+        m_inPreviewMode = true;
+    }
+
+    private void ExitPreviewMode()
+    {
+        if (!m_inPreviewMode) return;
+
+        var (leftSaber, rightSaber) = MenuStateHandler.Sabers;
+
+        if (leftSaber != null)
+        {
+            leftSaber.SetPreviewTransform(null);
+            leftSaber.transform.position = Vector3.zero;
+            leftSaber.transform.rotation = Quaternion.identity;
+        }
+        if (rightSaber != null)
+        {
+            rightSaber.SetPreviewTransform(null);
+            rightSaber.transform.position = Vector3.zero;
+            rightSaber.transform.rotation = Quaternion.identity;
+        }
+
+        if (m_leftPreviewAnchor != null)
+            Destroy(m_leftPreviewAnchor);
+        if (m_rightPreviewAnchor != null)
+            Destroy(m_rightPreviewAnchor);
+
+        m_leftPreviewAnchor = null;
+        m_rightPreviewAnchor = null;
+        m_inPreviewMode = false;
+    }
 }
 
 class SaberEditorComponent : UIComponent
@@ -111,12 +185,27 @@ class SaberEditorComponent : UIComponent
 
     private TextButtonComponent m_saveButton = null!;
     private TextButtonComponent m_deleteButton = null!;
+    private TextButtonComponent m_holdSabersButton = null!;
     private TextInputComponent m_renameInput = null!;
 
     public event Action? OnSave;
     public event Action? OnRevert;
     public event Action? OnDelete;
     public event Action<string>? OnRename;
+    public event Action<bool>? OnHoldSabersToggled;
+
+    private bool m_holdSabers = true;
+    public bool HoldSabers
+    {
+        get => m_holdSabers;
+        set
+        {
+            m_holdSabers = value;
+            if (m_holdSabersButton != null)
+                m_holdSabersButton.Text.Text = value ? "Un-hold Sabers" : "Hold Sabers";
+            m_saberBackgroundColumn.gameObject.SetActive(!value);
+        }
+    }
 
     public string ConfigTitle
     {
@@ -179,6 +268,7 @@ class SaberEditorComponent : UIComponent
     // panels
     private SubPanelComponent m_configPanel = null!;
     private SubPanelComponent m_partPanel = null!;
+    private UIComponent m_saberBackgroundColumn = null!;
     private SubPanelComponent m_geometryPanel = null!;
     private SubPanelComponent m_materialPanel = null!;
     private SubPanelComponent m_trailPanel = null!;
@@ -215,7 +305,7 @@ class SaberEditorComponent : UIComponent
         var layout = AddChild<HorizontalLayoutGroupComponent>().ToFill().WithSpacing(2);
         layout.ChildControlWidth = true;
         layout.ChildControlHeight = true;
-        layout.ChildForceExpandWidth = true;
+        layout.ChildForceExpandWidth = false;
         layout.ChildForceExpandHeight = true;
         
         var leftColumn = layout.AddChild<VerticalLayoutGroupComponent>();
@@ -224,6 +314,7 @@ class SaberEditorComponent : UIComponent
         leftColumn.ChildForceExpandWidth = true;
         leftColumn.ChildForceExpandHeight = false;
         leftColumn.WithSpacing(2);
+        leftColumn.LayoutElement.flexibleWidth = 1;
 
         m_configPanel = leftColumn.AddChild<SubPanelComponent>().WithLabel("Config");
         m_configPanel.LayoutElement.flexibleHeight = 1;
@@ -256,12 +347,25 @@ class SaberEditorComponent : UIComponent
                 OnRename?.Invoke(name);
         };
 
+        m_holdSabersButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Un-hold Sabers");
+        m_holdSabersButton.OnClick += () => HoldSabers = !HoldSabers;
+        m_holdSabersButton.OnClick += () => OnHoldSabersToggled?.Invoke(m_holdSabers);
+
         m_partPanel = leftColumn.AddChild<SubPanelComponent>().WithLabel("Part");
         m_partPanel.LayoutElement.flexibleHeight = 3;
 
         m_geometryPanel = layout.AddChild<SubPanelComponent>().WithLabel("Geometry");
+        m_geometryPanel.LayoutElement.flexibleWidth = 1;
+
+        m_saberBackgroundColumn = layout.AddChild<UIComponent>();
+        m_saberBackgroundColumn.LayoutElement.preferredWidth = 40;
+        m_saberBackgroundColumn.LayoutElement.flexibleWidth = 0;
+        m_saberBackgroundColumn.AddChild<RoundRectComponent>().ToFill().Color = (VainColor)"#050505";
+
         m_materialPanel = layout.AddChild<SubPanelComponent>().WithLabel("Material");
+        m_materialPanel.LayoutElement.flexibleWidth = 1;
         m_trailPanel = layout.AddChild<SubPanelComponent>().WithLabel("Trails");
+        m_trailPanel.LayoutElement.flexibleWidth = 1;
 
         m_partSelectRow = m_partPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
 
@@ -798,7 +902,7 @@ class SaberEditorComponent : UIComponent
 
         m_geometryPanel.Content.AddSubHeader("Ring Properties");
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Position").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 2f, 0.01f)
+            .WithLabel("Position").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 2f, 0.001f).WithSensitivityCoef(0.5f)
             .WithValue(ring.PosAlongPart01).OnValueChanged += val =>
             {
                 var i = m_selectedRingIndex;

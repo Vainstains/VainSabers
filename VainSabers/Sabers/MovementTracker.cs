@@ -16,10 +16,16 @@ namespace VainSabers.Sabers
 
         private CircularBuffer<MovementData> m_movementData = new CircularBuffer<MovementData>(100);
 
-        public void Init(Transform target)
-        {
-            m_target = target;
-        }
+    public Transform Target
+    {
+        get => m_target;
+        set => m_target = value;
+    }
+
+    public void Init(Transform target)
+    {
+        m_target = target;
+    }
         public override Pose GetPoseAgo(float age)
         {
             if (m_movementData.Count == 0)
