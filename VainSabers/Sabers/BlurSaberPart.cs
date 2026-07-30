@@ -60,6 +60,11 @@ namespace VainSabers.Sabers
         public float BlurFactor = 1;
         public float BlurFadeFactor = 1;
 
+        private float BlurTime => m_saberData != null ? m_saberData.BlurTime * BlurFactor : 0f;
+
+        private float m_smoothedMotion;
+        private float m_motionFactor;
+
         public bool EnableEndCaps = true;
         public bool EnableRoundedNormals = true;
 
@@ -346,7 +351,7 @@ namespace VainSabers.Sabers
                     .GetPose()
                     .TransformPose(m_movementHistoryProvider.transform.worldToLocalMatrix);
 
-            var samples = InterpolateData(m_saberData.BlurTime * BlurFactor);
+            var samples = InterpolateData(BlurTime);
             
             var localPoseMat = localPose.AsMatrix();
             var wtl = transform.worldToLocalMatrix;
@@ -545,16 +550,27 @@ namespace VainSabers.Sabers
             idx += ringVerts + 1;
         }
         
-        private Pose[] InterpolateData(float time)
+        private Pose[] InterpolateData(float maxTime)
         {
             var present = m_movementHistoryProvider.GetPoseAgo(0.0f);
-            var past = m_movementHistoryProvider.GetPoseAgo(time);
+            var past = m_movementHistoryProvider.GetPoseAgo(maxTime);
 
-            var angleDifference = Vector3.Angle(present.forward, past.forward) + 40 * Vector3.Distance(present.position, past.position);
-            var factor = Mathf.Clamp01((angleDifference - 0.3f) * 0.3f);
-            time *= factor;
+            var rawMotion = Vector3.Angle(present.forward, past.forward) + 40 * Vector3.Distance(present.position, past.position);
 
-            m_movementHistoryProvider.SampleNonAlloc(SampleCount, time, m_poseSamples);
+            float dt = Time.deltaTime;
+            float attack = 1f - Mathf.Exp(-12f * dt);
+            float release = 1f - Mathf.Exp(-2.5f * dt);
+            m_smoothedMotion = Mathf.Lerp(m_smoothedMotion, rawMotion, rawMotion > m_smoothedMotion ? attack : release);
+
+            float targetFactor = Mathf.Clamp01(Mathf.InverseLerp(0.2f, 3f, m_smoothedMotion));
+            targetFactor = targetFactor * targetFactor * (3f - 2f * targetFactor);
+
+            float smoothRate = dt * (targetFactor > m_motionFactor ? 3f : 1.2f);
+            m_motionFactor = Mathf.MoveTowards(m_motionFactor, targetFactor, smoothRate);
+
+            maxTime *= m_motionFactor;
+
+            m_movementHistoryProvider.SampleNonAlloc(SampleCount, maxTime, m_poseSamples);
 
             return m_poseSamples;
         }
