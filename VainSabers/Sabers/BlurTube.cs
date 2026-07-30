@@ -23,6 +23,7 @@ namespace VainSabers.Sabers
     {
         public Mesh TubeMesh { get; private set; }
         public int RingVerts { get; private set; }
+        public int VertsPerRing => RingVerts + 1;
         public int RingCount { get; private set; }
 
         private TubeVertex[] _vertices;
@@ -33,7 +34,8 @@ namespace VainSabers.Sabers
             RingVerts = ringVerts;
             RingCount = ringCount;
 
-            int vertCount = ringVerts * ringCount;
+            int vertsPerRing = ringVerts + 1;
+            int vertCount = vertsPerRing * ringCount;
             // Fewer than 2 rings means there's no adjacent ring pair to strip between.
             int stripCount = Math.Max(ringCount - 1, 0);
             int indexCount = ringVerts * stripCount * 6;
@@ -50,16 +52,15 @@ namespace VainSabers.Sabers
             int t = 0;
             for (int ring = 0; ring < stripCount; ring++)
             {
-                int ringStart = ring * RingVerts;
-                int nextRingStart = (ring + 1) * RingVerts;
+                int ringStart = ring * vertsPerRing;
+                int nextRingStart = (ring + 1) * vertsPerRing;
 
-                for (int i = 0; i < RingVerts; i++)
+                for (int i = 0; i < ringVerts; i++)
                 {
-                    int nextI = (i + 1) % RingVerts;
                     int a = ringStart + i;
-                    int b = ringStart + nextI;
+                    int b = ringStart + i + 1;
                     int c = nextRingStart + i;
-                    int d = nextRingStart + nextI;
+                    int d = nextRingStart + i + 1;
 
                     _indices[t++] = a; _indices[t++] = c; _indices[t++] = b;
                     _indices[t++] = b; _indices[t++] = c; _indices[t++] = d;

@@ -99,9 +99,8 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float sweepRatio = vertStage.uv2.y;
     float sweepFactor = sweepRatio * 1.5 * _VainSaberBlurSoftness;
     float blurFac = sweepFactor;
-
-    // Distance to edge (uv.x = ring angular position, 0-1)
-    float distanceToEdge = min(vertStage.uv.x * 2.0, 2.0 - 2.0 * vertStage.uv.x);
+    
+    float distanceToEdge = min(sweepCoord * 2.0, 2.0 - 2.0 * sweepCoord);
     distanceToEdge += 0.1 / max(sweepFactor, 0.01);
     distanceToEdge *= 2;
 
@@ -155,7 +154,7 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
 
     commonVars.rimFactor = 1.0 + _RimFactor * fresnelTerm;
     
-    float lodBias = blurFac * 8.0 - 4.0;
+    float lodBias = blurFac * 8.0 - 1.0;
     float2 texUv = vertStage.uv;
 
     if (_ColorTexEnabled > 0.5)

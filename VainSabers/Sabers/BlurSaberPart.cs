@@ -507,7 +507,7 @@ namespace VainSabers.Sabers
                     : avgFwd * -radiusSlope;
             }
 
-            for (var i = 0; i < ringVerts; i++)
+            for (var i = 0; i <= ringVerts; i++)
             {
                 var theta = 2.0f * Mathf.PI * i / ringVerts;
                 var offsetDir = sign * Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
@@ -524,7 +524,7 @@ namespace VainSabers.Sabers
 
                 var vertexPos = ringCenter + offsetDir * (isZero ? 0 : radius);
 
-                var u = (float)i / ringVerts;
+                var u = sign * (float)i / ringVerts + 0.5f * (1.0f - sign);
                 var v = ringT;
 
                 m_blurTube!.SetVertex(
@@ -537,12 +537,12 @@ namespace VainSabers.Sabers
                     plane,
                     fwd,
                     tSample,
-                    sweepRatio * BlurFadeFactor,
+                    Mathf.Clamp((sweepRatio * BlurFadeFactor - 0.7f) * 0.01f, 0.0f, 5.0f),
                     opacity
                 );
             }
 
-            idx += ringVerts;
+            idx += ringVerts + 1;
         }
         
         private Pose[] InterpolateData(float time)
