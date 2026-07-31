@@ -1082,6 +1082,29 @@ class SaberEditorComponent : UIComponent
             .WithLabel("Rounded Normals").SetComponent<ToggleComponent>().WithValue(referencePart.EnableRoundedNormals)
             .OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.EnableRoundedNormals = val);
+
+        BuildRingVertsControls(referencePart);
+    }
+
+    private void BuildRingVertsControls(BlurSaberPart referencePart)
+    {
+        m_geometryPanel.Content.AddSubHeader("Ring Verts");
+        var modeDropdown = m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Mode").SetComponent<DropdownComponent>();
+        modeDropdown.SetOptions(new[] { "Auto", "Manual" }, referencePart.ManualRingVerts ? 1 : 0);
+        modeDropdown.OnSelectionChanged += _ =>
+        {
+            ApplyToBothResolvedParts(part => part.ManualRingVerts = modeDropdown.SelectedIndex == 1);
+            RebuildPanels();
+        };
+
+        if (referencePart.ManualRingVerts)
+        {
+            m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Verts (Sides)").SetComponent<NumberInputComponent>().WithMinMaxStep(4f, 20f, 1f)
+                .WithValue(referencePart.RingVertsManual).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.RingVertsManual = Mathf.RoundToInt(Mathf.Clamp(val, 4f, 20f)));
+        }
     }
 
     private void BuildAdvancedGeometryPanel(BlurSaberPart referencePart)
@@ -1338,6 +1361,8 @@ class SaberEditorComponent : UIComponent
                         part.RingParams[i] = part.RingParams[i] with { CustomWeight = val };
                 });
             };
+
+        BuildRingVertsControls(referencePart);
     }
 
     private void RebuildTrailPanel()

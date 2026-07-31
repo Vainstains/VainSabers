@@ -79,6 +79,8 @@ public class BlurSaberData : MonoBehaviour
         newPart.BlurFadeFactor = 1f;
         newPart.EnableEndCaps = true;
         newPart.EndCapExtension = 0.25f;
+        newPart.ManualRingVerts = false;
+        newPart.RingVertsManual = 20;
         newPart.UseLookDir = false;
         newPart.LookDir = Vector3.zero;
         newPart.Lit = false;
@@ -318,6 +320,8 @@ public class BlurSaberData : MonoBehaviour
                 part.BlurFadeFactor = Mathf.Clamp(partData.BlurFade, 0f, 10f);
                 part.EnableEndCaps = partData.EnableEndCaps;
                 part.EnableRoundedNormals = partData.EnableRoundedNormals;
+                part.ManualRingVerts = partData.ManualRingVerts;
+                part.RingVertsManual = partData.RingVertsManual;
                 part.EndCapExtension = Mathf.Clamp(partData.EndCapExtension, 0f, 3f);
 
                 part.LookDir = ArrToVec3(partData.LookDir);
@@ -495,9 +499,11 @@ public class BlurSaberData : MonoBehaviour
                 Lit = part.Lit,
                 Blur = part.BlurFactor,
                 BlurFade = part.BlurFadeFactor,
-                EnableEndCaps = part.EnableEndCaps,
-                EnableRoundedNormals = part.EnableRoundedNormals,
-                EndCapExtension = part.EndCapExtension,
+                    EnableEndCaps = part.EnableEndCaps,
+                    EnableRoundedNormals = part.EnableRoundedNormals,
+                    ManualRingVerts = part.ManualRingVerts,
+                    RingVertsManual = part.RingVertsManual,
+                    EndCapExtension = part.EndCapExtension,
 
                 LookDir = new float[] { part.LookDir.x, part.LookDir.y, part.LookDir.z },
                 UseLookDir = part.UseLookDir,
@@ -885,6 +891,8 @@ public class BlurSaberData : MonoBehaviour
         public float BlurFade { get; set; } = 1f;
         public bool EnableEndCaps { get; set; } = true;
         public bool EnableRoundedNormals { get; set; } = true;
+        public bool ManualRingVerts { get; set; }
+        public int RingVertsManual { get; set; } = 20;
         public float EndCapExtension { get; set; } = 0.25f;
 
         public float[] LookDir { get; set; } = new float[3];

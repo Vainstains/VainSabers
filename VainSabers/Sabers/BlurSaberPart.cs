@@ -71,6 +71,9 @@ namespace VainSabers.Sabers
         public bool EnableEndCaps = true;
         public bool EnableRoundedNormals = true;
 
+        public bool ManualRingVerts = false;
+        public int RingVertsManual = 20;
+
         public float EndCapExtension = 0.25f;
 
         public float BulgeAmount = 0.00f;
@@ -187,6 +190,9 @@ namespace VainSabers.Sabers
         
         int ComputeRingVerts(float radius)
         {
+            if (ManualRingVerts)
+                return Mathf.Clamp(RingVertsManual, 4, 20);
+
             return Mathf.Clamp(
                 Mathf.RoundToInt(Config.SaberQuality * Mathf.Lerp(6, 36, Mathf.InverseLerp(0.0f, 0.02f, radius))),
                 6, 36
@@ -239,6 +245,8 @@ namespace VainSabers.Sabers
             EndCapExtension = source.EndCapExtension;
             BulgeAmount = source.BulgeAmount;
             MinimumRings = source.MinimumRings;
+            ManualRingVerts = source.ManualRingVerts;
+            RingVertsManual = source.RingVertsManual;
             EnableRoundedNormals = source.EnableRoundedNormals;
             RimFactor = source.RimFactor;
             RimPower = source.RimPower;
