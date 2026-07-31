@@ -36,7 +36,7 @@ public class MenuSaberManager : IDisposable
 
     private void OnModPanelStateChanged(MenuStateHandler.ModPanelState state)
     {
-        SetActive(state.ConfigOpen);
+        SetActive(state.ConfigOpen, state.EditorOpen);
     }
 
     private BlurSaber SetupSaber(Transform parent)
@@ -53,9 +53,15 @@ public class MenuSaberManager : IDisposable
         m_rightSaber.SetColor(right);
     }
 
-    public void SetActive(bool active)
+    public void SetActive(bool active, bool editorOpen = false)
     {
         active = active || m_config.ActiveInMenu;
+
+        if (Helpers.Helpers.GetIsFpfc())
+        {
+            active = editorOpen;
+        }
+
         m_menuPointers.SetPointerVisibility(!active);
         m_leftSaber.gameObject.SetActive(active);
         m_rightSaber.gameObject.SetActive(active);

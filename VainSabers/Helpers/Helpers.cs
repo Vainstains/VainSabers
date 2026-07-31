@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using HarmonyLib;
 using UnityEngine;
 
 namespace VainSabers.Helpers;
@@ -51,7 +52,47 @@ public static class Helpers
 
         return childGo.AddInitComponent<TComponent>(args);
     }
+
+    private static bool? _fpfc;
+
+    public static bool GetIsFpfc()
+    {
+        if (_fpfc.HasValue)
+            return _fpfc.Value;
+        var fpfc = GameObject.FindObjectOfType<FirstPersonFlyingController>();
+        bool isFpfc = fpfc != null && fpfc.enabled;
+        _fpfc = isFpfc;
+        return isFpfc;
+    }
+
+    public static void UpdateIsFpfc(bool isFpfc)
+    {
+        _fpfc = isFpfc;
+    }
 }
+
+[HarmonyPatch(typeof(FirstPersonFlyingController))]
+[HarmonyPatch("OnEnable")]
+internal class FirstPersonFlyingControllerPatchEnable
+{
+    [HarmonyPrefix]
+    public static void Prefix(FirstPersonFlyingController __instance)
+    {
+        Helpers.UpdateIsFpfc(true);
+    }
+}
+
+[HarmonyPatch(typeof(FirstPersonFlyingController))]
+[HarmonyPatch("OnDisable")]
+internal class FirstPersonFlyingControllerPatchDisable
+{
+    [HarmonyPrefix]
+    public static void Prefix(FirstPersonFlyingController __instance)
+    {
+        Helpers.UpdateIsFpfc(false);
+    }
+}
+
 
 public class UnityConstructorAttribute : Attribute;
 

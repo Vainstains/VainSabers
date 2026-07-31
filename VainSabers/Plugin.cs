@@ -68,7 +68,6 @@ internal class Plugin
         m_harmony.UnpatchSelf();
     }
     
-    
 }
 
 public static class VainSabersAssets

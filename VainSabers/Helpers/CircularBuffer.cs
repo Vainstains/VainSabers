@@ -30,6 +30,12 @@ public class CircularBuffer<T>
             _count++;
     }
     
+    public void Clear()
+    {
+        _head = 0;
+        _count = 0;
+    }
+
     public T this[int index]
     {
         get

@@ -19,6 +19,8 @@ internal class BlurSaber : MonoBehaviour
 
     private Transform m_saberTransform = null!;
     private MovementHistoryProvider m_historyProvider = null!;
+    private MovementTracker m_tracker = null!;
+    private Transform m_parkedTarget = null!;
     private Color m_gameColor = Color.white;
     private bool m_inPreviewMode;
     private Transform m_savedTrackerTarget = null!;
@@ -32,10 +34,16 @@ internal class BlurSaber : MonoBehaviour
         m_config = config;
         m_saberTransform = target;
         
-        m_historyProvider = gameObject.AddInitComponent<MovementTracker>(target);
+        m_tracker = gameObject.AddInitComponent<MovementTracker>(target);
+        m_historyProvider = m_tracker;
         m_blurSaberData = gameObject.AddInitComponent<BlurSaberData>(m_config);
         m_blurSaberData.TrailsChanged += OnTrailsChanged;
-        
+
+        var parkedGo = new GameObject("ParkedTarget");
+        parkedGo.transform.SetParent(transform, false);
+        parkedGo.transform.localPosition = new Vector3(0f, -100f, 0f);
+        m_parkedTarget = parkedGo.transform;
+
         CreateDefaultTrails();
     }
 
@@ -260,20 +268,22 @@ internal class BlurSaber : MonoBehaviour
 
     public void SetPreviewTransform(Transform? previewTransform)
     {
-        if (m_historyProvider is not MovementTracker tracker) return;
+        if (m_tracker == null) return;
 
         if (previewTransform != null)
         {
             if (!m_inPreviewMode)
             {
-                m_savedTrackerTarget = tracker.Target;
+                m_savedTrackerTarget = m_tracker.Target;
                 m_inPreviewMode = true;
             }
-            tracker.Target = previewTransform;
+            m_tracker.Target = previewTransform;
+            m_tracker.ClearHistory();
         }
         else if (m_inPreviewMode)
         {
-            tracker.Target = m_savedTrackerTarget;
+            m_tracker.Target = m_savedTrackerTarget;
+            m_tracker.ClearHistory();
             m_savedTrackerTarget = null!;
             m_inPreviewMode = false;
         }
@@ -282,5 +292,21 @@ internal class BlurSaber : MonoBehaviour
     private void FixedUpdate()
     {
         Shader.SetGlobalFloat("_VainSaberBlurSoftness", m_config.BlurSoftness);
+
+        if (m_inPreviewMode)
+            return;
+        
+        // prolly a better way to do this
+        bool isFpfc = Helpers.Helpers.GetIsFpfc();
+        if (isFpfc && m_tracker.Target != m_parkedTarget)
+        {
+            m_tracker.Target = m_parkedTarget;
+            m_tracker.ClearHistory();
+        }
+        else if (!isFpfc && m_tracker.Target == m_parkedTarget)
+        {
+            m_tracker.Target = m_saberTransform;
+            m_tracker.ClearHistory();
+        }
     }
 }

@@ -48,8 +48,7 @@ internal class SaberEditorController : MonoBehaviour
         panel = SimpleFloatingPanel.Create(new Vector2(250, 126), new Vector3(0, 1.2f, 2.0f));
         panel.Show();
 
-        var fpfc = FindObjectOfType<FirstPersonFlyingController>();
-        bool isFpfc = fpfc != null && fpfc.enabled;
+        bool isFpfc = Helpers.Helpers.GetIsFpfc();
         bool holdSabers = !isFpfc;
 
         if (!holdSabers)
@@ -129,11 +128,11 @@ internal class SaberEditorController : MonoBehaviour
         if (leftSaber == null || rightSaber == null) return;
 
         m_leftPreviewAnchor = new GameObject("LeftSaberPreviewAnchor");
-        m_leftPreviewAnchor.transform.position = new Vector3(-0.1f, 0.8f, 1.2f);
+        m_leftPreviewAnchor.transform.position = new Vector3(-0.07f, 0.8f, 1.2f);
         m_leftPreviewAnchor.transform.rotation = Quaternion.LookRotation(Vector3.up);
 
         m_rightPreviewAnchor = new GameObject("RightSaberPreviewAnchor");
-        m_rightPreviewAnchor.transform.position = new Vector3(0.1f, 0.8f, 1.2f);
+        m_rightPreviewAnchor.transform.position = new Vector3(0.07f, 0.8f, 1.2f);
         m_rightPreviewAnchor.transform.rotation = Quaternion.LookRotation(Vector3.up);
 
         leftSaber.transform.position = m_leftPreviewAnchor.transform.position;

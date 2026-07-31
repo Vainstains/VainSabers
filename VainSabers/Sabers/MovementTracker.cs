@@ -22,6 +22,11 @@ namespace VainSabers.Sabers
         set => m_target = value;
     }
 
+    public void ClearHistory()
+    {
+        m_movementData.Clear();
+    }
+
     public void Init(Transform target)
     {
         m_target = target;
