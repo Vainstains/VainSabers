@@ -79,6 +79,7 @@ namespace VainSabers.Sabers
 
         public string? ColorTextureName;
         public string? GlowTextureName;
+        public TextureWrapMode TextureWrap = TextureWrapMode.Clamp;
         
         public Vector3 LookDir = Vector3.zero;
         public bool UseLookDir = false;
@@ -115,12 +116,14 @@ namespace VainSabers.Sabers
 
         private static readonly Dictionary<string, Texture2D> s_loadedTextures = new();
 
-        internal static Texture2D? LoadTexture(string? fileName)
+        internal static Texture2D? LoadTexture(string? fileName, TextureWrapMode wrapMode)
         {
             if (string.IsNullOrEmpty(fileName))
                 return null;
 
-            if (s_loadedTextures.TryGetValue(fileName!, out var tex))
+            var cacheKey = $"{fileName}|{(int)wrapMode}";
+
+            if (s_loadedTextures.TryGetValue(cacheKey, out var tex))
                 return tex;
 
             var path = Path.Combine(ConfigUtil.ConfigDir, fileName!);
@@ -131,9 +134,9 @@ namespace VainSabers.Sabers
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, true);
             if (texture.LoadImage(data))
             {
-                texture.wrapMode = TextureWrapMode.Clamp;
+                texture.wrapMode = wrapMode;
                 texture.filterMode = FilterMode.Trilinear;
-                s_loadedTextures[fileName!] = texture;
+                s_loadedTextures[cacheKey] = texture;
                 return texture;
             }
 
@@ -210,6 +213,7 @@ namespace VainSabers.Sabers
             RimPerpendicular = source.RimPerpendicular;
             ColorTextureName = source.ColorTextureName;
             GlowTextureName = source.GlowTextureName;
+            TextureWrap = source.TextureWrap;
             LookDir = source.LookDir;
             UseLookDir = source.UseLookDir;
             Material = source.Material;
@@ -273,8 +277,8 @@ namespace VainSabers.Sabers
                 m_propertyBlock.SetFloat("_RimPower", RimPower);
                 m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
 
-                var colorTex = LoadTexture(ColorTextureName);
-                var glowTex = LoadTexture(GlowTextureName);
+                var colorTex = LoadTexture(ColorTextureName, TextureWrap);
+                var glowTex = LoadTexture(GlowTextureName, TextureWrap);
                 if (colorTex != null) m_propertyBlock.SetTexture("_ColorTex", colorTex);
                 else m_propertyBlock.SetTexture("_ColorTex", Texture2D.whiteTexture);
                 if (glowTex != null) m_propertyBlock.SetTexture("_GlowTex", glowTex);
@@ -451,7 +455,7 @@ namespace VainSabers.Sabers
                         radiusSlope = (nextRad - prevRad) / (dt * Length);
                 }
 
-                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, isZero, ring.PosAlongPart01, col, ring.Opacity, ref idx, ring.Offset, radiusSlope);
+                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, isZero, ring.PosAlongPart01, col, ring.Opacity, ref idx, ring.Offset, radiusSlope, ring.UvOffset);
             }
         }
         
@@ -476,7 +480,8 @@ namespace VainSabers.Sabers
             float opacity,
             ref int idx,
             Vector2 offset = default,
-            float radiusSlope = 0f)
+            float radiusSlope = 0f,
+            float uvOffset = 0f)
         {
             var radius = Mathf.Abs(rawRadius);
 
@@ -530,7 +535,7 @@ namespace VainSabers.Sabers
                 var vertexPos = ringCenter + offsetDir * (isZero ? 0 : radius);
 
                 var u = sign * (float)i / ringVerts + 0.5f * (1.0f - sign);
-                var v = ringT;
+                var v = ringT + uvOffset;
 
                 m_blurTube!.SetVertex(
                     idx + i,
@@ -556,13 +561,13 @@ namespace VainSabers.Sabers
             var past = m_movementHistoryProvider.GetPoseAgo(maxTime);
 
             var rawMotion = Vector3.Angle(present.forward, past.forward) + 40 * Vector3.Distance(present.position, past.position);
-
+            rawMotion *= 0.2f;
             float dt = Time.deltaTime;
             float attack = 1f - Mathf.Exp(-12f * dt);
-            float release = 1f - Mathf.Exp(-2.5f * dt);
+            float release = 1f - Mathf.Exp(-8.5f * dt);
             m_smoothedMotion = Mathf.Lerp(m_smoothedMotion, rawMotion, rawMotion > m_smoothedMotion ? attack : release);
 
-            float targetFactor = Mathf.Clamp01(Mathf.InverseLerp(0.2f, 3f, m_smoothedMotion));
+            float targetFactor = Mathf.Clamp01(Mathf.InverseLerp(0.3f, 4f, m_smoothedMotion));
             targetFactor = targetFactor * targetFactor * (3f - 2f * targetFactor);
 
             float smoothRate = dt * (targetFactor > m_motionFactor ? 3f : 1.2f);
@@ -571,6 +576,23 @@ namespace VainSabers.Sabers
             maxTime *= m_motionFactor;
 
             m_movementHistoryProvider.SampleNonAlloc(SampleCount, maxTime, m_poseSamples);
+
+            const float smoothing = 1f;
+            if (smoothing > 0.001f)
+            {
+                for (int i = 1; i < SampleCount - 1; i++)
+                {
+                    var prev = m_poseSamples[i - 1];
+                    var curr = m_poseSamples[i];
+                    var next = m_poseSamples[i + 1];
+
+                    var smoothedPos = Vector3.Lerp(curr.position, (prev.position + curr.position + next.position) / 3f, smoothing);
+                    var smoothedFwd = Vector3.Slerp(curr.forward, (prev.forward + curr.forward + next.forward).normalized, smoothing);
+                    var smoothedUp = Vector3.Slerp(curr.up, (prev.up + curr.up + next.up).normalized, smoothing);
+
+                    m_poseSamples[i] = new Pose(smoothedPos, Quaternion.LookRotation(smoothedFwd, smoothedUp));
+                }
+            }
 
             return m_poseSamples;
         }
@@ -596,6 +618,7 @@ namespace VainSabers.Sabers
         public float Opacity;
         public bool Inverted;
         public Vector2 Offset;
+        public float UvOffset;
         public BlurSaberRingParams(
             float posAlongPart01,
             float radius,
@@ -604,7 +627,8 @@ namespace VainSabers.Sabers
             float glow,
             float opacity,
             bool inverted,
-            Vector2 offset)
+            Vector2 offset,
+            float uvOffset = 0f)
         {
             PosAlongPart01 = posAlongPart01;
             Radius = radius;
@@ -614,6 +638,7 @@ namespace VainSabers.Sabers
             Opacity = opacity;
             Inverted = inverted;
             Offset = offset;
+            UvOffset = uvOffset;
         }
     }
 

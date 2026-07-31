@@ -298,6 +298,7 @@ public class BlurSaberData : MonoBehaviour
                 part.RimPerpendicular = partData.RimPerpendicular;
                 part.ColorTextureName = partData.ColorTexture;
                 part.GlowTextureName = partData.GlowTexture;
+                part.TextureWrap = (TextureWrapMode)Mathf.Clamp(partData.TextureWrap, 0, 3);
 
                 if (partData.Rings != null)
                 {
@@ -311,7 +312,8 @@ public class BlurSaberData : MonoBehaviour
                             glow: ring.Glow,
                             opacity: ring.Opacity,
                             inverted: ring.Inverted,
-                            offset: new Vector2(ring.OffsetX, ring.OffsetY)
+                            offset: new Vector2(ring.OffsetX, ring.OffsetY),
+                            uvOffset: ring.UvOffset
                         ));
                     }
                 }
@@ -423,7 +425,8 @@ public class BlurSaberData : MonoBehaviour
                     RimPerpendicular = part.RimPerpendicular,
 
                     ColorTexture = part.ColorTextureName,
-                    GlowTexture = part.GlowTextureName
+                    GlowTexture = part.GlowTextureName,
+                    TextureWrap = (int)part.TextureWrap
                 };
 
                 if (part.GeometryHandling == BlurSaberPart.GeometryType.Advanced && part.RingParams.Count > 0)
@@ -441,7 +444,8 @@ public class BlurSaberData : MonoBehaviour
                         Opacity = ring.Opacity,
                         Inverted = ring.Inverted,
                         OffsetX = ring.Offset.x,
-                        OffsetY = ring.Offset.y
+                        OffsetY = ring.Offset.y,
+                        UvOffset = ring.UvOffset
                     });
                     }
                 }
@@ -547,7 +551,7 @@ public class BlurSaberData : MonoBehaviour
                         : BlurSaberPart.GeometryType.Simple;
                     break;
                 case "ring":
-                    if (vals.Length != 9)
+                    if (vals.Length != 9 && vals.Length != 10)
                     {
                         Debug.LogWarning($"Skipping malformed ring line in {path}: '{line}'");
                         break;
@@ -560,7 +564,8 @@ public class BlurSaberData : MonoBehaviour
                         glow: vals[6],
                         opacity: vals[7],
                         inverted: Mathf.Approximately(vals[8], 1f),
-                        offset: Vector2.zero
+                        offset: Vector2.zero,
+                        uvOffset: vals.Length >= 10 ? vals[9] : 0f
                     ));
                     break;
                 case "startRad":
@@ -746,6 +751,7 @@ public class BlurSaberData : MonoBehaviour
 
         public string? ColorTexture { get; set; }
         public string? GlowTexture { get; set; }
+        public int TextureWrap { get; set; }
 
         public List<RingData>? Rings { get; set; }
     }
@@ -761,6 +767,7 @@ public class BlurSaberData : MonoBehaviour
         public bool Inverted { get; set; }
         public float OffsetX { get; set; }
         public float OffsetY { get; set; }
+        public float UvOffset { get; set; }
     }
 
     private class TrailData

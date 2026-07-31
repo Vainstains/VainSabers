@@ -682,6 +682,15 @@ class SaberEditorComponent : UIComponent
             ApplyToBothResolvedParts(part => part.GlowTextureName = name);
         };
 
+        var wrapModeNames = new[] { "Clamp", "Repeat", "Mirror", "MirrorOnce" };
+        var wrapModeDropdown = m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Wrap Mode").SetComponent<DropdownComponent>();
+        wrapModeDropdown.SetOptions(wrapModeNames, Mathf.Clamp((int)sourcePart.TextureWrap, 0, wrapModeNames.Length - 1));
+        wrapModeDropdown.OnSelectionChanged += idx =>
+        {
+            ApplyToBothResolvedParts(part => part.TextureWrap = (TextureWrapMode)Mathf.Clamp(idx, 0, wrapModeNames.Length - 1));
+        };
+
         m_materialPanel.Content.AddSubHeader("Rim Shading");
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(-3f, 3f, 0.1f).WithSensitivityCoef(0.3f)
@@ -925,7 +934,8 @@ class SaberEditorComponent : UIComponent
             var newRing = new BlurSaberRingParams(
                 Mathf.Clamp01(current.PosAlongPart01 + 0.1f),
                 current.Radius, current.Color, current.CustomWeight,
-                current.Glow, current.Opacity, current.Inverted, current.Offset);
+                current.Glow, current.Opacity, current.Inverted, current.Offset,
+                current.UvOffset);
             ApplyToBothResolvedParts(part =>
             {
                 part.RingParams.Insert(m_selectedRingIndex + 1, newRing);
@@ -993,6 +1003,17 @@ class SaberEditorComponent : UIComponent
                 {
                     if (i < part.RingParams.Count)
                         part.RingParams[i] = part.RingParams[i] with { Offset = new Vector2(val, part.RingParams[i].Offset.y) };
+                });
+            };
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("UV Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.01f).WithSensitivityCoef(0.1f)
+            .WithValue(ring.UvOffset).OnValueChanged += val =>
+            {
+                var i = m_selectedRingIndex;
+                ApplyToBothResolvedParts(part =>
+                {
+                    if (i < part.RingParams.Count)
+                        part.RingParams[i] = part.RingParams[i] with { UvOffset = val };
                 });
             };
 
