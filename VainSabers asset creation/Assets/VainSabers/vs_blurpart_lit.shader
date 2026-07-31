@@ -47,15 +47,16 @@
         }
         
         Tags { "Queue"="Transparent+100" "RenderType"="Transparent" "IgnoreProjector"="True" }
-        LOD 200
-        Cull Back
-        ZWrite Off
-        ZTest LEqual
-        Blend SrcAlpha OneMinusSrcAlpha
-        ColorMask RGB
+        
 
         Pass
         {
+            LOD 200
+            Cull Back
+            ZWrite Off
+            ZTest LEqual
+            Blend SrcAlpha OneMinusSrcAlpha
+            ColorMask RGB
             CGPROGRAM
             // #pragma multi_compile_instancing
             #pragma fragment frag
@@ -148,6 +149,25 @@
                 alpha = saturate(alpha);
 
                 return float4(rgb, alpha);
+            }
+            ENDCG
+        }
+
+        Pass
+        {
+            Cull Back
+            ZWrite Off
+            ZTest LEqual
+            ColorMask A
+
+            CGPROGRAM
+            #pragma fragment frag
+            #include "UnityCG.cginc"
+            #include "BlurPart.cginc"
+
+            fixed4 frag(v2f i) : SV_Target
+            {
+                return fixed4(0.0, 0.0, 0.0, 0.0);
             }
             ENDCG
         }
