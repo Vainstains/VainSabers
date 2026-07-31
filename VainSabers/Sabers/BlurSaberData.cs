@@ -438,12 +438,12 @@ public class BlurSaberData : MonoBehaviour
         }
     }
 
-    public void ExportToFile(string path)
+    public bool ExportToFile(string path)
     {
         if (string.IsNullOrEmpty(path))
         {
             Plugin.Log.Info("Export path cannot be null or empty");
-            return;
+            return false;
         }
 
         try
@@ -451,10 +451,12 @@ public class BlurSaberData : MonoBehaviour
             var preset = BuildPresetData(embedAssets: true);
             WritePresetToFile(path, preset);
             Plugin.Log.Info($"Exported saber with {ComponentCount} parts and embedded assets to {path}");
+            return true;
         }
         catch (Exception ex)
         {
             Plugin.Log.Error($"Failed to export saber to {path}: {ex.Message}");
+            return false;
         }
     }
 

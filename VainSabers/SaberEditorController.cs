@@ -119,7 +119,8 @@ internal class SaberEditorController : MonoBehaviour
             }
             Plugin.Log.Info($"Exporting preset: {editingPreset}");
             var exportPath = Path.ChangeExtension(ConfigUtil.GetSaberProfile(editingPreset), ".vainsaber");
-            MenuStateHandler.Sabers.right.Data.ExportToFile(exportPath);
+            if (MenuStateHandler.Sabers.right.Data.ExportToFile(exportPath))
+                editor.SetExportConfirmation($"Exported {Path.GetFileName(exportPath)}");
         };
         editor.OnDelete += () =>
         {
@@ -221,6 +222,7 @@ class SaberEditorComponent : UIComponent
 
     private TextButtonComponent m_saveButton = null!;
     private TextButtonComponent m_closeButton = null!;
+    private TextButtonComponent m_exportButton = null!;
     private TextButtonComponent m_deleteButton = null!;
     private TextButtonComponent m_holdSabersButton = null!;
     private TextInputComponent m_renameInput = null!;
@@ -250,6 +252,12 @@ class SaberEditorComponent : UIComponent
     {
         get => m_configPanel.Title;
         set => m_configPanel.Title = value;
+    }
+
+    public void SetExportConfirmation(string text)
+    {
+        if (m_exportButton != null)
+            m_exportButton.Text.Text = text;
     }
 
     private int m_selectedPartIndex = -1;
@@ -384,9 +392,9 @@ class SaberEditorComponent : UIComponent
         m_closeButton.OnClick += () => OnExit?.Invoke();
         m_closeButton.Color = new Color(0.55f, 0.35f, 0.2f, 1.0f);
 
-        var exportButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Export");
-        exportButton.OnClick += () => OnExport?.Invoke();
-        exportButton.Color = new Color(0.3f, 0.45f, 0.3f, 1.0f);
+        m_exportButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Export");
+        m_exportButton.OnClick += () => OnExport?.Invoke();
+        m_exportButton.Color = new Color(0.3f, 0.45f, 0.3f, 1.0f);
 
         m_deleteButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Delete");
         m_deleteButton.OnClick += () =>

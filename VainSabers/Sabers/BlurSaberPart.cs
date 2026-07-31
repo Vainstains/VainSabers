@@ -778,8 +778,6 @@ public abstract class BlurPartAnimationModulator
 {
     public abstract void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime);
 
-    public virtual bool AffectsColor => false;
-
     public virtual BlurPartAnimationModulator Clone() => (BlurPartAnimationModulator)MemberwiseClone();
 
     public static IReadOnlyList<Type> AvailableTypes { get; } = BuildAvailableTypes();
@@ -822,8 +820,6 @@ public class HueShiftAdder : BlurPartAnimationModulator
     [SensitivityCoef(2f)]
     public float Speed = 0.5f;
 
-    public override bool AffectsColor => true;
-
     private float m_time;
 
     public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
@@ -842,8 +838,6 @@ public class HueShiftOscillator : BlurPartAnimationModulator
     [Range(0f, 10f)]
     [SensitivityCoef(5f)]
     public float Frequency = 0.5f;
-
-    public override bool AffectsColor => true;
 
     private float m_time;
 
@@ -967,8 +961,6 @@ public class OpacityOscillator : BlurPartAnimationModulator
     [SensitivityCoef(2f)]
     public float Frequency = 0.5f;
 
-    public override bool AffectsColor => true;
-
     private float m_time;
 
     public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
@@ -987,8 +979,6 @@ public class GlowOscillator : BlurPartAnimationModulator
     [Range(0f, 4f)]
     [SensitivityCoef(2f)]
     public float Frequency = 0.5f;
-
-    public override bool AffectsColor => true;
 
     private float m_time;
 
@@ -1063,8 +1053,6 @@ public class MotionHueShift : BlurPartAnimationModulator
     [Step(0.01f)]
     public float Addend = 0f;
 
-    public override bool AffectsColor => true;
-
     public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
     {
         paramsToModulate.HueShift += paramsToModulate.Motion * Amount + Addend;
@@ -1081,8 +1069,6 @@ public class MotionGlow : BlurPartAnimationModulator
     [Step(0.01f)]
     public float Addend = 0f;
 
-    public override bool AffectsColor => true;
-
     public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
     {
         paramsToModulate.GlowMultiplier += paramsToModulate.Motion * Amount + Addend;
@@ -1098,8 +1084,6 @@ public class MotionOpacity : BlurPartAnimationModulator
     [Range(-3f, 3f)]
     [Step(0.01f)]
     public float Addend = 0f;
-
-    public override bool AffectsColor => true;
 
     public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
     {
