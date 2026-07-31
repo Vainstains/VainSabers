@@ -12,6 +12,12 @@ public class BlurSaberData : MonoBehaviour
 {
     private const int CurrentVersion = 1;
 
+    private static readonly JsonSerializerSettings PresetJsonSettings = new()
+    {
+        Formatting = Formatting.Indented,
+        TypeNameHandling = TypeNameHandling.Auto
+    };
+
     private PluginConfig? m_config = null;
     public Color CustomColor;
     public float BlurTime => m_config != null ? m_config.BlurMS * 0.001f : 0.04f;
@@ -217,6 +223,11 @@ public class BlurSaberData : MonoBehaviour
         newPart.RotY = source.RotY;
         newPart.RotZ = source.RotZ;
         newPart.CopyVisualPropertiesFrom(source);
+
+        newPart.Animators = new List<BlurPartAnimationModulator>(source.Animators.Count);
+        foreach (var animator in source.Animators)
+            newPart.Animators.Add(animator.Clone());
+
         return newPart;
     }
 
@@ -242,7 +253,7 @@ public class BlurSaberData : MonoBehaviour
         try
         {
             string json = File.ReadAllText(path);
-            var preset = JsonConvert.DeserializeObject<PresetData>(json);
+            var preset = JsonConvert.DeserializeObject<PresetData>(json, PresetJsonSettings);
             if (preset?.Parts == null)
             {
                 Debug.LogWarning($"No parts found in {path}");
@@ -307,6 +318,9 @@ public class BlurSaberData : MonoBehaviour
                 part.ColorTextureName = partData.ColorTexture;
                 part.GlowTextureName = partData.GlowTexture;
                 part.TextureWrap = (TextureWrapMode)Mathf.Clamp(partData.TextureWrap, 0, 3);
+
+                if (partData.Animators != null)
+                    part.Animators = partData.Animators;
 
                 if (partData.Rings != null)
                 {
@@ -444,7 +458,8 @@ public class BlurSaberData : MonoBehaviour
 
                     ColorTexture = part.ColorTextureName,
                     GlowTexture = part.GlowTextureName,
-                    TextureWrap = (int)part.TextureWrap
+                    TextureWrap = (int)part.TextureWrap,
+                    Animators = part.Animators.Count > 0 ? part.Animators : null
                 };
 
                 if (part.GeometryHandling == BlurSaberPart.GeometryType.Advanced && part.RingParams.Count > 0)
@@ -511,7 +526,7 @@ public class BlurSaberData : MonoBehaviour
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
 
-            string json = JsonConvert.SerializeObject(preset, Formatting.Indented);
+            string json = JsonConvert.SerializeObject(preset, PresetJsonSettings);
             File.WriteAllText(path, json);
             Plugin.Log.Info($"Saved saber with {ComponentCount} parts to {path}");
         }
@@ -808,6 +823,8 @@ public class BlurSaberData : MonoBehaviour
         public string? ColorTexture { get; set; }
         public string? GlowTexture { get; set; }
         public int TextureWrap { get; set; }
+
+        public List<BlurPartAnimationModulator>? Animators { get; set; }
 
         public List<RingData>? Rings { get; set; }
     }

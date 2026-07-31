@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using VainSabers.Config;
@@ -643,6 +645,8 @@ class SaberEditorComponent : UIComponent
             .WithMinMaxStep(0.001f, 1f, 0.001f)
             .WithValue(sourcePart.Length).OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.Length = val);
+
+        BuildAnimatorsSection(referencePart);
         
         // Material panel
         m_materialPanel.Content.AddSubHeader("General");
@@ -798,6 +802,130 @@ class SaberEditorComponent : UIComponent
         }
 
         RebuildTrailPanel();
+    }
+
+    private void BuildAnimatorsSection(BlurSaberPart referencePart)
+    {
+        m_partPanel.Content.AddSubHeader("Animators");
+
+        var types = BlurPartAnimationModulator.AvailableTypes;
+        var typeNames = new string[types.Count];
+        for (var i = 0; i < types.Count; i++)
+            typeNames[i] = types[i].Name;
+
+        var addRow = m_partPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
+        var typeDropdown = addRow.AddChild<DropdownComponent>().ToFill().InsetRight(10);
+        typeDropdown.SetOptions(typeNames, 0);
+        var addBtn = addRow.AddChild<TextButtonComponent>().ToRightEdge().ExtendLeft(4).WithText("+");
+        addBtn.Color = new Color(0.1f, 0.6f, 0.2f, 1.0f);
+        addBtn.OnClick += () =>
+        {
+            var typeIndex = typeDropdown.SelectedIndex < 0 ? 0 : typeDropdown.SelectedIndex;
+            if (typeIndex >= types.Count) return;
+            var created = (BlurPartAnimationModulator)Activator.CreateInstance(types[typeIndex])!;
+            ApplyToBothResolvedParts(part => part.Animators.Add(created));
+            RebuildPanels();
+        };
+
+        for (var i = 0; i < referencePart.Animators.Count; i++)
+            BuildAnimatorRow(referencePart, i);
+    }
+
+    private void BuildAnimatorRow(BlurSaberPart referencePart, int index)
+    {
+        var animator = referencePart.Animators[index];
+
+        var headerRow = m_partPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
+        var title = headerRow.AddChild<TextComponent>().ToFill().InsetRight(8);
+        title.Alignment = TextAlignmentOptions.Left;
+        title.FontSize = 3.2f;
+        title.Text = $"{index + 1}. {animator.GetType().Name}";
+
+        var removeIndex = index;
+        var removeBtn = headerRow.AddChild<TextButtonComponent>().ToRightEdge().ExtendLeft(4).WithText("-");
+        removeBtn.Color = new Color(0.7f, 0.1f, 0.25f, 1.0f);
+        removeBtn.OnClick += () =>
+        {
+            ApplyToBothResolvedParts(part =>
+            {
+                if (removeIndex < part.Animators.Count)
+                    part.Animators.RemoveAt(removeIndex);
+            });
+            RebuildPanels();
+        };
+
+        foreach (var field in animator.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance))
+            BuildAnimatorField(referencePart, index, field);
+    }
+
+    private void BuildAnimatorField(BlurSaberPart referencePart, int index, FieldInfo field)
+    {
+        var animator = referencePart.Animators[index];
+
+        if (field.FieldType == typeof(float))
+        {
+            var range = field.GetCustomAttribute<RangeAttribute>();
+            var step = field.GetCustomAttribute<StepAttribute>();
+            var sens = field.GetCustomAttribute<SensitivityCoefAttribute>();
+            var label = field.GetCustomAttribute<LabelAttribute>();
+
+            var input = m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel(label?.Text ?? FormatFieldName(field.Name))
+                .SetComponent<NumberInputComponent>()
+                .WithMinMaxStep(range?.min ?? -1000f, range?.max ?? 1000f, step?.StepSize ?? 0.1f)
+                .WithSensitivityCoef(sens?.SensitivityCoef ?? 1f)
+                .WithValue((float)field.GetValue(animator)!);
+
+            input.OnValueChanged += val =>
+                ApplyToBothResolvedParts(part =>
+                {
+                    if (index < part.Animators.Count)
+                        field.SetValue(part.Animators[index], val);
+                });
+        }
+        else if (field.FieldType == typeof(Axis))
+        {
+            var label = field.GetCustomAttribute<LabelAttribute>();
+
+            var dropdown = m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel(label?.Text ?? FormatFieldName(field.Name))
+                .SetComponent<DropdownComponent>();
+            dropdown.SetEnumOptions((Axis)field.GetValue(animator)!);
+            dropdown.OnSelectionChanged += _ =>
+                ApplyToBothResolvedParts(part =>
+                {
+                    if (index < part.Animators.Count)
+                        field.SetValue(part.Animators[index], dropdown.SelectedEnumValue<Axis>());
+                });
+        }
+        else if (field.FieldType == typeof(bool))
+        {
+            var label = field.GetCustomAttribute<LabelAttribute>();
+
+            var toggle = m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel(label?.Text ?? FormatFieldName(field.Name))
+                .SetComponent<ToggleComponent>()
+                .WithValue((bool)field.GetValue(animator)!);
+
+            toggle.OnValueChanged += val =>
+                ApplyToBothResolvedParts(part =>
+                {
+                    if (index < part.Animators.Count)
+                        field.SetValue(part.Animators[index], val);
+                });
+        }
+    }
+
+    private static string FormatFieldName(string name)
+    {
+        var sb = new StringBuilder(name.Length + 4);
+        for (var i = 0; i < name.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(name[i]))
+                sb.Append(' ');
+            sb.Append(name[i]);
+        }
+        return sb.ToString();
     }
 
     private void BuildSimpleGeometryPanel(BlurSaberPart referencePart)
