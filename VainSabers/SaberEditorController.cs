@@ -705,6 +705,59 @@ class SaberEditorComponent : UIComponent
             .WithValue(sourcePart.RimPerpendicular).OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.RimPerpendicular = val);
         
+        if (sourcePart.Lit)
+        {
+            m_materialPanel.Content.AddSubHeader("Lit Shading");
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Specular Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 2f, 0.01f).WithSensitivityCoef(0.3f)
+                .WithValue(sourcePart.SpecularStrength).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.SpecularStrength = val);
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Specular Power").SetComponent<NumberInputComponent>().WithMinMaxStep(4f, 512f, 1f).WithSensitivityCoef(10f)
+                .WithValue(sourcePart.SpecularPower).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.SpecularPower = val);
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Metallic").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f).WithSensitivityCoef(0.1f)
+                .WithValue(sourcePart.Metallic).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.Metallic = val);
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Smoothness").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f).WithSensitivityCoef(0.1f)
+                .WithValue(sourcePart.Smoothness).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.Smoothness = val);
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Cubemap Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 2f, 0.01f).WithSensitivityCoef(0.1f)
+                .WithValue(sourcePart.CubemapStrength).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.CubemapStrength = val);
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Cubemap Rotation").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 360f, 1f).WithSensitivityCoef(10f)
+                .WithValue(sourcePart.CubemapRotation).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.CubemapRotation = val);
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Fresnel Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 2f, 0.01f).WithSensitivityCoef(0.1f)
+                .WithValue(sourcePart.FresnelStrength).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.FresnelStrength = val);
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Fresnel Power").SetComponent<NumberInputComponent>().WithMinMaxStep(0.25f, 8f, 0.25f)
+                .WithValue(sourcePart.FresnelPower).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.FresnelPower = val);
+            m_materialPanel.Content.AddSubHeader("Rim Color");
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
+                .WithTint(RedColor)
+                .WithValue(sourcePart.RimColor.r).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.RimColor = new Color(val, part.RimColor.g, part.RimColor.b, part.RimColor.a));
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
+                .WithTint(GreenColor)
+                .WithValue(sourcePart.RimColor.g).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.RimColor = new Color(part.RimColor.r, val, part.RimColor.b, part.RimColor.a));
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
+                .WithTint(BlueColor)
+                .WithValue(sourcePart.RimColor.b).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.RimColor = new Color(part.RimColor.r, part.RimColor.g, val, part.RimColor.a));
+        }
+        
         m_materialPanel.Content.AddSubHeader("Blur");
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Time").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.1f).WithSensitivityCoef(0.3f)

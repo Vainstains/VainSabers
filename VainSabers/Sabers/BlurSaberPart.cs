@@ -77,6 +77,16 @@ namespace VainSabers.Sabers
         public float RimPower = 3;
         public float RimPerpendicular = 0;
 
+        public float SpecularStrength = 0.41f;
+        public float SpecularPower = 48f;
+        public float Metallic = 0f;
+        public float Smoothness = 0f;
+        public float CubemapStrength = 0.78f;
+        public float CubemapRotation = 0f;
+        public float FresnelStrength = 0.6f;
+        public float FresnelPower = 2.89f;
+        public Color RimColor = new Color(0.47f, 0.51f, 0.57f, 1f);
+
         public string? ColorTextureName;
         public string? GlowTextureName;
         public TextureWrapMode TextureWrap = TextureWrapMode.Clamp;
@@ -211,6 +221,15 @@ namespace VainSabers.Sabers
             RimFactor = source.RimFactor;
             RimPower = source.RimPower;
             RimPerpendicular = source.RimPerpendicular;
+            SpecularStrength = source.SpecularStrength;
+            SpecularPower = source.SpecularPower;
+            Metallic = source.Metallic;
+            Smoothness = source.Smoothness;
+            CubemapStrength = source.CubemapStrength;
+            CubemapRotation = source.CubemapRotation;
+            FresnelStrength = source.FresnelStrength;
+            FresnelPower = source.FresnelPower;
+            RimColor = source.RimColor;
             ColorTextureName = source.ColorTextureName;
             GlowTextureName = source.GlowTextureName;
             TextureWrap = source.TextureWrap;
@@ -276,6 +295,16 @@ namespace VainSabers.Sabers
                 m_propertyBlock.SetFloat("_RimFactor", RimFactor);
                 m_propertyBlock.SetFloat("_RimPower", RimPower);
                 m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
+
+                m_propertyBlock.SetFloat("_SpecularStrength", SpecularStrength);
+                m_propertyBlock.SetFloat("_SpecularPower", SpecularPower);
+                m_propertyBlock.SetFloat("_Metallic", Metallic);
+                m_propertyBlock.SetFloat("_Smoothness", Smoothness);
+                m_propertyBlock.SetFloat("_CubemapStrength", CubemapStrength);
+                m_propertyBlock.SetFloat("_CubemapRotation", CubemapRotation);
+                m_propertyBlock.SetFloat("_FresnelStrength", FresnelStrength);
+                m_propertyBlock.SetFloat("_FresnelPower", FresnelPower);
+                m_propertyBlock.SetColor("_RimColor", RimColor);
 
                 var colorTex = LoadTexture(ColorTextureName, TextureWrap);
                 var glowTex = LoadTexture(GlowTextureName, TextureWrap);

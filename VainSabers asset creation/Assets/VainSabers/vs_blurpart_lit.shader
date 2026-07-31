@@ -3,7 +3,9 @@
     Properties
     {
         _SpecularStrength ("Specular Strength", Range(0,2)) = 0.6
-        _SpecularPower ("Specular Power (Shininess)", Range(4,128)) = 32
+        _SpecularPower ("Specular Power (Shininess)", Range(4,512)) = 32
+        _Metallic ("Metallic", Range(0,1)) = 0
+        _Smoothness ("Smoothness", Range(0,1)) = 0
         _ColorBoost ("RGB Multiplier", Range(0,4)) = 1
         _Glow ("Glow", Range(0,1)) = 0.5
         _DepthOffset("Depth Offset", Float) = 0.0
@@ -64,6 +66,8 @@
 
             float _SpecularStrength;
             float _SpecularPower;
+            float _Metallic;
+            float _Smoothness;
             float _ColorBoost;
             
             // Fresnel Rim Lighting Variables
@@ -107,11 +111,16 @@
                 float3 V = normalize(vars.viewDir);
                 float3 L = normalize(float3(0,1,0)); // fallback directional light
 
+                // Metallic / Smoothness driven lighting
+                float diffuseStrength = 1.0 - _Metallic * 0.9;
+                float specStrength = lerp(_SpecularStrength, 1.0, _Metallic);
+                float shininess = lerp(_SpecularPower, 512.0, _Smoothness);
+
                 float NdotL = saturate(dot(N,L) * 0.4 + 0.6);
-                float3 diffuse = vars.color * NdotL * NdotL;
+                float3 diffuse = vars.color * NdotL * NdotL * diffuseStrength;
 
                 float3 H = normalize(L + V);
-                float spec = pow(saturate(dot(N,H)), _SpecularPower) * _SpecularStrength;
+                float spec = pow(saturate(dot(N,H)), shininess) * specStrength;
 
                 // Fresnel Rim Lighting Calculation
                 float fresnel = 1.0 - saturate(dot(N, V));
@@ -124,7 +133,7 @@
                 
                 // Combine Fresnel with Cubemap
                 float3 rimLight = fresnel * _FresnelStrength * _RimColor.rgb;
-                float3 cubemapEffect = cubemap.rgb * _CubemapStrength * sqrt(fresnel);
+                float3 cubemapEffect = cubemap.rgb * _CubemapStrength * sqrt(fresnel) * lerp(0.2, 1.0, _Metallic);
                 
                 // Final rim lighting (additive)
                 float3 rimFinal = rimLight + cubemapEffect;

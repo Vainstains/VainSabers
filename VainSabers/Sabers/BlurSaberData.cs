@@ -296,6 +296,15 @@ public class BlurSaberData : MonoBehaviour
                 part.RimFactor = partData.RimFactor;
                 part.RimPower = partData.RimPower;
                 part.RimPerpendicular = partData.RimPerpendicular;
+                part.SpecularStrength = partData.SpecularStrength;
+                part.SpecularPower = partData.SpecularPower;
+                part.Metallic = partData.Metallic;
+                part.Smoothness = partData.Smoothness;
+                part.CubemapStrength = partData.CubemapStrength;
+                part.CubemapRotation = partData.CubemapRotation;
+                part.FresnelStrength = partData.FresnelStrength;
+                part.FresnelPower = partData.FresnelPower;
+                part.RimColor = ArrToColor(partData.RimColor);
                 part.ColorTextureName = partData.ColorTexture;
                 part.GlowTextureName = partData.GlowTexture;
                 part.TextureWrap = (TextureWrapMode)Mathf.Clamp(partData.TextureWrap, 0, 3);
@@ -423,6 +432,16 @@ public class BlurSaberData : MonoBehaviour
                     RimFactor = part.RimFactor,
                     RimPower = part.RimPower,
                     RimPerpendicular = part.RimPerpendicular,
+
+                    SpecularStrength = part.SpecularStrength,
+                    SpecularPower = part.SpecularPower,
+                    Metallic = part.Metallic,
+                    Smoothness = part.Smoothness,
+                    CubemapStrength = part.CubemapStrength,
+                    CubemapRotation = part.CubemapRotation,
+                    FresnelStrength = part.FresnelStrength,
+                    FresnelPower = part.FresnelPower,
+                    RimColor = new float[] { part.RimColor.r, part.RimColor.g, part.RimColor.b },
 
                     ColorTexture = part.ColorTextureName,
                     GlowTexture = part.GlowTextureName,
@@ -649,6 +668,34 @@ public class BlurSaberData : MonoBehaviour
                 case "rimPerpendicular":
                     currentPart.RimPerpendicular = vals[0];
                     break;
+                case "specularStrength":
+                    currentPart.SpecularStrength = vals[0];
+                    break;
+                case "specularPower":
+                    currentPart.SpecularPower = vals[0];
+                    break;
+                case "metallic":
+                    currentPart.Metallic = vals[0];
+                    break;
+                case "smoothness":
+                    currentPart.Smoothness = vals[0];
+                    break;
+                case "cubemapStrength":
+                    currentPart.CubemapStrength = vals[0];
+                    break;
+                case "cubemapRotation":
+                    currentPart.CubemapRotation = vals[0];
+                    break;
+                case "fresnelStrength":
+                    currentPart.FresnelStrength = vals[0];
+                    break;
+                case "fresnelPower":
+                    currentPart.FresnelPower = vals[0];
+                    break;
+                case "rimColor":
+                    if (vals.Length >= 3)
+                        currentPart.RimColor = new Color(vals[0], vals[1], vals[2], 1f);
+                    break;
             }
         }
 
@@ -748,6 +795,16 @@ public class BlurSaberData : MonoBehaviour
         public float RimFactor { get; set; }
         public float RimPower { get; set; } = 3f;
         public float RimPerpendicular { get; set; }
+
+        public float SpecularStrength { get; set; } = 0.41f;
+        public float SpecularPower { get; set; } = 48f;
+        public float Metallic { get; set; }
+        public float Smoothness { get; set; }
+        public float CubemapStrength { get; set; } = 0.78f;
+        public float CubemapRotation { get; set; }
+        public float FresnelStrength { get; set; } = 0.6f;
+        public float FresnelPower { get; set; } = 2.89f;
+        public float[] RimColor { get; set; } = new float[3];
 
         public string? ColorTexture { get; set; }
         public string? GlowTexture { get; set; }
