@@ -213,7 +213,6 @@ public class BlurSaberData : MonoBehaviour
     public BlurSaberPart DuplicateComponent(BlurSaberPart source)
     {
         var newPart = AddComponent($"{source.gameObject.name} Copy");
-        newPart.transform.localPosition = source.transform.localPosition;
         newPart.RotX = source.RotX;
         newPart.RotY = source.RotY;
         newPart.RotZ = source.RotZ;
@@ -256,7 +255,7 @@ public class BlurSaberData : MonoBehaviour
             {
                 var part = AddComponent(partData.Name ?? "Part");
 
-                part.transform.localPosition = ArrToVec3(partData.Position);
+                part.Position = ArrToVec3(partData.Position);
                 part.RotX = partData.Rotation[0];
                 part.RotY = partData.Rotation[1];
                 part.RotZ = partData.Rotation[2];
@@ -394,7 +393,7 @@ public class BlurSaberData : MonoBehaviour
                 var partData = new PartData
                 {
                     Name = part.gameObject.name,
-                    Position = new float[] { part.transform.localPosition.x, part.transform.localPosition.y, part.transform.localPosition.z },
+                    Position = new float[] { part.Position.x, part.Position.y, part.Position.z },
                     Rotation = new float[] { part.RotX, part.RotY, part.RotZ },
                     LinkedPartIndex = part.LinkedPartIndex,
                     Length = part.Length,
@@ -554,7 +553,7 @@ public class BlurSaberData : MonoBehaviour
             switch (key)
             {
                 case "pos":
-                    currentPart.transform.localPosition = new Vector3(vals[0], vals[1], vals[2]);
+                    currentPart.Position = new Vector3(vals[0], vals[1], vals[2]);
                     break;
                 case "rot":
                     currentPart.RotX = vals[0];

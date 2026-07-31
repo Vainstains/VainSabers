@@ -28,6 +28,7 @@ namespace VainSabers.Sabers
         private int ringVerts = 0;
         
         public float RotX, RotY, RotZ;
+        public Vector3 Position;
         
         public float Length;
 
@@ -193,6 +194,7 @@ namespace VainSabers.Sabers
 
         public void CopyVisualPropertiesFrom(BlurSaberPart source)
         {
+            Position = source.Position;
             Length = source.Length;
             GeometryHandling = source.GeometryHandling;
             RingParams = new List<BlurSaberRingParams>(source.RingParams);
@@ -327,9 +329,20 @@ namespace VainSabers.Sabers
             m_blurTube.RefreshMesh();
         }
 
+        private BlurPartAnimationModulatableParams m_modulatableParams = new();
+
         private void Update()
         {
-            transform.localEulerAngles = new Vector3(RotX, RotY, RotZ);
+            m_modulatableParams.Position = Position;
+            m_modulatableParams.RotationEuler = new Vector3(RotX, RotY, RotZ);
+            m_modulatableParams.HueShift = HueShift;
+            m_modulatableParams.OpacityMultiplier = 1.0f;
+            m_modulatableParams.GlowMultiplier = 1.0f;
+
+
+
+            transform.localPosition = m_modulatableParams.Position;
+            transform.localEulerAngles = m_modulatableParams.RotationEuler;
         }
 
         private void EnsureRuntimeMaterial(ref Material? runtimeMaterial, Material baseMaterial)
@@ -703,4 +716,13 @@ namespace VainSabers.Sabers
             QueueOffset = queueOffset;
         }
     }
+}
+
+public class BlurPartAnimationModulatableParams
+{
+    public Vector3 Position;
+    public Vector3 RotationEuler;
+    public float HueShift;
+    public float OpacityMultiplier;
+    public float GlowMultiplier;
 }

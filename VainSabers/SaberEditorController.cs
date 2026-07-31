@@ -604,21 +604,21 @@ class SaberEditorComponent : UIComponent
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
             .WithTint(RedColor)
-            .WithValue(referencePart.transform.localPosition.x).OnValueChanged += val =>
+            .WithValue(referencePart.Position.x).OnValueChanged += val =>
             ApplyToBothParts(part => 
-            part.transform.localPosition = part.transform.localPosition with { x = val });
+            part.Position = part.Position with { x = val });
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
             .WithTint(GreenColor)
-            .WithValue(referencePart.transform.localPosition.y).OnValueChanged += val =>
+            .WithValue(referencePart.Position.y).OnValueChanged += val =>
             ApplyToBothParts(part => 
-            part.transform.localPosition = part.transform.localPosition with { y = val });
+            part.Position = part.Position with { y = val });
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
             .WithTint(BlueColor)
-            .WithValue(referencePart.transform.localPosition.z).OnValueChanged += val =>
+            .WithValue(referencePart.Position.z).OnValueChanged += val =>
             ApplyToBothParts(part =>     
-            part.transform.localPosition = part.transform.localPosition with { z = val });
+            part.Position = part.Position with { z = val });
         
         m_partPanel.Content.AddSubHeader("Rotation");
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
