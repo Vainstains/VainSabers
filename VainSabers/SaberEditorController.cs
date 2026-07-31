@@ -46,6 +46,15 @@ internal class SaberEditorController : MonoBehaviour
         
         if (!state.EditorOpen)
             return;
+
+        var editingPreset = string.IsNullOrEmpty(state.EditingPreset) ? config.CurrentSaber : state.EditingPreset;
+        var profilePath = ConfigUtil.GetSaberProfile(editingPreset);
+        if (!BlurSaberData.IsSupportedVersion(profilePath))
+        {
+            Plugin.Log.Warn($"Cannot open editor: preset '{editingPreset}' is from a newer version of VainSabers");
+            MenuStateHandler.SetEditorOpen(false);
+            return;
+        }
         
         panel = SimpleFloatingPanel.Create(new Vector2(250, 126), new Vector3(0, 1.2f, 2.0f));
         panel.Show();
@@ -63,7 +72,6 @@ internal class SaberEditorController : MonoBehaviour
             if (hold) ExitPreviewMode();
             else EnterPreviewMode();
         };
-        var editingPreset = string.IsNullOrEmpty(state.EditingPreset) ? config.CurrentSaber : state.EditingPreset;
         editor.ConfigTitle = $"Config : {editingPreset}";
         editor.OnSave += () =>
         {

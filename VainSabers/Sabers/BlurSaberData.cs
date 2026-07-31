@@ -231,24 +231,44 @@ public class BlurSaberData : MonoBehaviour
         return newPart;
     }
 
-    public void ImportFromFile(string path)
+    public static bool IsSupportedVersion(string path)
+    {
+        if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            return true;
+
+        if (path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        try
+        {
+            string json = File.ReadAllText(path);
+            var preset = JsonConvert.DeserializeObject<PresetData>(json, PresetJsonSettings);
+            return preset == null || preset.Version <= CurrentVersion;
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    public bool ImportFromFile(string path)
     {
         if (string.IsNullOrEmpty(path) || !File.Exists(path))
         {
             Debug.LogError($"File not found: {path}");
-            return;
+            return false;
         }
 
         if (path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
         {
             ImportFromLegacyTxt(path);
-            return;
+            return true;
         }
 
-        ImportFromJson(path);
+        return ImportFromJson(path);
     }
 
-    private void ImportFromJson(string path)
+    private bool ImportFromJson(string path)
     {
         try
         {
@@ -257,7 +277,13 @@ public class BlurSaberData : MonoBehaviour
             if (preset?.Parts == null)
             {
                 Debug.LogWarning($"No parts found in {path}");
-                return;
+                return false;
+            }
+
+            if (preset.Version > CurrentVersion)
+            {
+                Plugin.Log.Warn($"Rejected preset {path}: file version {preset.Version} is newer than supported version {CurrentVersion}");
+                return false;
             }
 
             RemoveAllComponents();
@@ -380,10 +406,13 @@ public class BlurSaberData : MonoBehaviour
             {
                 BladeTrail = null;
             }
+
+            return true;
         }
         catch (Exception ex)
         {
             Debug.LogError($"Failed to import JSON preset from {path}: {ex.Message}");
+            return false;
         }
     }
 
