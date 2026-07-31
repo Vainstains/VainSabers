@@ -343,6 +343,8 @@ public class BlurSaberData : MonoBehaviour
                 part.RimColor = ArrToColor(partData.RimColor);
                 part.ColorTextureName = partData.ColorTexture;
                 part.GlowTextureName = partData.GlowTexture;
+                part.ColorTextureBase64 = partData.ColorTextureBase64;
+                part.GlowTextureBase64 = partData.GlowTextureBase64;
                 part.TextureWrap = (TextureWrapMode)Mathf.Clamp(partData.TextureWrap, 0, 3);
 
                 if (partData.Animators != null)
@@ -426,119 +428,136 @@ public class BlurSaberData : MonoBehaviour
 
         try
         {
-            var preset = new PresetData { Version = CurrentVersion, Parts = new List<PartData>() };
+            var preset = BuildPresetData(embedAssets: false);
+            WritePresetToFile(path, preset);
+            Plugin.Log.Info($"Saved saber with {ComponentCount} parts to {path}");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"Failed to save saber to {path}: {ex.Message}");
+        }
+    }
 
-            for (int i = 0; i < m_components.Count; i++)
+    public void ExportToFile(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            Plugin.Log.Info("Export path cannot be null or empty");
+            return;
+        }
+
+        try
+        {
+            var preset = BuildPresetData(embedAssets: true);
+            WritePresetToFile(path, preset);
+            Plugin.Log.Info($"Exported saber with {ComponentCount} parts and embedded assets to {path}");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"Failed to export saber to {path}: {ex.Message}");
+        }
+    }
+
+    private PresetData BuildPresetData(bool embedAssets)
+    {
+        var preset = new PresetData { Version = CurrentVersion, Parts = new List<PartData>() };
+
+        for (int i = 0; i < m_components.Count; i++)
+        {
+            var part = m_components[i];
+            if (part == null) continue;
+
+            var partData = new PartData
             {
-                var part = m_components[i];
-                if (part == null) continue;
+                Name = part.gameObject.name,
+                Position = new float[] { part.Position.x, part.Position.y, part.Position.z },
+                Rotation = new float[] { part.RotX, part.RotY, part.RotZ },
+                LinkedPartIndex = part.LinkedPartIndex,
+                Length = part.Length,
+                GeometryMode = part.GeometryHandling,
+                HueShift = part.HueShift,
 
-                var partData = new PartData
+                StartRadius = part.StartRadius,
+                StartColor = new float[] { part.StartColor.r, part.StartColor.g, part.StartColor.b },
+                StartCustomWeight = part.StartCustomColorWeight,
+                StartGlow = part.StartGlow,
+                StartOpacity = part.StartOpacity,
+
+                EndRadius = part.EndRadius,
+                EndColor = new float[] { part.EndColor.r, part.EndColor.g, part.EndColor.b },
+                EndCustomWeight = part.EndCustomColorWeight,
+                EndGlow = part.EndGlow,
+                EndOpacity = part.EndOpacity,
+
+                Inverted = part.Inverted,
+                Lit = part.Lit,
+                Blur = part.BlurFactor,
+                BlurFade = part.BlurFadeFactor,
+                EnableEndCaps = part.EnableEndCaps,
+                EnableRoundedNormals = part.EnableRoundedNormals,
+                EndCapExtension = part.EndCapExtension,
+
+                LookDir = new float[] { part.LookDir.x, part.LookDir.y, part.LookDir.z },
+                UseLookDir = part.UseLookDir,
+
+                BulgeAmount = part.BulgeAmount,
+                MinimumRings = part.MinimumRings,
+                RenderQueueOffset = part.RenderQueueOffset,
+                DepthOffset = part.DepthOffset,
+
+                RimFactor = part.RimFactor,
+                RimPower = part.RimPower,
+                RimPerpendicular = part.RimPerpendicular,
+
+                SpecularStrength = part.SpecularStrength,
+                SpecularPower = part.SpecularPower,
+                Metallic = part.Metallic,
+                Smoothness = part.Smoothness,
+                CubemapStrength = part.CubemapStrength,
+                CubemapRotation = part.CubemapRotation,
+                FresnelStrength = part.FresnelStrength,
+                FresnelPower = part.FresnelPower,
+                RimColor = new float[] { part.RimColor.r, part.RimColor.g, part.RimColor.b },
+
+                ColorTexture = part.ColorTextureName,
+                GlowTexture = part.GlowTextureName,
+                ColorTextureBase64 = embedAssets ? LoadAssetBase64(part.ColorTextureName, part.ColorTextureBase64) : null,
+                GlowTextureBase64 = embedAssets ? LoadAssetBase64(part.GlowTextureName, part.GlowTextureBase64) : null,
+                TextureWrap = (int)part.TextureWrap,
+                Animators = part.Animators.Count > 0 ? part.Animators : null
+            };
+
+            if (part.GeometryHandling == BlurSaberPart.GeometryType.Advanced && part.RingParams.Count > 0)
+            {
+                partData.Rings = new List<RingData>();
+                foreach (var ring in part.RingParams)
                 {
-                    Name = part.gameObject.name,
-                    Position = new float[] { part.Position.x, part.Position.y, part.Position.z },
-                    Rotation = new float[] { part.RotX, part.RotY, part.RotZ },
-                    LinkedPartIndex = part.LinkedPartIndex,
-                    Length = part.Length,
-                    GeometryMode = part.GeometryHandling,
-                    HueShift = part.HueShift,
-
-                    StartRadius = part.StartRadius,
-                    StartColor = new float[] { part.StartColor.r, part.StartColor.g, part.StartColor.b },
-                    StartCustomWeight = part.StartCustomColorWeight,
-                    StartGlow = part.StartGlow,
-                    StartOpacity = part.StartOpacity,
-
-                    EndRadius = part.EndRadius,
-                    EndColor = new float[] { part.EndColor.r, part.EndColor.g, part.EndColor.b },
-                    EndCustomWeight = part.EndCustomColorWeight,
-                    EndGlow = part.EndGlow,
-                    EndOpacity = part.EndOpacity,
-
-                    Inverted = part.Inverted,
-                    Lit = part.Lit,
-                    Blur = part.BlurFactor,
-                    BlurFade = part.BlurFadeFactor,
-                    EnableEndCaps = part.EnableEndCaps,
-                    EnableRoundedNormals = part.EnableRoundedNormals,
-                    EndCapExtension = part.EndCapExtension,
-
-                    LookDir = new float[] { part.LookDir.x, part.LookDir.y, part.LookDir.z },
-                    UseLookDir = part.UseLookDir,
-
-                    BulgeAmount = part.BulgeAmount,
-                    MinimumRings = part.MinimumRings,
-                    RenderQueueOffset = part.RenderQueueOffset,
-                    DepthOffset = part.DepthOffset,
-
-                    RimFactor = part.RimFactor,
-                    RimPower = part.RimPower,
-                    RimPerpendicular = part.RimPerpendicular,
-
-                    SpecularStrength = part.SpecularStrength,
-                    SpecularPower = part.SpecularPower,
-                    Metallic = part.Metallic,
-                    Smoothness = part.Smoothness,
-                    CubemapStrength = part.CubemapStrength,
-                    CubemapRotation = part.CubemapRotation,
-                    FresnelStrength = part.FresnelStrength,
-                    FresnelPower = part.FresnelPower,
-                    RimColor = new float[] { part.RimColor.r, part.RimColor.g, part.RimColor.b },
-
-                    ColorTexture = part.ColorTextureName,
-                    GlowTexture = part.GlowTextureName,
-                    TextureWrap = (int)part.TextureWrap,
-                    Animators = part.Animators.Count > 0 ? part.Animators : null
-                };
-
-                if (part.GeometryHandling == BlurSaberPart.GeometryType.Advanced && part.RingParams.Count > 0)
+                partData.Rings.Add(new RingData
                 {
-                    partData.Rings = new List<RingData>();
-                    foreach (var ring in part.RingParams)
-                    {
-                    partData.Rings.Add(new RingData
-                    {
-                        Position = ring.PosAlongPart01,
-                        Radius = ring.Radius,
-                        Color = new float[] { ring.Color.r, ring.Color.g, ring.Color.b },
-                        CustomWeight = ring.CustomWeight,
-                        Glow = ring.Glow,
-                        Opacity = ring.Opacity,
-                        Inverted = ring.Inverted,
-                        OffsetX = ring.Offset.x,
-                        OffsetY = ring.Offset.y,
-                        UvOffset = ring.UvOffset
-                    });
-                    }
+                    Position = ring.PosAlongPart01,
+                    Radius = ring.Radius,
+                    Color = new float[] { ring.Color.r, ring.Color.g, ring.Color.b },
+                    CustomWeight = ring.CustomWeight,
+                    Glow = ring.Glow,
+                    Opacity = ring.Opacity,
+                    Inverted = ring.Inverted,
+                    OffsetX = ring.Offset.x,
+                    OffsetY = ring.Offset.y,
+                    UvOffset = ring.UvOffset
+                });
                 }
-
-                preset.Parts.Add(partData);
             }
 
-            preset.UseCustomTrails = UseCustomTrails;
-            if (TipTrails.Count > 0)
-            {
-                preset.TipTrails = new List<TrailData>();
-                foreach (var td in TipTrails)
-                {
-                    preset.TipTrails.Add(new TrailData
-                    {
-                        Position = td.Position,
-                        Color = td.Color,
-                        CustomBlend = td.CustomBlend,
-                        Glow = td.Glow,
-                        Opacity = td.Opacity,
-                        Width = td.Width,
-                        Length = td.Length,
-                        QueueOffset = td.QueueOffset
-                    });
-                }
-            }
+            preset.Parts.Add(partData);
+        }
 
-            if (BladeTrail.HasValue)
+        preset.UseCustomTrails = UseCustomTrails;
+        if (TipTrails.Count > 0)
+        {
+            preset.TipTrails = new List<TrailData>();
+            foreach (var td in TipTrails)
             {
-                var td = BladeTrail.Value;
-                preset.BladeTrail = new TrailData
+                preset.TipTrails.Add(new TrailData
                 {
                     Position = td.Position,
                     Color = td.Color,
@@ -548,20 +567,59 @@ public class BlurSaberData : MonoBehaviour
                     Width = td.Width,
                     Length = td.Length,
                     QueueOffset = td.QueueOffset
-                };
+                });
             }
+        }
 
-            string directory = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
+        if (BladeTrail.HasValue)
+        {
+            var td = BladeTrail.Value;
+            preset.BladeTrail = new TrailData
+            {
+                Position = td.Position,
+                Color = td.Color,
+                CustomBlend = td.CustomBlend,
+                Glow = td.Glow,
+                Opacity = td.Opacity,
+                Width = td.Width,
+                Length = td.Length,
+                QueueOffset = td.QueueOffset
+            };
+        }
 
-            string json = JsonConvert.SerializeObject(preset, PresetJsonSettings);
-            File.WriteAllText(path, json);
-            Plugin.Log.Info($"Saved saber with {ComponentCount} parts to {path}");
+        return preset;
+    }
+
+    private static void WritePresetToFile(string path, PresetData preset)
+    {
+        string directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            Directory.CreateDirectory(directory);
+
+        string json = JsonConvert.SerializeObject(preset, PresetJsonSettings);
+        File.WriteAllText(path, json);
+    }
+
+    private static string? LoadAssetBase64(string? fileName, string? existingBase64)
+    {
+        if (string.IsNullOrEmpty(fileName))
+            return null;
+
+        if (!string.IsNullOrEmpty(existingBase64))
+            return existingBase64;
+
+        var path = Path.Combine(ConfigUtil.ConfigDir, fileName!);
+        if (!File.Exists(path))
+            return null;
+
+        try
+        {
+            return Convert.ToBase64String(File.ReadAllBytes(path));
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"Failed to save saber to {path}: {ex.Message}");
+            Plugin.Log.Warn($"Failed to embed asset '{fileName}': {ex.Message}");
+            return null;
         }
     }
 
@@ -851,6 +909,8 @@ public class BlurSaberData : MonoBehaviour
 
         public string? ColorTexture { get; set; }
         public string? GlowTexture { get; set; }
+        public string? ColorTextureBase64 { get; set; }
+        public string? GlowTextureBase64 { get; set; }
         public int TextureWrap { get; set; }
 
         public List<BlurPartAnimationModulator>? Animators { get; set; }

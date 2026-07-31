@@ -82,11 +82,17 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
     }
     private static List<object> GetPresetNames()
     {
-        var files = Directory.GetFiles(Config.ConfigUtil.ConfigDir, "*.json").ToList();
-        files.Sort();
-        Plugin.Log.Info($"Found {files.Count} Presets");
+        var jsonFiles = Directory.GetFiles(Config.ConfigUtil.ConfigDir, "*.json");
+        var vainsaberFiles = Directory.GetFiles(Config.ConfigUtil.ConfigDir, "*.vainsaber");
+        var names = jsonFiles.Select(Path.GetFileNameWithoutExtension)
+            .Concat(vainsaberFiles.Select(Path.GetFileNameWithoutExtension))
+            .Distinct()
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .Cast<object>()
+            .ToList();
+        Plugin.Log.Info($"Found {names.Count} Presets");
 
-        return files.Select(Path.GetFileNameWithoutExtension).Cast<object>().ToList();
+        return names;
     }
     
     [UIValue("PresetNames")]

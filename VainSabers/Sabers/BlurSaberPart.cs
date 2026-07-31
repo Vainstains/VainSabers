@@ -92,6 +92,8 @@ namespace VainSabers.Sabers
 
         public string? ColorTextureName;
         public string? GlowTextureName;
+        public string? ColorTextureBase64;
+        public string? GlowTextureBase64;
         public TextureWrapMode TextureWrap = TextureWrapMode.Clamp;
         
         public Vector3 LookDir = Vector3.zero;
@@ -129,21 +131,37 @@ namespace VainSabers.Sabers
 
         private static readonly Dictionary<string, Texture2D> s_loadedTextures = new();
 
-        internal static Texture2D? LoadTexture(string? fileName, TextureWrapMode wrapMode)
+        internal static Texture2D? LoadTexture(string? fileName, TextureWrapMode wrapMode, string? embeddedBase64 = null)
         {
             if (string.IsNullOrEmpty(fileName))
                 return null;
 
-            var cacheKey = $"{fileName}|{(int)wrapMode}";
+            var cacheKey = $"{fileName}|{(int)wrapMode}|{embeddedBase64}";
 
             if (s_loadedTextures.TryGetValue(cacheKey, out var tex))
                 return tex;
 
-            var path = Path.Combine(ConfigUtil.ConfigDir, fileName!);
-            if (!File.Exists(path))
-                return null;
+            byte[]? data;
+            if (!string.IsNullOrEmpty(embeddedBase64))
+            {
+                try
+                {
+                    data = Convert.FromBase64String(embeddedBase64!);
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.Warn($"Failed to decode embedded asset '{fileName}': {ex.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                var path = Path.Combine(ConfigUtil.ConfigDir, fileName!);
+                if (!File.Exists(path))
+                    return null;
+                data = File.ReadAllBytes(path);
+            }
 
-            var data = File.ReadAllBytes(path);
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, true);
             if (texture.LoadImage(data))
             {
@@ -236,6 +254,8 @@ namespace VainSabers.Sabers
             RimColor = source.RimColor;
             ColorTextureName = source.ColorTextureName;
             GlowTextureName = source.GlowTextureName;
+            ColorTextureBase64 = source.ColorTextureBase64;
+            GlowTextureBase64 = source.GlowTextureBase64;
             TextureWrap = source.TextureWrap;
             LookDir = source.LookDir;
             UseLookDir = source.UseLookDir;
@@ -310,8 +330,8 @@ namespace VainSabers.Sabers
                 m_propertyBlock.SetFloat("_FresnelPower", FresnelPower);
                 m_propertyBlock.SetColor("_RimColor", RimColor);
 
-                var colorTex = LoadTexture(ColorTextureName, TextureWrap);
-                var glowTex = LoadTexture(GlowTextureName, TextureWrap);
+                var colorTex = LoadTexture(ColorTextureName, TextureWrap, ColorTextureBase64);
+                var glowTex = LoadTexture(GlowTextureName, TextureWrap, GlowTextureBase64);
                 if (colorTex != null) m_propertyBlock.SetTexture("_ColorTex", colorTex);
                 else m_propertyBlock.SetTexture("_ColorTex", Texture2D.whiteTexture);
                 if (glowTex != null) m_propertyBlock.SetTexture("_GlowTex", glowTex);

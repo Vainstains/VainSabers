@@ -55,6 +55,12 @@ internal class SaberEditorController : MonoBehaviour
             MenuStateHandler.SetEditorOpen(false);
             return;
         }
+        if (profilePath.EndsWith(".vainsaber", StringComparison.OrdinalIgnoreCase))
+        {
+            Plugin.Log.Warn($"Cannot open editor: preset '{editingPreset}' is a read-only .vainsaber export");
+            MenuStateHandler.SetEditorOpen(false);
+            return;
+        }
         
         panel = SimpleFloatingPanel.Create(new Vector2(250, 126), new Vector3(0, 1.2f, 2.0f));
         panel.Show();
@@ -103,6 +109,17 @@ internal class SaberEditorController : MonoBehaviour
                 MenuStateHandler.Sabers.left.SetPreset(editingPreset);
             }
             MenuStateHandler.SetEditorOpen(false);
+        };
+        editor.OnExport += () =>
+        {
+            if (editingPreset == "")
+            {
+                Plugin.Log.Warn("Cannot export an unsaved preset");
+                return;
+            }
+            Plugin.Log.Info($"Exporting preset: {editingPreset}");
+            var exportPath = Path.ChangeExtension(ConfigUtil.GetSaberProfile(editingPreset), ".vainsaber");
+            MenuStateHandler.Sabers.right.Data.ExportToFile(exportPath);
         };
         editor.OnDelete += () =>
         {
@@ -211,6 +228,7 @@ class SaberEditorComponent : UIComponent
     public event Action? OnSave;
     public event Action? OnRevert;
     public event Action? OnExit;
+    public event Action? OnExport;
     public event Action? OnDelete;
     public event Action<string>? OnRename;
     public event Action<bool>? OnHoldSabersToggled;
@@ -365,6 +383,10 @@ class SaberEditorComponent : UIComponent
         m_closeButton = saveRow.AddChild<TextButtonComponent>().ToRightEdge().ExtendLeft(6).WithText("<");
         m_closeButton.OnClick += () => OnExit?.Invoke();
         m_closeButton.Color = new Color(0.55f, 0.35f, 0.2f, 1.0f);
+
+        var exportButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Export");
+        exportButton.OnClick += () => OnExport?.Invoke();
+        exportButton.Color = new Color(0.3f, 0.45f, 0.3f, 1.0f);
 
         m_deleteButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Delete");
         m_deleteButton.OnClick += () =>

@@ -92,6 +92,10 @@ public static class ConfigUtil
         if (File.Exists(txtPath))
             return txtPath;
 
+        string vainsaberPath = Path.Combine(ConfigDir, $"{name}.vainsaber");
+        if (File.Exists(vainsaberPath))
+            return vainsaberPath;
+
         Plugin.Log.Warn($"Saber profile '{name}' not found.");
         return jsonPath;
     }
