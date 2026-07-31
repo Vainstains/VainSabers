@@ -339,7 +339,7 @@ namespace VainSabers.Sabers
             m_modulatableParams.OpacityMultiplier = 1.0f;
             m_modulatableParams.GlowMultiplier = 1.0f;
 
-
+            // TODO: run m_modulatableParams through all this part's animator modules
 
             transform.localPosition = m_modulatableParams.Position;
             transform.localEulerAngles = m_modulatableParams.RotationEuler;
@@ -422,15 +422,16 @@ namespace VainSabers.Sabers
             
             var startCol = Color.Lerp(StartColor, m_saberData.CustomColor, StartCustomColorWeight);
             var endCol = Color.Lerp(EndColor, m_saberData.CustomColor, EndCustomColorWeight);
-            
-            if (Mathf.Abs(HueShift) > 0.001f)
+
+            var hueShift = m_modulatableParams.HueShift;
+            if (Mathf.Abs(hueShift) > 0.001f)
             {
-                startCol = ShiftHue(startCol, HueShift);
-                endCol = ShiftHue(endCol, HueShift);
+                startCol = ShiftHue(startCol, hueShift);
+                endCol = ShiftHue(endCol, hueShift);
             }
             
-            startCol.a = StartGlow;
-            endCol.a = EndGlow;
+            startCol.a = StartGlow * m_modulatableParams.GlowMultiplier;
+            endCol.a = EndGlow * m_modulatableParams.GlowMultiplier;
             
             var startRad = Inverted ? -StartRadius : StartRadius;
             var endRad = Inverted ? -EndRadius : EndRadius;
@@ -464,13 +465,14 @@ namespace VainSabers.Sabers
         void BuildAdvancedRings(Pose[] samples, ref int idx)
         {
             var count = RingParams.Count;
+            var hueShift = m_modulatableParams.HueShift;
             for (var i = 0; i < count; i++)
             {
                 var ring = RingParams[i];
 
                 var col = Color.Lerp(ring.Color, m_saberData.CustomColor, ring.CustomWeight);
-                if (Mathf.Abs(HueShift) > 0.001f)
-                    col = ShiftHue(col, HueShift);
+                if (Mathf.Abs(hueShift) > 0.001f)
+                    col = ShiftHue(col, hueShift);
                 col.a = ring.Glow;
 
                 var rawRadius = ring.Inverted ? -ring.Radius : ring.Radius;
@@ -497,7 +499,10 @@ namespace VainSabers.Sabers
                         radiusSlope = (nextRad - prevRad) / (dt * Length);
                 }
 
-                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, isZero, ring.PosAlongPart01, col, ring.Opacity, ref idx, ring.Offset, radiusSlope, ring.UvOffset);
+                var opacity = ring.Opacity * m_modulatableParams.OpacityMultiplier;
+                col.a *= m_modulatableParams.GlowMultiplier;
+
+                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, isZero, ring.PosAlongPart01, col, opacity, ref idx, ring.Offset, radiusSlope, ring.UvOffset);
             }
         }
         
@@ -725,4 +730,188 @@ public class BlurPartAnimationModulatableParams
     public float HueShift;
     public float OpacityMultiplier;
     public float GlowMultiplier;
+}
+
+public abstract class BlurPartAnimationModulator
+{
+    public abstract void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime);
+}
+public class StepAttribute : Attribute
+{
+    public float StepSize;
+    public StepAttribute(float stepSize)
+    {
+        StepSize = stepSize;
+    }
+}
+
+public class SensitivityCoefAttribute : Attribute
+{
+    public float SensitivityCoef;
+    public SensitivityCoefAttribute(float sensitivityCoef)
+    {
+        SensitivityCoef = sensitivityCoef;
+    }
+}
+
+public class HueShiftAdder : BlurPartAnimationModulator
+{
+    [Range(-3f, 3f)]
+    [Step(0.01f)]
+    public float Speed = 0.5f;
+
+    public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
+    {
+        paramsToModulate.HueShift += Speed * deltaTime;
+    }
+}
+
+public class HueShiftOscillator : BlurPartAnimationModulator
+{
+    [Range(-3f, 3f)]
+    [Step(0.01f)]
+    public float Amplitude = 0.5f;
+
+    [Range(0f, 10f)]
+    [SensitivityCoef(5f)]
+    public float Frequency = 0.5f;
+
+    public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
+    {
+        float f = Mathf.PI * 2f * Frequency * deltaTime;
+        paramsToModulate.HueShift += Amplitude * Mathf.Sin(f);
+    }
+}
+
+public enum Axis
+{
+    X,
+    Y,
+    Z
+}
+
+public class PositionOscillator : BlurPartAnimationModulator
+{
+    public Axis Axis = Axis.X;
+
+    [Range(-1f, 1f)]
+    [Step(0.01f)]
+    [SensitivityCoef(0.25f)]
+    public float Amplitude = 0.5f;
+
+    [Range(0f, 10f)]
+    [SensitivityCoef(5f)]
+    public float Frequency = 0.5f;
+
+    public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
+    {
+        float f = Mathf.PI * 2f * Frequency * deltaTime;
+        Vector3 axis = Vector3.zero;
+        switch (Axis)
+        {
+            case Axis.X:
+                axis = Vector3.right;
+                break;
+            case Axis.Y:
+                axis = Vector3.up;
+                break;
+            case Axis.Z:
+                axis = Vector3.forward;
+                break;
+        }
+        paramsToModulate.Position += axis * Amplitude * Mathf.Sin(f);
+    }
+}
+
+public class RotationAdder : BlurPartAnimationModulator
+{
+    public Axis Axis = Axis.X;
+
+    [Range(-180f, 180f)]
+    [Step(1f)]
+    public float Speed = 30f;
+
+    public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
+    {
+        Vector3 axis = Vector3.zero;
+        switch (Axis)
+        {
+            case Axis.X:
+                axis = Vector3.right;
+                break;
+            case Axis.Y:
+                axis = Vector3.up;
+                break;
+            case Axis.Z:
+                axis = Vector3.forward;
+                break;
+        }
+        paramsToModulate.RotationEuler += axis * Speed * deltaTime;
+    }
+}
+
+public class RotationOscillator : BlurPartAnimationModulator
+{
+    public Axis Axis = Axis.X;
+
+    [Range(-3f, 3f)]
+    [Step(0.01f)]
+    public float Amplitude = 0.5f;
+
+    [Range(0f, 10f)]
+    [SensitivityCoef(5f)]
+    public float Frequency = 0.5f;
+
+    public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
+    {
+        float f = Mathf.PI * 2f * Frequency * deltaTime;
+        Vector3 axis = Vector3.zero;
+        switch (Axis)
+        {
+            case Axis.X:
+                axis = Vector3.right;
+                break;
+            case Axis.Y:
+                axis = Vector3.up;
+                break;
+            case Axis.Z:
+                axis = Vector3.forward;
+                break;
+        }
+        paramsToModulate.RotationEuler += axis * Amplitude * Mathf.Sin(f);
+    }
+}
+
+public class OpacityOscillator : BlurPartAnimationModulator
+{
+    [Range(0f, 3f)]
+    [Step(0.01f)]
+    public float Amplitude = 0.5f;
+
+    [Range(0f, 10f)]
+    [SensitivityCoef(5f)]
+    public float Frequency = 0.5f;
+
+    public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
+    {
+        float f = Mathf.PI * 2f * Frequency * deltaTime;
+        paramsToModulate.OpacityMultiplier += Amplitude * (0.5f + 0.5f * Mathf.Sin(f));
+    }
+}
+
+public class GlowOscillator : BlurPartAnimationModulator
+{
+    [Range(0f, 3f)]
+    [Step(0.01f)]
+    public float Amplitude = 0.5f;
+
+    [Range(0f, 10f)]
+    [SensitivityCoef(5f)]
+    public float Frequency = 0.5f;
+
+    public override void Apply(BlurPartAnimationModulatableParams paramsToModulate, float deltaTime)
+    {
+        float f = Mathf.PI * 2f * Frequency * deltaTime;
+        paramsToModulate.GlowMultiplier += Amplitude * (0.5f + 0.5f * Mathf.Sin(f));
+    }
 }
