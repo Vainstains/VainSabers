@@ -94,6 +94,16 @@ internal class SaberEditorController : MonoBehaviour
             MenuStateHandler.SetEditorOpen(false);
             MenuStateHandler.SetEditorOpen(true);
         };
+        editor.OnExit += () =>
+        {
+            Plugin.Log.Info("Reverting and closing editor");
+            if (editingPreset != "")
+            {
+                MenuStateHandler.Sabers.right.SetPreset(editingPreset);
+                MenuStateHandler.Sabers.left.SetPreset(editingPreset);
+            }
+            MenuStateHandler.SetEditorOpen(false);
+        };
         editor.OnDelete += () =>
         {
             Plugin.Log.Info($"Deleting preset: {editingPreset}");
@@ -193,12 +203,14 @@ class SaberEditorComponent : UIComponent
     private static readonly Color BlueColor = (VainColor)"#79a7f7" * 1.3f;
 
     private TextButtonComponent m_saveButton = null!;
+    private TextButtonComponent m_closeButton = null!;
     private TextButtonComponent m_deleteButton = null!;
     private TextButtonComponent m_holdSabersButton = null!;
     private TextInputComponent m_renameInput = null!;
 
     public event Action? OnSave;
     public event Action? OnRevert;
+    public event Action? OnExit;
     public event Action? OnDelete;
     public event Action<string>? OnRename;
     public event Action<bool>? OnHoldSabersToggled;
@@ -344,9 +356,15 @@ class SaberEditorComponent : UIComponent
         m_configPanel.LayoutElement.flexibleHeight = 1;
 
         var configContent = m_configPanel.Content;
-        m_saveButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Save");
+
+        var saveRow = configContent.AddChild<UIComponent>().WithPreferredHeight(4);
+        m_saveButton = saveRow.AddChild<TextButtonComponent>().ToFill().InsetRight(8).WithText("Save");
         m_saveButton.OnClick += () => OnSave?.Invoke();
         m_saveButton.Color = new Color(0.3f, 0.5f, 0.7f, 1.0f);
+
+        m_closeButton = saveRow.AddChild<TextButtonComponent>().ToRightEdge().ExtendLeft(6).WithText("<");
+        m_closeButton.OnClick += () => OnExit?.Invoke();
+        m_closeButton.Color = new Color(0.55f, 0.35f, 0.2f, 1.0f);
 
         m_deleteButton = configContent.AddChild<TextButtonComponent>().WithPreferredHeight(4).WithText("Delete");
         m_deleteButton.OnClick += () =>
