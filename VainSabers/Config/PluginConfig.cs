@@ -16,4 +16,6 @@ public class PluginConfig
     public virtual int BladeTrailMS { get; set; } = 60;
     
     public virtual float SaberQuality { get; set; } = 1;
+    
+    public virtual float ZRotationOffset { get; set; } = 0f;
 }

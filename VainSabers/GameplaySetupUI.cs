@@ -166,6 +166,18 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         }
     }
     
+    [UIValue("ZRotationOffset")]
+    private float ZRotationOffset
+    {
+        get => m_config.ZRotationOffset;
+        set
+        {
+            m_config.ZRotationOffset = value;
+            m_menuSaberManager.ApplyZRotationOffset();
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ZRotationOffset)));
+        }
+    }
+    
     [UIValue("showInMenu")]
     private bool ShowInMenu
     {

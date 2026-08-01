@@ -39,6 +39,7 @@ internal class BlurSaber : MonoBehaviour
         m_blurSaberData = gameObject.AddInitComponent<BlurSaberData>(m_config);
         m_blurSaberData.IsLeftSaber = target.name.Contains("Left", StringComparison.OrdinalIgnoreCase) || target.parent?.name.Contains("Left", StringComparison.OrdinalIgnoreCase) == true;
         m_blurSaberData.TrailsChanged += OnTrailsChanged;
+        ApplyZRotationOffset();
 
         var parkedGo = new GameObject("ParkedTarget");
         parkedGo.transform.SetParent(transform, false);
@@ -46,6 +47,15 @@ internal class BlurSaber : MonoBehaviour
         m_parkedTarget = parkedGo.transform;
 
         CreateDefaultTrails();
+    }
+
+    public void ApplyZRotationOffset()
+    {
+        if (m_tracker == null) return;
+        float offset = m_config.ZRotationOffset;
+        if (m_blurSaberData != null && m_blurSaberData.IsLeftSaber)
+            offset = -offset;
+        m_tracker.SetZRotationOffset(offset);
     }
 
     public void SetPreset(string preset)

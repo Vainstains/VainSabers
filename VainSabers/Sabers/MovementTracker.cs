@@ -12,6 +12,8 @@ namespace VainSabers.Sabers
             public float DeltaTime;
         }
         private Transform m_target = null!;
+        private float m_zRotationOffset = 0f;
+        private Quaternion m_zRotation = Quaternion.identity;
         
 
         private CircularBuffer<MovementData> m_movementData = new CircularBuffer<MovementData>(100);
@@ -31,10 +33,24 @@ namespace VainSabers.Sabers
     {
         m_target = target;
     }
+
+    public void SetZRotationOffset(float degrees)
+    {
+        m_zRotationOffset = degrees;
+        m_zRotation = Quaternion.Euler(0f, 0f, degrees);
+    }
+
+    private Pose GetTargetPose()
+    {
+        var pose = m_target.GetPose();
+        if (m_zRotationOffset != 0f)
+            pose.rotation = pose.rotation * m_zRotation;
+        return pose;
+    }
         public override Pose GetPoseAgo(float age)
         {
             if (m_movementData.Count == 0)
-                return m_target.GetPose();
+                return GetTargetPose();
 
             float accumulated = 0f;
             
@@ -63,7 +79,7 @@ namespace VainSabers.Sabers
             if (samples <= 0)
                 return;
 
-            Pose currentPose = m_target.GetPose();
+            Pose currentPose = GetTargetPose();
 
             if (samples == 1 || duration <= 0.0001f || m_movementData.Count == 0)
             {
@@ -110,7 +126,7 @@ namespace VainSabers.Sabers
         
         private void Update()
         {
-            var currentPose = m_target.GetPose();
+            var currentPose = GetTargetPose();
             m_movementData.Add(new  MovementData { Pose = currentPose, DeltaTime = Time.deltaTime });
         }
     }

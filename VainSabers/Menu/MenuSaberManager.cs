@@ -44,8 +44,15 @@ public class MenuSaberManager : IDisposable
         var saberObj = new GameObject("BlurSaber");
         var blurSaber = saberObj.AddInitComponent<BlurSaber>(parent, m_config);
         blurSaber.Data.IsLeftSaber = isLeft;
+        blurSaber.ApplyZRotationOffset();
         blurSaber.gameObject.SetActive(m_config.ActiveInMenu);
         return blurSaber;
+    }
+
+    public void ApplyZRotationOffset()
+    {
+        m_leftSaber.ApplyZRotationOffset();
+        m_rightSaber.ApplyZRotationOffset();
     }
 
     public void SetColor(Color left, Color right)
