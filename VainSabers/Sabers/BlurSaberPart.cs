@@ -51,6 +51,7 @@ public enum GeometryType
         public int DivisionsY;
         public float SizeX;
         public float SizeY;
+        public bool DoubleSided;
 
         public float StartRadius;
         public float EndRadius;
@@ -258,6 +259,7 @@ public enum GeometryType
             DivisionsY = source.DivisionsY;
             SizeX = source.SizeX;
             SizeY = source.SizeY;
+            DoubleSided = source.DoubleSided;
             
             RingParams = new List<BlurSaberRingParams>(source.RingParams);
 
@@ -352,10 +354,10 @@ public enum GeometryType
                 int divX = Mathf.Max(1, DivisionsX);
                 int divY = Mathf.Max(1, DivisionsY);
 
-                if (m_blurSprite == null || m_blurSprite.DivisionsX != divX || m_blurSprite.DivisionsY != divY)
+                if (m_blurSprite == null || m_blurSprite.DivisionsX != divX || m_blurSprite.DivisionsY != divY || m_blurSprite.DoubleSided != DoubleSided)
                 {
                     m_blurSprite?.Destroy();
-                    m_blurSprite = new BlurSprite(divX, divY);
+                    m_blurSprite = new BlurSprite(divX, divY, DoubleSided);
                 }
 
                 // Material setup (same as before)

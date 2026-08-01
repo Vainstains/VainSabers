@@ -682,6 +682,8 @@ private void OnLinkChanged(int index)
         }
 
         RebuildPanels();
+        UpdateLinkDropdown();
+        UpdateSideDropdown();
     }
 
     private void RebuildPanels()
@@ -1176,6 +1178,10 @@ private void OnLinkChanged(int index)
             .WithMinMaxStep(1f, 20f, 1f).WithSensitivityCoef(8f)
             .WithValue(referencePart.DivisionsY).OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.DivisionsY = Mathf.Max(1, Mathf.RoundToInt(val)));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Double Sided").SetComponent<ToggleComponent>().WithValue(referencePart.DoubleSided)
+            .OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.DoubleSided = val);
         
         m_geometryPanel.Content.AddSubHeader("Vertex properties");
         if (!referencePart.Lit)

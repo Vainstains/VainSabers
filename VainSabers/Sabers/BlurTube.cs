@@ -117,20 +117,24 @@ namespace VainSabers.Sabers
     public Mesh SpriteMesh { get; private set; }
     public int DivisionsX { get; private set; }
     public int DivisionsY { get; private set; }
+    public bool DoubleSided { get; private set; }
 
     private BlurVertex[] _vertices;
     private int[] _indices;
+    private int _frontVertCount;
 
-    public BlurSprite(int divisionsX, int divisionsY)
+    public BlurSprite(int divisionsX, int divisionsY, bool doubleSided = false)
     {
         DivisionsX = divisionsX;
         DivisionsY = divisionsY;
+        DoubleSided = doubleSided;
 
         int vertsX = divisionsX + 1;
         int vertsY = divisionsY + 1;
-        int vertCount = vertsX * vertsY;
+        _frontVertCount = vertsX * vertsY;
+        int vertCount = doubleSided ? _frontVertCount * 2 : _frontVertCount;
         int cellCount = divisionsX * divisionsY;
-        int indexCount = cellCount * 6;
+        int indexCount = cellCount * 6 * (doubleSided ? 2 : 1);
 
         SpriteMesh = new Mesh
         {
@@ -156,6 +160,17 @@ namespace VainSabers.Sabers
                 
                 _indices[t++] = bl; _indices[t++] = tl; _indices[t++] = br;
                 _indices[t++] = br; _indices[t++] = tl; _indices[t++] = tr;
+
+                if (doubleSided)
+                {
+                    int backBl = bl + _frontVertCount;
+                    int backBr = br + _frontVertCount;
+                    int backTl = tl + _frontVertCount;
+                    int backTr = tr + _frontVertCount;
+
+                    _indices[t++] = backBl; _indices[t++] = backBr; _indices[t++] = backTl;
+                    _indices[t++] = backBr; _indices[t++] = backTr; _indices[t++] = backTl;
+                }
             }
         }
         
@@ -184,6 +199,18 @@ namespace VainSabers.Sabers
         vert.uv2 = new Vector2(sweepCoord, sweepRatio);
         vert.bladeDir = new Vector4(bladeDir.x, bladeDir.y, bladeDir.z, opacity);
         vert.color = color;
+
+        if (DoubleSided)
+        {
+            ref var backVert = ref _vertices[idx + _frontVertCount];
+            backVert.position = pos;
+            backVert.normal = -normal;
+            backVert.tangent = new Vector4(planeNormal.x, planeNormal.y, planeNormal.z, 0);
+            backVert.uv = new Vector2(u, v);
+            backVert.uv2 = new Vector2(sweepCoord, sweepRatio);
+            backVert.bladeDir = new Vector4(bladeDir.x, bladeDir.y, bladeDir.z, opacity);
+            backVert.color = color;
+        }
     }
 
     public void RefreshMesh()

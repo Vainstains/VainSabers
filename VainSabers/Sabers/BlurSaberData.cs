@@ -93,6 +93,7 @@ public class BlurSaberData : MonoBehaviour
         newPart.DivisionsY = 4;
         newPart.SizeX = 0.05f;
         newPart.SizeY = 0.05f;
+        newPart.DoubleSided = false;
         
         newPart.Config = m_config!;
 
@@ -229,6 +230,7 @@ public class BlurSaberData : MonoBehaviour
     public BlurSaberPart DuplicateComponent(BlurSaberPart source)
     {
         var newPart = AddComponent($"{source.gameObject.name} Copy");
+        newPart.Position = source.Position;
         newPart.RotX = source.RotX;
         newPart.RotY = source.RotY;
         newPart.RotZ = source.RotZ;
@@ -313,6 +315,7 @@ public class BlurSaberData : MonoBehaviour
                 part.SizeY = partData.SpriteSizeY;
                 part.DivisionsX = partData.SpriteDivisionsX;
                 part.DivisionsY = partData.SpriteDivisionsY;
+                part.DoubleSided = partData.DoubleSided;
                 
                 part.HueShift = partData.HueShift;
 
@@ -500,6 +503,7 @@ public class BlurSaberData : MonoBehaviour
                 SpriteSizeY = part.SizeY,
                 SpriteDivisionsX = part.DivisionsX,
                 SpriteDivisionsY = part.DivisionsY,
+                DoubleSided = part.DoubleSided,
                 
                 HueShift = part.HueShift,
 
@@ -897,6 +901,7 @@ public class BlurSaberData : MonoBehaviour
         public float SpriteSizeY { get; set; } = 0.2f;
         public int SpriteDivisionsX { get; set; } = 1;
         public int SpriteDivisionsY { get; set; } = 1;
+        public bool DoubleSided { get; set; }
         
         public float HueShift { get; set; }
 
