@@ -355,6 +355,7 @@ class SaberEditorComponent : UIComponent
     private UIComponent m_partActionRow = null!;
     private DropdownComponent m_linkDropdown = null!;
     private TextButtonComponent m_duplicateButton = null!;
+    private DropdownComponent m_sideDropdown = null!;
 
     // trail editor
     private int m_selectedTipTrailIndex = 0;
@@ -461,9 +462,14 @@ class SaberEditorComponent : UIComponent
 
         m_partActionRow = m_partPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
 
-        m_linkDropdown = m_partActionRow.AddChild<FieldComponent>().ToFill().InsetRight(10)
+        m_linkDropdown = m_partActionRow.AddChild<FieldComponent>().ToFill().InsetRight(30)
             .WithLabel("Link").SetComponent<DropdownComponent>();
         m_linkDropdown.OnSelectionChanged += OnLinkChanged;
+
+        m_sideDropdown = m_partActionRow.AddChild<FieldComponent>().ToRightEdge()
+            .ExtendLeft(28).InsetRight(6).WithLabel("Side").SetComponent<DropdownComponent>();
+        m_sideDropdown.SetOptions(new[] { "Both", "Left", "Right" });
+        m_sideDropdown.OnSelectionChanged += OnSideChanged;
 
         m_duplicateButton = m_partActionRow.AddChild<TextButtonComponent>().ToRightEdge()
             .ExtendLeft(4).WithText("Dup");
@@ -568,13 +574,28 @@ class SaberEditorComponent : UIComponent
         UpdatePartDropdown();
     }
 
-    private void OnLinkChanged(int index)
+private void OnLinkChanged(int index)
+        {
+            if (m_selectedPartIndex < 0)
+                return;
+
+            int linkIndex = index - 1;
+            ApplyToBothParts(part => part.LinkedPartIndex = linkIndex);
+        }
+
+    private void OnSideChanged(int index)
     {
         if (m_selectedPartIndex < 0)
             return;
 
-        int linkIndex = index - 1;
-        ApplyToBothParts(part => part.LinkedPartIndex = linkIndex);
+        var side = index switch
+        {
+            0 => BlurSaberPart.SaberSide.Both,
+            1 => BlurSaberPart.SaberSide.LeftOnly,
+            2 => BlurSaberPart.SaberSide.RightOnly,
+            _ => BlurSaberPart.SaberSide.Both
+        };
+        ApplyToBothParts(part => part.Side = side);
     }
 
     private void UpdateLinkDropdown()
@@ -622,6 +643,26 @@ class SaberEditorComponent : UIComponent
             m_partActionRow.gameObject.SetActive(false);
         }
         UpdateLinkDropdown();
+        UpdateSideDropdown();
+    }
+
+    private void UpdateSideDropdown()
+    {
+        if (m_selectedPartIndex >= 0 && m_selectedPartIndex < EditingSaber.Data.Components.Count)
+        {
+            var part = EditingSaber.Data.Components[m_selectedPartIndex];
+            m_sideDropdown.SelectedIndex = part.Side switch
+            {
+                BlurSaberPart.SaberSide.Both => 0,
+                BlurSaberPart.SaberSide.LeftOnly => 1,
+                BlurSaberPart.SaberSide.RightOnly => 2,
+                _ => 0
+            };
+        }
+        else
+        {
+            m_sideDropdown.SelectedIndex = 0;
+        }
     }
 
     private void SelectedPartChanged(int index)

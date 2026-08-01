@@ -37,6 +37,7 @@ internal class BlurSaber : MonoBehaviour
         m_tracker = gameObject.AddInitComponent<MovementTracker>(target);
         m_historyProvider = m_tracker;
         m_blurSaberData = gameObject.AddInitComponent<BlurSaberData>(m_config);
+        m_blurSaberData.IsLeftSaber = target.name.Contains("Left", StringComparison.OrdinalIgnoreCase) || target.parent?.name.Contains("Left", StringComparison.OrdinalIgnoreCase) == true;
         m_blurSaberData.TrailsChanged += OnTrailsChanged;
 
         var parkedGo = new GameObject("ParkedTarget");

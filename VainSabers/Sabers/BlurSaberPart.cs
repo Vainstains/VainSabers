@@ -11,14 +11,21 @@ namespace VainSabers.Sabers
     [ExecuteInEditMode]
     public class BlurSaberPart : MonoBehaviour
     {
-        public enum GeometryType
+public enum GeometryType
         {
-            [Label("Simple (Interpolated)")]
+            [Label("Simple")]
             Simple,
             [Label("Advanced (Per-Ring)")]
             Advanced,
             [Label("Sprite")]
             Sprite
+        }
+
+        public enum SaberSide
+        {
+            Both,
+            LeftOnly,
+            RightOnly
         }
 
         private const int SampleCount = 32;
@@ -80,6 +87,8 @@ namespace VainSabers.Sabers
 
         public bool ManualRingVerts = false;
         public int RingVertsManual = 20;
+
+        public SaberSide Side = SaberSide.Both;
 
         public float EndCapExtension = 0.25f;
 
@@ -206,6 +215,19 @@ namespace VainSabers.Sabers
                 6, 36
             );
         }
+
+        private bool ShouldRenderOnCurrentSaber()
+        {
+            if (Side == SaberSide.Both)
+                return true;
+
+            bool isLeftSaber = m_saberData?.IsLeftSaber ?? false;
+            
+            if (isLeftSaber)
+                return Side == SaberSide.LeftOnly;
+            else
+                return Side == SaberSide.RightOnly;
+        }
         
         private float GetProfileRadiusForRingVerts()
         {
@@ -261,6 +283,7 @@ namespace VainSabers.Sabers
             MinimumRings = source.MinimumRings;
             ManualRingVerts = source.ManualRingVerts;
             RingVertsManual = source.RingVertsManual;
+            Side = source.Side;
             EnableRoundedNormals = source.EnableRoundedNormals;
             RimFactor = source.RimFactor;
             RimPower = source.RimPower;
@@ -296,6 +319,16 @@ namespace VainSabers.Sabers
                 m_blurSprite?.Destroy();
                 m_blurTube = null;
                 m_blurSprite = null;
+                return;
+            }
+
+            if (!ShouldRenderOnCurrentSaber())
+            {
+                m_blurTube?.Destroy();
+                m_blurSprite?.Destroy();
+                m_blurTube = null;
+                m_blurSprite = null;
+                m_meshFilter.mesh = null;
                 return;
             }
 

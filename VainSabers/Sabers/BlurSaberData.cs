@@ -30,6 +30,8 @@ public class BlurSaberData : MonoBehaviour
     public List<SaberTrailData> TipTrails { get; private set; } = new();
     public SaberTrailData? BladeTrail { get; private set; }
 
+    public bool IsLeftSaber { get; set; }
+
     public event Action? TrailsChanged;
 
     public void Init(PluginConfig config)
@@ -81,6 +83,7 @@ public class BlurSaberData : MonoBehaviour
         newPart.EndCapExtension = 0.25f;
         newPart.ManualRingVerts = false;
         newPart.RingVertsManual = 20;
+        newPart.Side = BlurSaberPart.SaberSide.Both;
         newPart.UseLookDir = false;
         newPart.LookDir = Vector3.zero;
         newPart.Lit = false;
@@ -333,6 +336,7 @@ public class BlurSaberData : MonoBehaviour
                 part.EnableRoundedNormals = partData.EnableRoundedNormals;
                 part.ManualRingVerts = partData.ManualRingVerts;
                 part.RingVertsManual = partData.RingVertsManual;
+                part.Side = partData.Side;
                 part.EndCapExtension = Mathf.Clamp(partData.EndCapExtension, 0f, 3f);
 
                 part.LookDir = ArrToVec3(partData.LookDir);
@@ -519,6 +523,7 @@ public class BlurSaberData : MonoBehaviour
                     EnableRoundedNormals = part.EnableRoundedNormals,
                     ManualRingVerts = part.ManualRingVerts,
                     RingVertsManual = part.RingVertsManual,
+                    Side = part.Side,
                     EndCapExtension = part.EndCapExtension,
 
                 LookDir = new float[] { part.LookDir.x, part.LookDir.y, part.LookDir.z },
@@ -915,6 +920,7 @@ public class BlurSaberData : MonoBehaviour
         public bool EnableRoundedNormals { get; set; } = true;
         public bool ManualRingVerts { get; set; }
         public int RingVertsManual { get; set; } = 20;
+        public BlurSaberPart.SaberSide Side { get; set; } = BlurSaberPart.SaberSide.Both;
         public float EndCapExtension { get; set; } = 0.25f;
 
         public float[] LookDir { get; set; } = new float[3];

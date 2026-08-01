@@ -24,8 +24,8 @@ public class MenuSaberManager : IDisposable
         m_config = config;
         m_menuPointers = menuPointers;
         var (left, right) = menuPointers.Parents;
-        m_leftSaber = SetupSaber(left);
-        m_rightSaber = SetupSaber(right);
+        m_leftSaber = SetupSaber(left, true);
+        m_rightSaber = SetupSaber(right, false);
         m_colorSchemesSettings = colorSchemesSettings;
         
         MenuStateHandler.ModPanelStateChanged += OnModPanelStateChanged;
@@ -39,10 +39,11 @@ public class MenuSaberManager : IDisposable
         SetActive(state.ConfigOpen, state.EditorOpen);
     }
 
-    private BlurSaber SetupSaber(Transform parent)
+    private BlurSaber SetupSaber(Transform parent, bool isLeft)
     {
         var saberObj = new GameObject("BlurSaber");
         var blurSaber = saberObj.AddInitComponent<BlurSaber>(parent, m_config);
+        blurSaber.Data.IsLeftSaber = isLeft;
         blurSaber.gameObject.SetActive(m_config.ActiveInMenu);
         return blurSaber;
     }
