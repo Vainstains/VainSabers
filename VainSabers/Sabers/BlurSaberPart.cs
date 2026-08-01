@@ -16,7 +16,9 @@ namespace VainSabers.Sabers
             [Label("Simple (Interpolated)")]
             Simple,
             [Label("Advanced (Per-Ring)")]
-            Advanced
+            Advanced,
+            [Label("Sprite")]
+            Sprite
         }
 
         private const int SampleCount = 32;
@@ -37,6 +39,11 @@ namespace VainSabers.Sabers
         public GeometryType GeometryHandling = GeometryType.Simple;
         // for advanced geometry handling, just use these directly and ignore everything else
         public List<BlurSaberRingParams> RingParams = new();
+
+        public int DivisionsX;
+        public int DivisionsY;
+        public float SizeX;
+        public float SizeY;
 
         public float StartRadius;
         public float EndRadius;
@@ -123,6 +130,7 @@ namespace VainSabers.Sabers
         
         private bool m_injected = false;
         private BlurTube? m_blurTube;
+        private BlurSprite? m_blurSprite;
         
         private Material? m_runtimeMaterial;
         private Material? m_runtimeInvertedMaterial;
@@ -223,6 +231,12 @@ namespace VainSabers.Sabers
             Animators = source.Animators;
             Length = source.Length;
             GeometryHandling = source.GeometryHandling;
+            
+            DivisionsX = source.DivisionsX;
+            DivisionsY = source.DivisionsY;
+            SizeX = source.SizeX;
+            SizeY = source.SizeY;
+            
             RingParams = new List<BlurSaberRingParams>(source.RingParams);
 
             StartRadius = source.StartRadius;
@@ -273,13 +287,15 @@ namespace VainSabers.Sabers
             LitInvertedMaterial = source.LitInvertedMaterial;
             RenderQueueOffset = source.RenderQueueOffset;
         }
-
+        
         void LateUpdate()
         {
             if (!this.Inject(ref m_injected))
             {
                 m_blurTube?.Destroy();
+                m_blurSprite?.Destroy();
                 m_blurTube = null;
+                m_blurSprite = null;
                 return;
             }
 
@@ -290,12 +306,84 @@ namespace VainSabers.Sabers
                     CopyVisualPropertiesFrom(source);
             }
 
+            Material? activeMat;
+            if (GeometryHandling == GeometryType.Sprite)
+            {
+                // Destroy tube mesh if we had one
+                if (m_blurTube != null)
+                {
+                    m_blurTube.Destroy();
+                    m_blurTube = null;
+                }
+
+                int divX = Mathf.Max(1, DivisionsX);
+                int divY = Mathf.Max(1, DivisionsY);
+
+                if (m_blurSprite == null || m_blurSprite.DivisionsX != divX || m_blurSprite.DivisionsY != divY)
+                {
+                    m_blurSprite?.Destroy();
+                    m_blurSprite = new BlurSprite(divX, divY);
+                }
+
+                // Material setup (same as before)
+                EnsureRuntimeMaterial(ref m_runtimeMaterial, Material);
+                EnsureRuntimeMaterial(ref m_runtimeInvertedMaterial, InvertedMaterial);
+                EnsureRuntimeMaterial(ref m_runtimeLitMaterial, LitMaterial);
+                EnsureRuntimeMaterial(ref m_runtimeLitInvertedMaterial, LitInvertedMaterial);
+
+                activeMat = GetActiveMaterial();
+                if (activeMat != null)
+                {
+                    activeMat.renderQueue = 3600 + RenderQueueOffset;
+                        
+                    m_propertyBlock ??= new MaterialPropertyBlock();
+                    m_propertyBlock.SetFloat("_DepthOffset", DepthOffset + (Inverted ? 0f : 0.001f));
+
+                    m_propertyBlock.SetFloat("_RimFactor", RimFactor);
+                    m_propertyBlock.SetFloat("_RimPower", RimPower);
+                    m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
+
+                    m_propertyBlock.SetFloat("_SpecularStrength", SpecularStrength);
+                    m_propertyBlock.SetFloat("_SpecularPower", SpecularPower);
+                    m_propertyBlock.SetFloat("_Metallic", Metallic);
+                    m_propertyBlock.SetFloat("_Smoothness", Smoothness);
+                    m_propertyBlock.SetFloat("_CubemapStrength", CubemapStrength);
+                    m_propertyBlock.SetFloat("_CubemapRotation", CubemapRotation);
+                    m_propertyBlock.SetFloat("_FresnelStrength", FresnelStrength);
+                    m_propertyBlock.SetFloat("_FresnelPower", FresnelPower);
+                    m_propertyBlock.SetColor("_RimColor", RimColor);
+
+                    var colorTex = LoadTexture(ColorTextureName, TextureWrap, ColorTextureBase64);
+                    var glowTex = LoadTexture(GlowTextureName, TextureWrap, GlowTextureBase64);
+                    if (colorTex != null) m_propertyBlock.SetTexture("_ColorTex", colorTex);
+                    else m_propertyBlock.SetTexture("_ColorTex", Texture2D.whiteTexture);
+                    if (glowTex != null) m_propertyBlock.SetTexture("_GlowTex", glowTex);
+                    else m_propertyBlock.SetTexture("_GlowTex", Texture2D.whiteTexture);
+
+                    m_propertyBlock.SetFloat("_ColorTexEnabled", colorTex != null ? 1f : 0f);
+                    m_propertyBlock.SetFloat("_GlowTexEnabled", glowTex != null ? 1f : 0f);
+
+                    m_meshRenderer.SetPropertyBlock(m_propertyBlock);
+                }
+                m_meshRenderer.sharedMaterial = activeMat;
+                m_meshRenderer.sortingOrder = 100;
+
+                m_meshFilter.mesh = m_blurSprite.SpriteMesh;
+
+                RebuildVerts();
+                m_blurSprite.RefreshMesh();
+                return;
+            }
+            
+            if (m_blurSprite != null)
+            {
+                m_blurSprite.Destroy();
+                m_blurSprite = null;
+            }
+
             var ringCount = RingCount;
             if (ringCount < 2)
             {
-                // Fewer than two rings means there's no adjacent pair to build a quad strip
-                // between - nothing valid to render, so bail out cleanly rather than let
-                // BlurTube construct degenerate/negative-length buffers.
                 m_blurTube?.Destroy();
                 m_blurTube = null;
                 m_meshFilter.mesh = null;
@@ -310,17 +398,17 @@ namespace VainSabers.Sabers
                 m_blurTube.Destroy();
                 m_blurTube = new BlurTube(ringVerts, ringCount);
             }
-            
+
             EnsureRuntimeMaterial(ref m_runtimeMaterial, Material);
             EnsureRuntimeMaterial(ref m_runtimeInvertedMaterial, InvertedMaterial);
             EnsureRuntimeMaterial(ref m_runtimeLitMaterial, LitMaterial);
             EnsureRuntimeMaterial(ref m_runtimeLitInvertedMaterial, LitInvertedMaterial);
-            
-            var activeMat = GetActiveMaterial();
+
+            activeMat = GetActiveMaterial();
             if (activeMat != null)
             {
                 activeMat.renderQueue = 3600 + RenderQueueOffset;
-                
+                        
                 m_propertyBlock ??= new MaterialPropertyBlock();
                 m_propertyBlock.SetFloat("_DepthOffset", DepthOffset + (Inverted ? 0f : 0.001f));
 
@@ -350,9 +438,8 @@ namespace VainSabers.Sabers
 
                 m_meshRenderer.SetPropertyBlock(m_propertyBlock);
             }
-
             m_meshRenderer.sharedMaterial = activeMat;
-            m_meshRenderer.sortingOrder = 100; // always render above canvases smh
+            m_meshRenderer.sortingOrder = 100;
             m_meshFilter.mesh = m_blurTube.TubeMesh;
 
             RebuildVerts();
@@ -446,8 +533,10 @@ namespace VainSabers.Sabers
         private void OnDestroy()
         {
             m_blurTube?.Destroy();
-            m_blurTube = null!;
-            
+            m_blurSprite?.Destroy();
+            m_blurTube = null;
+            m_blurSprite = null;
+
             if (m_runtimeMaterial != null) DestroyImmediate(m_runtimeMaterial);
             if (m_runtimeInvertedMaterial != null) DestroyImmediate(m_runtimeInvertedMaterial);
             if (m_runtimeLitMaterial != null) DestroyImmediate(m_runtimeLitMaterial);
@@ -474,6 +563,12 @@ namespace VainSabers.Sabers
                     localPoseMat;
 
                 samples[i] = PoseHelpers.TransformPoseFromMatrix(combined);
+            }
+            
+            if (GeometryHandling == GeometryType.Sprite)
+            {
+                BuildSprite(samples);
+                return;
             }
 
             var idx = 0;
@@ -580,7 +675,11 @@ namespace VainSabers.Sabers
     
             return samples[idx];
         }
-
+        
+        // Rings are built by building a circle around the center defined by zPos and the cross-section offset (basically
+        // just a fancy roundabout way to use full 3d coordinates), and taking the movement direction at that point (roughly),
+        // dot-ing it with the circle offset, and using that dot to select samples backwards in time to build each vertex with.
+        // all the fancier stuff is handled in the shader because insert reason here.
         void BuildRing(
             Pose[] samples,
             float zPos,
@@ -664,6 +763,105 @@ namespace VainSabers.Sabers
             }
 
             idx += ringVerts + 1;
+        }
+        
+        // Sprites are built by subdividing a rectangle and smearing it based on dot-ing the movement vector with the
+        // vertices, very similar to the rings. It has special handling because it's not the surface of a 3d shape,
+        // rather the full area of a 2d shape. to make sure the blur at least somewhat visually connects with the previous
+        // and future frames, some trickery is pulled in tilting the plane beforehand to make it more coplanar with the
+        // movement vector, so that the smear is almost as wide as can be.
+        void BuildSprite(Pose[] samples)
+        {
+            if (m_blurSprite == null) return;
+            if (samples.Length < 2) return;
+
+            var first = samples[0];
+            var last = samples[samples.Length - 1];
+
+            Vector3 motionVec = last.position - first.position;
+            float dst = motionVec.magnitude;
+            Vector3 motionDir = dst > 0.0001f ? motionVec / dst : Vector3.forward;
+            Vector3 avgRight = (first.right + last.right).normalized;
+            Vector3 avgUp = (first.up + last.up).normalized;
+
+            var col = Color.Lerp(StartColor, m_saberData.CustomColor, StartCustomColorWeight);
+            if (Mathf.Abs(m_modulatableParams.HueShift) > 0.001f)
+                col = ShiftHue(col, m_modulatableParams.HueShift);
+            col.a = StartGlow * m_modulatableParams.GlowMultiplier;
+            float opacity = StartOpacity * m_modulatableParams.OpacityMultiplier;
+            float sweepRatio = Config.BlurSoftness * dst * 50.0f;
+            sweepRatio = Mathf.Clamp((sweepRatio * BlurFadeFactor - 0.7f) * 0.01f, 0.0f, 5.0f);
+            
+            float bendAmount = Mathf.Clamp01(sweepRatio);
+            Vector3 bentRight = Vector3.Slerp(avgRight, motionDir, bendAmount);
+            if (bentRight.sqrMagnitude < 0.0001f) bentRight = avgRight;
+            bentRight.Normalize();
+            
+            Vector3 bentUp = Vector3.ProjectOnPlane(avgUp, bentRight);
+            if (bentUp.sqrMagnitude < 0.0001f)
+                bentUp = Vector3.ProjectOnPlane(motionDir, bentRight).sqrMagnitude > 0.0001f
+                    ? Vector3.Cross(bentRight, Vector3.Cross(avgUp, bentRight))
+                    : avgUp;
+            bentUp.Normalize();
+            
+            Vector3 planeNormal = Vector3.Cross(bentRight, bentUp).normalized;
+            if (planeNormal.sqrMagnitude < 0.001f)
+                planeNormal = Vector3.Cross(motionDir, Vector3.forward).normalized;
+
+            int vertsX = DivisionsX + 1;
+            int vertsY = DivisionsY + 1;
+
+            float halfX = SizeX * 0.5f;
+            float halfY = SizeY * 0.5f;
+            
+            Vector3[] corners =
+            {
+                bentRight * -halfX + bentUp * -halfY,
+                bentRight *  halfX + bentUp * -halfY,
+                bentRight * -halfX + bentUp *  halfY,
+                bentRight *  halfX + bentUp *  halfY,
+            };
+
+            float minDot = float.MaxValue, maxDot = float.MinValue;
+            for (int i = 0; i < corners.Length; i++)
+            {
+                float d = Vector3.Dot(corners[i], motionDir);
+                if (d < minDot) minDot = d;
+                if (d > maxDot) maxDot = d;
+            }
+            if (Mathf.Approximately(minDot, maxDot))
+            {
+                minDot -= 0.5f;
+                maxDot += 0.5f;
+            }
+
+            for (int iy = 0; iy < vertsY; iy++)
+            {
+                float v = (float)iy / (vertsY - 1);
+                float y = Mathf.Lerp(halfY, -halfY, v);
+
+                for (int ix = 0; ix < vertsX; ix++)
+                {
+                    float u = (float)ix / (vertsX - 1);
+                    float x = Mathf.Lerp(-halfX, halfX, u);
+
+                    Vector3 offset = bentRight * x + bentUp * y;
+                    float dot = Vector3.Dot(offset, motionDir);
+                    float tSample = Mathf.InverseLerp(minDot, maxDot, dot);
+
+                    var interpSample = SampleAlongCurve(samples, tSample);
+                    Vector3 pos = interpSample.position + offset;
+
+                    int idx = iy * vertsX + ix;
+                    m_blurSprite.SetVertex(
+                        idx, pos, Vector3.forward,
+                        u, v, col, planeNormal, interpSample.forward,
+                        tSample, sweepRatio, opacity
+                    );
+                }
+            }
+
+            m_blurSprite.RefreshMesh();
         }
         
         private Pose[] InterpolateData(float maxTime)

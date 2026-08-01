@@ -85,6 +85,11 @@ public class BlurSaberData : MonoBehaviour
         newPart.LookDir = Vector3.zero;
         newPart.Lit = false;
         newPart.DepthOffset = 0f;
+
+        newPart.DivisionsX = 4;
+        newPart.DivisionsY = 4;
+        newPart.SizeX = 0.05f;
+        newPart.SizeY = 0.05f;
         
         newPart.Config = m_config!;
 
@@ -300,6 +305,12 @@ public class BlurSaberData : MonoBehaviour
                 part.RotZ = partData.Rotation[2];
                 part.Length = partData.Length;
                 part.GeometryHandling = partData.GeometryMode;
+                
+                part.SizeX = partData.SpriteSizeX;
+                part.SizeY = partData.SpriteSizeY;
+                part.DivisionsX = partData.SpriteDivisionsX;
+                part.DivisionsY = partData.SpriteDivisionsY;
+                
                 part.HueShift = partData.HueShift;
 
                 part.StartRadius = partData.StartRadius;
@@ -481,6 +492,11 @@ public class BlurSaberData : MonoBehaviour
                 LinkedPartIndex = part.LinkedPartIndex,
                 Length = part.Length,
                 GeometryMode = part.GeometryHandling,
+                SpriteSizeX = part.SizeX,
+                SpriteSizeY = part.SizeY,
+                SpriteDivisionsX = part.DivisionsX,
+                SpriteDivisionsY = part.DivisionsY,
+                
                 HueShift = part.HueShift,
 
                 StartRadius = part.StartRadius,
@@ -871,6 +887,12 @@ public class BlurSaberData : MonoBehaviour
         public int LinkedPartIndex { get; set; } = -1;
         public float Length { get; set; } = 0.1f;
         public BlurSaberPart.GeometryType GeometryMode { get; set; }
+        
+        public float SpriteSizeX { get; set; } = 0.2f;
+        public float SpriteSizeY { get; set; } = 0.2f;
+        public int SpriteDivisionsX { get; set; } = 1;
+        public int SpriteDivisionsY { get; set; } = 1;
+        
         public float HueShift { get; set; }
 
         public float StartRadius { get; set; }

@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 namespace VainSabers.Sabers
 {
     [StructLayout(LayoutKind.Sequential)]
-    internal struct TubeVertex
+    internal struct BlurVertex
     {
         public Vector3 position;
         public Vector3 normal;
@@ -19,6 +19,11 @@ namespace VainSabers.Sabers
         public Vector2 uv2;
     }
 
+    internal static class BlurBounds
+    {
+        public static Bounds Giant = new Bounds(Vector3.zero, Vector3.one * 5);
+    }
+
     internal class BlurTube
     {
         public Mesh TubeMesh { get; private set; }
@@ -26,7 +31,7 @@ namespace VainSabers.Sabers
         public int VertsPerRing => RingVerts + 1;
         public int RingCount { get; private set; }
 
-        private TubeVertex[] _vertices;
+        private BlurVertex[] _vertices;
         private int[] _indices;
 
         public BlurTube(int ringVerts, int ringCount)
@@ -46,7 +51,7 @@ namespace VainSabers.Sabers
             };
             TubeMesh.MarkDynamic();
 
-            _vertices = new TubeVertex[vertCount];
+            _vertices = new BlurVertex[vertCount];
             _indices = new int[indexCount];
 
             int t = 0;
@@ -98,7 +103,7 @@ namespace VainSabers.Sabers
         public void RefreshMesh()
         {
             TubeMesh.SetVertexBufferData(_vertices, 0, 0, _vertices.Length, 0, MeshUpdateFlags.DontRecalculateBounds);
-            TubeMesh.RecalculateBounds();
+            TubeMesh.bounds = BlurBounds.Giant;
         }
 
         public void Destroy()
@@ -106,4 +111,91 @@ namespace VainSabers.Sabers
             Object.DestroyImmediate(TubeMesh);
         }
     }
+
+    internal class BlurSprite
+{
+    public Mesh SpriteMesh { get; private set; }
+    public int DivisionsX { get; private set; }
+    public int DivisionsY { get; private set; }
+
+    private BlurVertex[] _vertices;
+    private int[] _indices;
+
+    public BlurSprite(int divisionsX, int divisionsY)
+    {
+        DivisionsX = divisionsX;
+        DivisionsY = divisionsY;
+
+        int vertsX = divisionsX + 1;
+        int vertsY = divisionsY + 1;
+        int vertCount = vertsX * vertsY;
+        int cellCount = divisionsX * divisionsY;
+        int indexCount = cellCount * 6;
+
+        SpriteMesh = new Mesh
+        {
+            indexFormat = vertCount > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16
+        };
+        SpriteMesh.MarkDynamic();
+
+        _vertices = new BlurVertex[vertCount];
+        _indices = new int[indexCount];
+        
+        int t = 0;
+        for (int iy = 0; iy < divisionsY; iy++)
+        {
+            for (int ix = 0; ix < divisionsX; ix++)
+            {
+                int rowStart0 = iy * vertsX;
+                int rowStart1 = (iy + 1) * vertsX;
+
+                int bl = rowStart0 + ix;
+                int br = rowStart0 + ix + 1;
+                int tl = rowStart1 + ix;
+                int tr = rowStart1 + ix + 1;
+                
+                _indices[t++] = bl; _indices[t++] = tl; _indices[t++] = br;
+                _indices[t++] = br; _indices[t++] = tl; _indices[t++] = tr;
+            }
+        }
+        
+        SpriteMesh.SetVertexBufferParams(vertCount,
+            new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
+            new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),
+            new VertexAttributeDescriptor(VertexAttribute.Tangent, VertexAttributeFormat.Float32, 4),
+            new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.Float32, 4),
+            new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2),
+            new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4),
+            new VertexAttributeDescriptor(VertexAttribute.TexCoord2, VertexAttributeFormat.Float32, 2)
+        );
+        
+        SpriteMesh.SetVertexBufferData(_vertices, 0, 0, vertCount, 0, MeshUpdateFlags.DontRecalculateBounds);
+        SpriteMesh.SetTriangles(_indices, 0, false);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void SetVertex(int idx, Vector3 pos, Vector3 normal, float u, float v, Color color, Vector3 planeNormal, Vector3 bladeDir, float sweepCoord, float sweepRatio, float opacity)
+    {
+        ref var vert = ref _vertices[idx];
+        vert.position = pos;
+        vert.normal = normal;
+        vert.tangent = new Vector4(planeNormal.x, planeNormal.y, planeNormal.z, 0);
+        vert.uv = new Vector2(u, v);
+        vert.uv2 = new Vector2(sweepCoord, sweepRatio);
+        vert.bladeDir = new Vector4(bladeDir.x, bladeDir.y, bladeDir.z, opacity);
+        vert.color = color;
+    }
+
+    public void RefreshMesh()
+    {
+        SpriteMesh.SetVertexBufferData(_vertices, 0, 0, _vertices.Length, 0, MeshUpdateFlags.DontRecalculateBounds);
+        SpriteMesh.bounds = BlurBounds.Giant;
+    }
+
+    public void Destroy()
+    {
+        Object.DestroyImmediate(SpriteMesh);
+    }
 }
+}
+

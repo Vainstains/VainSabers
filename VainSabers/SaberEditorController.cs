@@ -660,19 +660,19 @@ class SaberEditorComponent : UIComponent
 
         m_partPanel.Content.AddSubHeader("Position");
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.001f).WithSensitivityCoef(0.1f)
             .WithTint(RedColor)
             .WithValue(referencePart.Position.x).OnValueChanged += val =>
             ApplyToBothParts(part => 
             part.Position = part.Position with { x = val });
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.001f).WithSensitivityCoef(0.1f)
             .WithTint(GreenColor)
             .WithValue(referencePart.Position.y).OnValueChanged += val =>
             ApplyToBothParts(part => 
             part.Position = part.Position with { y = val });
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
+            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.001f).WithSensitivityCoef(0.1f)
             .WithTint(BlueColor)
             .WithValue(referencePart.Position.z).OnValueChanged += val =>
             ApplyToBothParts(part =>     
@@ -854,6 +854,9 @@ class SaberEditorComponent : UIComponent
                 break;
             case BlurSaberPart.GeometryType.Advanced:
                 BuildAdvancedGeometryPanel(sourcePart);
+                break;
+            case BlurSaberPart.GeometryType.Sprite:
+                BuildSpriteGeometryPanel(sourcePart);
                 break;
         }
 
@@ -1101,10 +1104,68 @@ class SaberEditorComponent : UIComponent
         if (referencePart.ManualRingVerts)
         {
             m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-                .WithLabel("Verts (Sides)").SetComponent<NumberInputComponent>().WithMinMaxStep(4f, 20f, 1f)
+                .WithLabel("Verts (Sides)").SetComponent<NumberInputComponent>().WithMinMaxStep(4f, 20f, 1f).WithSensitivityCoef(10)
                 .WithValue(referencePart.RingVertsManual).OnValueChanged += val =>
                 ApplyToBothResolvedParts(part => part.RingVertsManual = Mathf.RoundToInt(Mathf.Clamp(val, 4f, 20f)));
         }
+    }
+    
+    private void BuildSpriteGeometryPanel(BlurSaberPart referencePart)
+    {
+        m_geometryPanel.Content.AddSubHeader("Sprite Size");
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Width (X)").SetComponent<NumberInputComponent>()
+            .WithMinMaxStep(0.005f, 0.5f, 0.001f).WithSensitivityCoef(0.2f)
+            .WithValue(referencePart.SizeX).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.SizeX = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Height (Y)").SetComponent<NumberInputComponent>()
+            .WithMinMaxStep(0.005f, 0.5f, 0.001f).WithSensitivityCoef(0.2f)
+            .WithValue(referencePart.SizeY).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.SizeY = val);
+
+        m_geometryPanel.Content.AddSubHeader("Subdivisions");
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Divisions X").SetComponent<NumberInputComponent>()
+            .WithMinMaxStep(1f, 20f, 1f).WithSensitivityCoef(8f)
+            .WithValue(referencePart.DivisionsX).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.DivisionsX = Mathf.Max(1, Mathf.RoundToInt(val)));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Divisions Y").SetComponent<NumberInputComponent>()
+            .WithMinMaxStep(1f, 20f, 1f).WithSensitivityCoef(8f)
+            .WithValue(referencePart.DivisionsY).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.DivisionsY = Mathf.Max(1, Mathf.RoundToInt(val)));
+        
+        m_geometryPanel.Content.AddSubHeader("Vertex properties");
+        if (!referencePart.Lit)
+            m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
+                .WithValue(referencePart.StartGlow).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.StartGlow = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(referencePart.StartOpacity).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.StartOpacity = val);
+        m_geometryPanel.Content.AddSpace(2);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(RedColor)
+            .WithValue(referencePart.StartColor.r).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.StartColor = new Color(val, part.StartColor.g, part.StartColor.b, part.StartColor.a));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(GreenColor)
+            .WithValue(referencePart.StartColor.g).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.StartColor = new Color(part.StartColor.r, val, part.StartColor.b, part.StartColor.a));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(BlueColor)
+            .WithValue(referencePart.StartColor.b).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.StartColor = new Color(part.StartColor.r, part.StartColor.g, val, part.StartColor.a));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
+            .WithValue(referencePart.StartCustomColorWeight).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.StartCustomColorWeight = val);
     }
 
     private void BuildAdvancedGeometryPanel(BlurSaberPart referencePart)
