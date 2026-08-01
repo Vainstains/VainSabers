@@ -224,5 +224,68 @@ namespace VainSabers.Sabers
         Object.DestroyImmediate(SpriteMesh);
     }
 }
+
+    internal class BlurObj
+    {
+        public Mesh ObjMesh { get; private set; }
+        public Vector3[] LocalPositions { get; private set; }
+        public Vector3[] LocalNormals { get; private set; }
+        public Vector2[] Uvs { get; private set; }
+        public string CacheKey { get; private set; }
+
+        private BlurVertex[] _vertices;
+
+        public BlurObj(ObjMeshData data)
+        {
+            LocalPositions = data.Positions;
+            LocalNormals = data.Normals;
+            Uvs = data.Uvs;
+            CacheKey = data.CacheKey;
+
+            _vertices = new BlurVertex[LocalPositions.Length];
+
+            ObjMesh = new Mesh
+            {
+                indexFormat = _vertices.Length > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16
+            };
+            ObjMesh.MarkDynamic();
+
+            ObjMesh.SetVertexBufferParams(_vertices.Length,
+                new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
+                new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),
+                new VertexAttributeDescriptor(VertexAttribute.Tangent, VertexAttributeFormat.Float32, 4),
+                new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.Float32, 4),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord2, VertexAttributeFormat.Float32, 2)
+            );
+            ObjMesh.SetVertexBufferData(_vertices, 0, 0, _vertices.Length, 0, MeshUpdateFlags.DontRecalculateBounds);
+            ObjMesh.SetTriangles(data.Triangles, 0, false);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetVertex(int idx, Vector3 pos, Vector3 normal, float u, float v, Color color, Vector3 planeNormal, Vector3 bladeDir, float sweepCoord, float sweepRatio, float opacity)
+        {
+            ref var vert = ref _vertices[idx];
+            vert.position = pos;
+            vert.normal = normal;
+            vert.tangent = new Vector4(planeNormal.x, planeNormal.y, planeNormal.z, 0);
+            vert.uv = new Vector2(u, v);
+            vert.uv2 = new Vector2(sweepCoord, sweepRatio);
+            vert.bladeDir = new Vector4(bladeDir.x, bladeDir.y, bladeDir.z, opacity);
+            vert.color = color;
+        }
+
+        public void RefreshMesh()
+        {
+            ObjMesh.SetVertexBufferData(_vertices, 0, 0, _vertices.Length, 0, MeshUpdateFlags.DontRecalculateBounds);
+            ObjMesh.bounds = BlurBounds.Giant;
+        }
+
+        public void Destroy()
+        {
+            Object.DestroyImmediate(ObjMesh);
+        }
+    }
 }
 

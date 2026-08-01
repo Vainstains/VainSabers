@@ -18,7 +18,9 @@ public enum GeometryType
             [Label("Advanced (Per-Ring)")]
             Advanced,
             [Label("Sprite")]
-            Sprite
+            Sprite,
+            [Label("Obj")]
+            Obj
         }
 
         public enum SaberSide
@@ -115,6 +117,10 @@ public enum GeometryType
         public string? ColorTextureBase64;
         public string? GlowTextureBase64;
         public TextureWrapMode TextureWrap = TextureWrapMode.Clamp;
+
+        public string? ObjFileName;
+        public string? ObjBase64;
+        public float ObjScale = 1f;
         
         public Vector3 LookDir = Vector3.zero;
         public bool UseLookDir = false;
@@ -141,6 +147,8 @@ public enum GeometryType
         private bool m_injected = false;
         private BlurTube? m_blurTube;
         private BlurSprite? m_blurSprite;
+        private BlurObj? m_blurObj;
+        private Vector3[] m_objWorldOffsets = new Vector3[0];
         
         private Material? m_runtimeMaterial;
         private Material? m_runtimeInvertedMaterial;
@@ -151,6 +159,25 @@ public enum GeometryType
         public PluginConfig Config = null!;
 
         private static readonly Dictionary<string, Texture2D> s_loadedTextures = new();
+        private static readonly Dictionary<string, ObjMeshData> s_loadedObjs = new();
+
+        internal static ObjMeshData LoadObjData(string? fileName, string? embeddedBase64)
+        {
+            if (string.IsNullOrEmpty(fileName) && string.IsNullOrEmpty(embeddedBase64))
+                return new ObjMeshData();
+
+            var cacheKey = !string.IsNullOrEmpty(embeddedBase64)
+                ? "embedded|" + embeddedBase64
+                : fileName + "|" + System.IO.File.GetLastWriteTimeUtc(System.IO.Path.Combine(ConfigUtil.ConfigDir, fileName!)).Ticks;
+
+            if (s_loadedObjs.TryGetValue(cacheKey, out var cached))
+                return cached;
+
+            var data = OBJLoader.Load(fileName, embeddedBase64);
+            if (data.Positions.Length > 0)
+                s_loadedObjs[cacheKey] = data;
+            return data;
+        }
 
         internal static Texture2D? LoadTexture(string? fileName, TextureWrapMode wrapMode, string? embeddedBase64 = null)
         {
@@ -304,6 +331,9 @@ public enum GeometryType
             ColorTextureBase64 = source.ColorTextureBase64;
             GlowTextureBase64 = source.GlowTextureBase64;
             TextureWrap = source.TextureWrap;
+            ObjFileName = source.ObjFileName;
+            ObjBase64 = source.ObjBase64;
+            ObjScale = source.ObjScale;
             LookDir = source.LookDir;
             UseLookDir = source.UseLookDir;
             Material = source.Material;
@@ -313,137 +343,18 @@ public enum GeometryType
             RenderQueueOffset = source.RenderQueueOffset;
         }
         
-        void LateUpdate()
+        private void ApplyMaterialProps()
         {
-            if (!this.Inject(ref m_injected))
-            {
-                m_blurTube?.Destroy();
-                m_blurSprite?.Destroy();
-                m_blurTube = null;
-                m_blurSprite = null;
-                return;
-            }
-
-            if (!ShouldRenderOnCurrentSaber())
-            {
-                m_blurTube?.Destroy();
-                m_blurSprite?.Destroy();
-                m_blurTube = null;
-                m_blurSprite = null;
-                m_meshFilter.mesh = null;
-                return;
-            }
-
-            if (LinkedPartIndex >= 0 && LinkedPartIndex < m_saberData.ComponentCount)
-            {
-                var source = m_saberData.Components[LinkedPartIndex];
-                if (source != null && source != this)
-                    CopyVisualPropertiesFrom(source);
-            }
-
-            Material? activeMat;
-            if (GeometryHandling == GeometryType.Sprite)
-            {
-                // Destroy tube mesh if we had one
-                if (m_blurTube != null)
-                {
-                    m_blurTube.Destroy();
-                    m_blurTube = null;
-                }
-
-                int divX = Mathf.Max(1, DivisionsX);
-                int divY = Mathf.Max(1, DivisionsY);
-
-                if (m_blurSprite == null || m_blurSprite.DivisionsX != divX || m_blurSprite.DivisionsY != divY || m_blurSprite.DoubleSided != DoubleSided)
-                {
-                    m_blurSprite?.Destroy();
-                    m_blurSprite = new BlurSprite(divX, divY, DoubleSided);
-                }
-
-                // Material setup (same as before)
-                EnsureRuntimeMaterial(ref m_runtimeMaterial, Material);
-                EnsureRuntimeMaterial(ref m_runtimeInvertedMaterial, InvertedMaterial);
-                EnsureRuntimeMaterial(ref m_runtimeLitMaterial, LitMaterial);
-                EnsureRuntimeMaterial(ref m_runtimeLitInvertedMaterial, LitInvertedMaterial);
-
-                activeMat = GetActiveMaterial();
-                if (activeMat != null)
-                {
-                    activeMat.renderQueue = 3600 + RenderQueueOffset;
-                        
-                    m_propertyBlock ??= new MaterialPropertyBlock();
-                    m_propertyBlock.SetFloat("_DepthOffset", DepthOffset + (Inverted ? 0f : 0.001f));
-
-                    m_propertyBlock.SetFloat("_RimFactor", RimFactor);
-                    m_propertyBlock.SetFloat("_RimPower", RimPower);
-                    m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
-
-                    m_propertyBlock.SetFloat("_SpecularStrength", SpecularStrength);
-                    m_propertyBlock.SetFloat("_SpecularPower", SpecularPower);
-                    m_propertyBlock.SetFloat("_Metallic", Metallic);
-                    m_propertyBlock.SetFloat("_Smoothness", Smoothness);
-                    m_propertyBlock.SetFloat("_CubemapStrength", CubemapStrength);
-                    m_propertyBlock.SetFloat("_CubemapRotation", CubemapRotation);
-                    m_propertyBlock.SetFloat("_FresnelStrength", FresnelStrength);
-                    m_propertyBlock.SetFloat("_FresnelPower", FresnelPower);
-                    m_propertyBlock.SetColor("_RimColor", RimColor);
-
-                    var colorTex = LoadTexture(ColorTextureName, TextureWrap, ColorTextureBase64);
-                    var glowTex = LoadTexture(GlowTextureName, TextureWrap, GlowTextureBase64);
-                    if (colorTex != null) m_propertyBlock.SetTexture("_ColorTex", colorTex);
-                    else m_propertyBlock.SetTexture("_ColorTex", Texture2D.whiteTexture);
-                    if (glowTex != null) m_propertyBlock.SetTexture("_GlowTex", glowTex);
-                    else m_propertyBlock.SetTexture("_GlowTex", Texture2D.whiteTexture);
-
-                    m_propertyBlock.SetFloat("_ColorTexEnabled", colorTex != null ? 1f : 0f);
-                    m_propertyBlock.SetFloat("_GlowTexEnabled", glowTex != null ? 1f : 0f);
-
-                    m_meshRenderer.SetPropertyBlock(m_propertyBlock);
-                }
-                m_meshRenderer.sharedMaterial = activeMat;
-                m_meshRenderer.sortingOrder = 100;
-
-                m_meshFilter.mesh = m_blurSprite.SpriteMesh;
-
-                RebuildVerts();
-                m_blurSprite.RefreshMesh();
-                return;
-            }
-            
-            if (m_blurSprite != null)
-            {
-                m_blurSprite.Destroy();
-                m_blurSprite = null;
-            }
-
-            var ringCount = RingCount;
-            if (ringCount < 2)
-            {
-                m_blurTube?.Destroy();
-                m_blurTube = null;
-                m_meshFilter.mesh = null;
-                return;
-            }
-
-            ringVerts = ComputeRingVerts(GetProfileRadiusForRingVerts());
-            m_blurTube ??= new BlurTube(ringVerts, ringCount);
-
-            if (m_blurTube.RingVerts != ringVerts || m_blurTube.RingCount != ringCount)
-            {
-                m_blurTube.Destroy();
-                m_blurTube = new BlurTube(ringVerts, ringCount);
-            }
-
             EnsureRuntimeMaterial(ref m_runtimeMaterial, Material);
             EnsureRuntimeMaterial(ref m_runtimeInvertedMaterial, InvertedMaterial);
             EnsureRuntimeMaterial(ref m_runtimeLitMaterial, LitMaterial);
             EnsureRuntimeMaterial(ref m_runtimeLitInvertedMaterial, LitInvertedMaterial);
 
-            activeMat = GetActiveMaterial();
+            var activeMat = GetActiveMaterial();
             if (activeMat != null)
             {
                 activeMat.renderQueue = 3600 + RenderQueueOffset;
-                        
+
                 m_propertyBlock ??= new MaterialPropertyBlock();
                 m_propertyBlock.SetFloat("_DepthOffset", DepthOffset + (Inverted ? 0f : 0.001f));
 
@@ -475,6 +386,134 @@ public enum GeometryType
             }
             m_meshRenderer.sharedMaterial = activeMat;
             m_meshRenderer.sortingOrder = 100;
+        }
+
+        void LateUpdate()
+        {
+            if (!this.Inject(ref m_injected))
+            {
+                m_blurTube?.Destroy();
+                m_blurSprite?.Destroy();
+                m_blurObj?.Destroy();
+                m_blurTube = null;
+                m_blurSprite = null;
+                m_blurObj = null;
+                return;
+            }
+
+            if (!ShouldRenderOnCurrentSaber())
+            {
+                m_blurTube?.Destroy();
+                m_blurSprite?.Destroy();
+                m_blurObj?.Destroy();
+                m_blurTube = null;
+                m_blurSprite = null;
+                m_blurObj = null;
+                m_meshFilter.mesh = null;
+                return;
+            }
+
+            if (LinkedPartIndex >= 0 && LinkedPartIndex < m_saberData.ComponentCount)
+            {
+                var source = m_saberData.Components[LinkedPartIndex];
+                if (source != null && source != this)
+                    CopyVisualPropertiesFrom(source);
+            }
+
+            if (GeometryHandling == GeometryType.Obj)
+            {
+                if (m_blurTube != null)
+                {
+                    m_blurTube.Destroy();
+                    m_blurTube = null;
+                }
+                if (m_blurSprite != null)
+                {
+                    m_blurSprite.Destroy();
+                    m_blurSprite = null;
+                }
+
+                var objData = LoadObjData(ObjFileName, ObjBase64);
+                if (objData.Positions.Length == 0)
+                {
+                    m_blurObj?.Destroy();
+                    m_blurObj = null;
+                    m_meshFilter.mesh = null;
+                    return;
+                }
+
+                if (m_blurObj == null || m_blurObj.CacheKey != objData.CacheKey)
+                {
+                    m_blurObj?.Destroy();
+                    m_blurObj = new BlurObj(objData);
+                }
+
+                ApplyMaterialProps();
+
+                m_meshFilter.mesh = m_blurObj.ObjMesh;
+
+                RebuildVerts();
+                m_blurObj.RefreshMesh();
+                return;
+            }
+
+            if (GeometryHandling == GeometryType.Sprite)
+            {
+                // Destroy tube mesh if we had one
+                if (m_blurTube != null)
+                {
+                    m_blurTube.Destroy();
+                    m_blurTube = null;
+                }
+                m_blurObj?.Destroy();
+                m_blurObj = null;
+
+                int divX = Mathf.Max(1, DivisionsX);
+                int divY = Mathf.Max(1, DivisionsY);
+
+                if (m_blurSprite == null || m_blurSprite.DivisionsX != divX || m_blurSprite.DivisionsY != divY || m_blurSprite.DoubleSided != DoubleSided)
+                {
+                    m_blurSprite?.Destroy();
+                    m_blurSprite = new BlurSprite(divX, divY, DoubleSided);
+                }
+
+                ApplyMaterialProps();
+
+                m_meshFilter.mesh = m_blurSprite.SpriteMesh;
+
+                RebuildVerts();
+                m_blurSprite.RefreshMesh();
+                return;
+            }
+            
+            if (m_blurSprite != null)
+            {
+                m_blurSprite.Destroy();
+                m_blurSprite = null;
+            }
+            m_blurObj?.Destroy();
+            m_blurObj = null;
+
+            var ringCount = RingCount;
+            if (ringCount < 2)
+            {
+                m_blurTube?.Destroy();
+                m_blurTube = null;
+                m_meshFilter.mesh = null;
+                return;
+            }
+
+            ringVerts = ComputeRingVerts(GetProfileRadiusForRingVerts());
+            m_blurTube ??= new BlurTube(ringVerts, ringCount);
+
+            if (m_blurTube.RingVerts != ringVerts || m_blurTube.RingCount != ringCount)
+            {
+                m_blurTube.Destroy();
+                m_blurTube = new BlurTube(ringVerts, ringCount);
+            }
+
+            ApplyMaterialProps();
+
             m_meshFilter.mesh = m_blurTube.TubeMesh;
 
             RebuildVerts();
@@ -569,8 +608,10 @@ public enum GeometryType
         {
             m_blurTube?.Destroy();
             m_blurSprite?.Destroy();
+            m_blurObj?.Destroy();
             m_blurTube = null;
             m_blurSprite = null;
+            m_blurObj = null;
 
             if (m_runtimeMaterial != null) DestroyImmediate(m_runtimeMaterial);
             if (m_runtimeInvertedMaterial != null) DestroyImmediate(m_runtimeInvertedMaterial);
@@ -603,6 +644,12 @@ public enum GeometryType
             if (GeometryHandling == GeometryType.Sprite)
             {
                 BuildSprite(samples);
+                return;
+            }
+
+            if (GeometryHandling == GeometryType.Obj)
+            {
+                BuildObj(samples);
                 return;
             }
 
@@ -897,6 +944,73 @@ public enum GeometryType
             }
 
             m_blurSprite.RefreshMesh();
+        }
+
+        void BuildObj(Pose[] samples)
+        {
+            if (m_blurObj == null) return;
+            if (samples.Length < 2) return;
+
+            var first = samples[0];
+            var last = samples[samples.Length - 1];
+
+            Vector3 motionVec = last.position - first.position;
+            float dst = motionVec.magnitude;
+            Vector3 motionDir = dst > 0.0001f ? motionVec / dst : Vector3.forward;
+            Vector3 avgRight = (first.right + last.right).normalized;
+            Vector3 avgUp = (first.up + last.up).normalized;
+            Vector3 avgFwd = (first.forward + last.forward).normalized;
+
+            var col = Color.Lerp(StartColor, m_saberData.CustomColor, StartCustomColorWeight);
+            if (Mathf.Abs(m_modulatableParams.HueShift) > 0.001f)
+                col = ShiftHue(col, m_modulatableParams.HueShift);
+            col.a = StartGlow * m_modulatableParams.GlowMultiplier;
+            float opacity = StartOpacity * m_modulatableParams.OpacityMultiplier;
+            float sweepRatio = Config.BlurSoftness * dst * 50.0f;
+            sweepRatio = Mathf.Clamp((sweepRatio * BlurFadeFactor - 0.7f) * 0.05f, 0.0f, 20.0f);
+
+            var positions = m_blurObj.LocalPositions;
+            var normals = m_blurObj.LocalNormals;
+            var uvs = m_blurObj.Uvs;
+            int count = positions.Length;
+            if (count == 0) return;
+            if (m_objWorldOffsets.Length != count)
+                m_objWorldOffsets = new Vector3[count];
+
+            float minDot = float.MaxValue, maxDot = float.MinValue;
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 local = positions[i] * ObjScale;
+                Vector3 world = avgRight * local.x + avgUp * local.y + avgFwd * local.z;
+                m_objWorldOffsets[i] = world;
+                float d = Vector3.Dot(world, motionDir);
+                if (d < minDot) minDot = d;
+                if (d > maxDot) maxDot = d;
+            }
+            if (Mathf.Approximately(minDot, maxDot))
+            {
+                minDot -= 0.5f;
+                maxDot += 0.5f;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 offset = m_objWorldOffsets[i];
+                float dot = Vector3.Dot(offset, motionDir);
+                float tSample = Mathf.InverseLerp(minDot, maxDot, dot);
+
+                var interpSample = SampleAlongCurve(samples, tSample);
+                Vector3 pos = interpSample.position + offset;
+                Vector3 normal = interpSample.rotation * normals[i];
+
+                m_blurObj.SetVertex(
+                    i, pos, normal,
+                    uvs[i].x, uvs[i].y, col, normal, interpSample.forward,
+                    tSample, sweepRatio, opacity
+                );
+            }
+
+            m_blurObj.RefreshMesh();
         }
         
         private Pose[] InterpolateData(float maxTime)

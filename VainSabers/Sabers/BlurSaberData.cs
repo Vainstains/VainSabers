@@ -94,6 +94,7 @@ public class BlurSaberData : MonoBehaviour
         newPart.SizeX = 0.05f;
         newPart.SizeY = 0.05f;
         newPart.DoubleSided = false;
+        newPart.ObjScale = 1f;
         
         newPart.Config = m_config!;
 
@@ -368,6 +369,9 @@ public class BlurSaberData : MonoBehaviour
                 part.ColorTextureBase64 = partData.ColorTextureBase64;
                 part.GlowTextureBase64 = partData.GlowTextureBase64;
                 part.TextureWrap = (TextureWrapMode)Mathf.Clamp(partData.TextureWrap, 0, 3);
+                part.ObjFileName = partData.ObjFile;
+                part.ObjBase64 = partData.ObjBase64;
+                part.ObjScale = partData.ObjScale;
 
                 if (partData.Animators != null)
                     part.Animators = partData.Animators;
@@ -557,6 +561,9 @@ public class BlurSaberData : MonoBehaviour
                 ColorTextureBase64 = embedAssets ? LoadAssetBase64(part.ColorTextureName, part.ColorTextureBase64) : null,
                 GlowTextureBase64 = embedAssets ? LoadAssetBase64(part.GlowTextureName, part.GlowTextureBase64) : null,
                 TextureWrap = (int)part.TextureWrap,
+                ObjFile = part.ObjFileName,
+                ObjBase64 = embedAssets ? LoadAssetBase64(part.ObjFileName, part.ObjBase64) : null,
+                ObjScale = part.ObjScale,
                 Animators = part.Animators.Count > 0 ? part.Animators : null
             };
 
@@ -955,6 +962,10 @@ public class BlurSaberData : MonoBehaviour
         public string? ColorTextureBase64 { get; set; }
         public string? GlowTextureBase64 { get; set; }
         public int TextureWrap { get; set; }
+
+        public string? ObjFile { get; set; }
+        public string? ObjBase64 { get; set; }
+        public float ObjScale { get; set; } = 1f;
 
         public List<BlurPartAnimationModulator>? Animators { get; set; }
 

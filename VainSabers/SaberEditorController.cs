@@ -326,6 +326,19 @@ class SaberEditorComponent : UIComponent
         names.AddRange(textures!);
         return names;
     }
+
+    private static List<string> GetObjFileNames()
+    {
+        var names = new List<string> { "None" };
+        if (!Directory.Exists(ConfigUtil.ConfigDir))
+            return names;
+        var objs = Directory.GetFiles(ConfigUtil.ConfigDir, "*.obj")
+            .Select(Path.GetFileName)
+            .OrderBy(x => x)
+            .ToList();
+        names.AddRange(objs!);
+        return names;
+    }
     
     // panels
     private SubPanelComponent m_configPanel = null!;
@@ -901,6 +914,9 @@ private void OnLinkChanged(int index)
             case BlurSaberPart.GeometryType.Sprite:
                 BuildSpriteGeometryPanel(sourcePart);
                 break;
+            case BlurSaberPart.GeometryType.Obj:
+                BuildObjGeometryPanel(sourcePart);
+                break;
         }
 
         RebuildTrailPanel();
@@ -1183,6 +1199,59 @@ private void OnLinkChanged(int index)
             .OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.DoubleSided = val);
         
+        m_geometryPanel.Content.AddSubHeader("Vertex properties");
+        if (!referencePart.Lit)
+            m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
+                .WithValue(referencePart.StartGlow).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.StartGlow = val);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(referencePart.StartOpacity).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.StartOpacity = val);
+        m_geometryPanel.Content.AddSpace(2);
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("R").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(RedColor)
+            .WithValue(referencePart.StartColor.r).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.StartColor = new Color(val, part.StartColor.g, part.StartColor.b, part.StartColor.a));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(GreenColor)
+            .WithValue(referencePart.StartColor.g).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.StartColor = new Color(part.StartColor.r, val, part.StartColor.b, part.StartColor.a));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
+            .WithTint(BlueColor)
+            .WithValue(referencePart.StartColor.b).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.StartColor = new Color(part.StartColor.r, part.StartColor.g, val, part.StartColor.a));
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Custom Weight").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.005f)
+            .WithValue(referencePart.StartCustomColorWeight).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.StartCustomColorWeight = val);
+    }
+
+    private void BuildObjGeometryPanel(BlurSaberPart referencePart)
+    {
+        var objFiles = GetObjFileNames();
+        var objDropdown = m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Obj File").SetComponent<DropdownComponent>();
+        var objIdx = objFiles.IndexOf(referencePart.ObjFileName ?? "");
+        if (objIdx < 0) objIdx = 0;
+        objDropdown.SetOptions(objFiles, objIdx);
+        objDropdown.OnSelectionChanged += idx =>
+        {
+            var name = idx > 0 ? objFiles[idx] : null;
+            ApplyToBothResolvedParts(part => part.ObjFileName = name);
+        };
+
+        m_geometryPanel.Content.AddSubHeader("Obj Size");
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Scale").SetComponent<NumberInputComponent>()
+            .WithMinMaxStep(0.0001f, 1f, 0.001f).WithSensitivityCoef(0.1f)
+            .WithValue(referencePart.ObjScale).OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.ObjScale = val);
+
         m_geometryPanel.Content.AddSubHeader("Vertex properties");
         if (!referencePart.Lit)
             m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
