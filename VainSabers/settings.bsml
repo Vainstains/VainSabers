@@ -8,13 +8,8 @@
         <dropdown-list-setting id="PresetDropdown" text="Saber Config" value="SelectedPreset" choices="PresetNames"
                                bind-value="true" apply-on-change="true"/>
         <button on-click="CreateNewPreset" text="Create New Preset"/>
-        <button on-click="ToggleEditor" text="Toggle Editor"/>
-        <slider-setting value="BlurMilliseconds" text="Blur MS" apply-on-change="true" integer-only="true" min="0" max="50" />
-        <slider-setting value="BlurSoftness" text="Blur Softness" apply-on-change="true" min="0.0" max="1.0" />
-        <slider-setting value="BladeMilliseconds" text="Blade Trail MS" apply-on-change="true" integer-only="true" min="0" max="200" />
-        <slider-setting value="TipMilliseconds" text="Tip Trail MS" apply-on-change="true" integer-only="true" min="0" max="200" />
-        <slider-setting value="SaberQuality" text="Saber Quality" apply-on-change="true" min="0.01" max="1.5" />
-        <slider-setting value="ZRotationOffset" text="Saber Z Rotation" apply-on-change="true" min="-180" max="180" />
+        <button id="EditorButton" on-click="ToggleEditor" text="Toggle Editor"/>
+        <button on-click="ToggleSettingsPanel" text="Settings"/>
         <toggle-setting text="Always show in menu" value="showInMenu" pref-width="50" apply-on-change="true" hover-hint="yeah" />
     </vertical>
 </bg>

@@ -48,6 +48,7 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         UpdatePresetDropdown();
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedPreset)));
         m_menuSaberManager.Update(m_config.CurrentSaber);
+        UpdateEditorButton();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -66,6 +67,11 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
     [UIComponent("PresetDropdown")]
 #pragma warning disable CS0649
     public DropDownListSetting PresetDropDown = null!;
+#pragma warning restore CS0649
+
+    [UIComponent("EditorButton")]
+#pragma warning disable CS0649
+    private HMUI.NoTransitionsButton? EditorButton = null;
 #pragma warning restore CS0649
     
     internal void UpdatePresetDropdown()
@@ -108,73 +114,7 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedPreset)));
             m_menuSaberManager.Update(value);
             MenuStateHandler.SetEditingPreset(value);
-        }
-    }
-    
-    [UIValue("BlurMilliseconds")]
-    private int BlurMilliseconds
-    {
-        get => m_config.BlurMS;
-        set
-        {
-            m_config.BlurMS = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BlurMilliseconds)));
-        }
-    }
-    
-    [UIValue("BlurSoftness")]
-    private float BlurSoftness
-    {
-        get => m_config.BlurSoftness;
-        set
-        {
-            m_config.BlurSoftness = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BlurSoftness)));
-        }
-    }
-    
-    [UIValue("BladeMilliseconds")]
-    private int BladeMilliseconds
-    {
-        get => m_config.BladeTrailMS;
-        set
-        {
-            m_config.BladeTrailMS = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BladeMilliseconds)));
-        }
-    }
-    
-    [UIValue("TipMilliseconds")]
-    private int TipMilliseconds
-    {
-        get => m_config.TipTrailMS;
-        set
-        {
-            m_config.TipTrailMS = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TipMilliseconds)));
-        }
-    }
-    
-    [UIValue("SaberQuality")]
-    private float SaberQuality
-    {
-        get => m_config.SaberQuality;
-        set
-        {
-            m_config.SaberQuality = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SaberQuality)));
-        }
-    }
-    
-    [UIValue("ZRotationOffset")]
-    private float ZRotationOffset
-    {
-        get => m_config.ZRotationOffset;
-        set
-        {
-            m_config.ZRotationOffset = value;
-            m_menuSaberManager.ApplyZRotationOffset();
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ZRotationOffset)));
+            UpdateEditorButton();
         }
     }
     
@@ -191,6 +131,24 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
     }
     
     public void ToggleEditor() => MenuStateHandler.SetEditorOpen(true);
+
+    public void ToggleSettingsPanel() => MenuStateHandler.ToggleSettingsOpen();
+
+    private bool IsSelectedPresetReadOnly()
+    {
+        var preset = m_config.CurrentSaber;
+        if (string.IsNullOrEmpty(preset))
+            return false;
+        var profile = Config.ConfigUtil.GetSaberProfile(preset);
+        return profile.EndsWith(".vainsaber", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void UpdateEditorButton()
+    {
+        if (EditorButton == null)
+            return;
+        EditorButton.interactable = !IsSelectedPresetReadOnly();
+    }
     
     [UIAction("CreateNewPreset")]
     private void CreateNewPreset()
@@ -227,5 +185,7 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
     private void OnAfterParse() {
         _root?.AddInitComponent<MenuStateHandler>(m_config);
         _root?.AddInitComponent<SaberEditorController>(m_config);
+        _root?.AddInitComponent<SaberSettingsPanelController>(m_config);
+        UpdateEditorButton();
     }
 }

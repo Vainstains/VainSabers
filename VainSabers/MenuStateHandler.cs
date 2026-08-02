@@ -12,6 +12,7 @@ internal class MenuStateHandler : MonoBehaviour
     {
         public bool EditorOpen = false;
         public bool ConfigOpen = false;
+        public bool SettingsOpen = false;
         public string EditingPreset = "";
 
         public ModPanelState(bool configOpen, bool editorOpen, string preset)
@@ -64,6 +65,22 @@ internal class MenuStateHandler : MonoBehaviour
     public static void SetEditingPreset(string preset)
     {
         s_modPanelState.EditingPreset = preset;
+        ModPanelStateChanged?.Invoke(s_modPanelState);
+    }
+
+    public static void ToggleSettingsOpen()
+    {
+        s_modPanelState.SettingsOpen = !s_modPanelState.SettingsOpen;
+        Plugin.Log.Info($"Toggling settings panel state: {s_modPanelState.SettingsOpen}");
+        ModPanelStateChanged?.Invoke(s_modPanelState);
+    }
+
+    public static void SetSettingsOpen(bool open)
+    {
+        if (s_modPanelState.SettingsOpen == open)
+            return;
+        s_modPanelState.SettingsOpen = open;
+        Plugin.Log.Info($"Setting settings panel state: {open}");
         ModPanelStateChanged?.Invoke(s_modPanelState);
     }
 
