@@ -150,7 +150,7 @@ namespace VainSabers.Sabers
                 }
                 else
                 {
-                    float rate = Mathf.Lerp(30f, 4f, Mathf.Clamp01(m_config.MotionSmoothingStrength));
+                    float rate = Mathf.Lerp(100f, 10f, Mathf.Clamp01(m_config.MotionSmoothingStrength));
                     float alpha = 1f - Mathf.Exp(-rate * Time.deltaTime);
                     m_smoothedPose = m_smoothedPose.LerpTo(currentPose, alpha);
                 }
