@@ -35,7 +35,7 @@ internal class SaberSettingsPanelController : MonoBehaviour
         if (!state.SettingsOpen)
             return;
 
-        m_panel = SimpleFloatingPanel.Create(new Vector2(110, 55), new Vector3(0, 1.2f, 2.0f));
+        m_panel = SimpleFloatingPanel.Create(new Vector2(110, 66), new Vector3(0, 1.2f, 2.0f));
         m_panel.Show();
         var settings = m_panel.AddChild<SaberSettingsPanelComponent>().ToFill();
         settings.Build(m_config);
@@ -104,6 +104,19 @@ internal class SaberSettingsPanelComponent : UIComponent
             m_config.ZRotationOffset = v;
             ApplyZRotationOffset();
         };
+
+        var smoothMotion = content.AddChild<FieldComponent>()
+            .WithPreferredHeight(4).WithLabel("Smooth Motion")
+            .SetComponent<ToggleComponent>()
+            .WithValue(config.MotionSmoothingEnabled);
+        smoothMotion.OnValueChanged += v => m_config.MotionSmoothingEnabled = v;
+
+        var smoothness = content.AddChild<FieldComponent>()
+            .WithPreferredHeight(4).WithLabel("Smoothness")
+            .SetComponent<NumberInputComponent>()
+            .WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(config.MotionSmoothingStrength);
+        smoothness.OnValueChanged += v => m_config.MotionSmoothingStrength = v;
 
         var closeRow = content.AddChild<UIComponent>().WithPreferredHeight(4);
         var closeButton = closeRow.AddChild<TextButtonComponent>().ToFill().WithText("Close");

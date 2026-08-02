@@ -34,7 +34,7 @@ internal class BlurSaber : MonoBehaviour
         m_config = config;
         m_saberTransform = target;
         
-        m_tracker = gameObject.AddInitComponent<MovementTracker>(target);
+        m_tracker = gameObject.AddInitComponent<MovementTracker>(target, m_config);
         m_historyProvider = m_tracker;
         m_blurSaberData = gameObject.AddInitComponent<BlurSaberData>(m_config);
         m_blurSaberData.IsLeftSaber = target.name.Contains("Left", StringComparison.OrdinalIgnoreCase) || target.parent?.name.Contains("Left", StringComparison.OrdinalIgnoreCase) == true;

@@ -18,4 +18,7 @@ public class PluginConfig
     public virtual float SaberQuality { get; set; } = 1;
     
     public virtual float ZRotationOffset { get; set; } = 0f;
+
+    public virtual bool MotionSmoothingEnabled { get; set; } = false;
+    public virtual float MotionSmoothingStrength { get; set; } = 0.5f;
 }

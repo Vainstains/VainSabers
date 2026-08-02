@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using VainSabers.Config;
 using VainSabers.Helpers;
 
 namespace VainSabers.Sabers
@@ -12,10 +13,13 @@ namespace VainSabers.Sabers
             public float DeltaTime;
         }
         private Transform m_target = null!;
+        private PluginConfig m_config = null!;
         private float m_zRotationOffset = 0f;
         private Quaternion m_zRotation = Quaternion.identity;
         
-
+        private bool m_smoothedInitialized;
+        private Pose m_smoothedPose;
+        
         private CircularBuffer<MovementData> m_movementData = new CircularBuffer<MovementData>(100);
 
     public Transform Target
@@ -27,11 +31,13 @@ namespace VainSabers.Sabers
     public void ClearHistory()
     {
         m_movementData.Clear();
+        m_smoothedInitialized = false;
     }
 
-    public void Init(Transform target)
+    public void Init(Transform target, PluginConfig config)
     {
         m_target = target;
+        m_config = config;
     }
 
     public void SetZRotationOffset(float degrees)
@@ -47,10 +53,17 @@ namespace VainSabers.Sabers
             pose.rotation = pose.rotation * m_zRotation;
         return pose;
     }
+
+    private Pose GetCurrentPose()
+    {
+        if (m_config is { MotionSmoothingEnabled: true } && m_smoothedInitialized)
+            return m_smoothedPose;
+        return GetTargetPose();
+    }
         public override Pose GetPoseAgo(float age)
         {
             if (m_movementData.Count == 0)
-                return GetTargetPose();
+                return GetCurrentPose();
 
             float accumulated = 0f;
             
@@ -79,7 +92,7 @@ namespace VainSabers.Sabers
             if (samples <= 0)
                 return;
 
-            Pose currentPose = GetTargetPose();
+            Pose currentPose = GetCurrentPose();
 
             if (samples == 1 || duration <= 0.0001f || m_movementData.Count == 0)
             {
@@ -127,7 +140,27 @@ namespace VainSabers.Sabers
         private void Update()
         {
             var currentPose = GetTargetPose();
-            m_movementData.Add(new  MovementData { Pose = currentPose, DeltaTime = Time.deltaTime });
+
+            if (m_config is { MotionSmoothingEnabled: true })
+            {
+                if (!m_smoothedInitialized)
+                {
+                    m_smoothedPose = currentPose;
+                    m_smoothedInitialized = true;
+                }
+                else
+                {
+                    float rate = Mathf.Lerp(30f, 4f, Mathf.Clamp01(m_config.MotionSmoothingStrength));
+                    float alpha = 1f - Mathf.Exp(-rate * Time.deltaTime);
+                    m_smoothedPose = m_smoothedPose.LerpTo(currentPose, alpha);
+                }
+                m_movementData.Add(new MovementData { Pose = m_smoothedPose, DeltaTime = Time.deltaTime });
+            }
+            else
+            {
+                m_smoothedInitialized = false;
+                m_movementData.Add(new MovementData { Pose = currentPose, DeltaTime = Time.deltaTime });
+            }
         }
     }
 }
