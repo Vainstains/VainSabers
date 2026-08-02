@@ -1164,6 +1164,12 @@ public enum GeometryType
         public int Length;
         public int QueueOffset;
         public float DepthOffset;
+        public float Fade;
+        public string? ColorTextureName;
+        public string? GlowTextureName;
+        public string? ColorTextureBase64;
+        public string? GlowTextureBase64;
+        public TextureWrapMode TextureWrap;
 
         public SaberTrailData(
             float[] position,
@@ -1174,7 +1180,13 @@ public enum GeometryType
             float width,
             int length,
             int queueOffset,
-            float depthOffset = 0f)
+            float depthOffset = 0f,
+            float fade = 1f,
+            string? colorTextureName = null,
+            string? glowTextureName = null,
+            string? colorTextureBase64 = null,
+            string? glowTextureBase64 = null,
+            TextureWrapMode textureWrap = TextureWrapMode.Clamp)
         {
             Position = position;
             Color = color;
@@ -1185,6 +1197,12 @@ public enum GeometryType
             Length = length;
             QueueOffset = queueOffset;
             DepthOffset = depthOffset;
+            Fade = fade;
+            ColorTextureName = colorTextureName;
+            GlowTextureName = glowTextureName;
+            ColorTextureBase64 = colorTextureBase64;
+            GlowTextureBase64 = glowTextureBase64;
+            TextureWrap = textureWrap;
         }
     }
 }

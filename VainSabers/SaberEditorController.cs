@@ -1780,6 +1780,14 @@ class SaberEditorComponent : UIComponent
                 t.DepthOffset = val;
                 ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
             };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Fade Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(trail.Fade).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.Fade = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
     }
 
     private void BuildBladeTrailEditor()
@@ -1896,5 +1904,49 @@ class SaberEditorComponent : UIComponent
                 t.DepthOffset = val;
                 data.SetBladeTrail(t);
             };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Fade Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(trail.Fade).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.Fade = val;
+                data.SetBladeTrail(t);
+            };
+
+        m_trailPanel.Content.AddSubHeader("Textures");
+        var trailTextureFiles = GetTextureFileNames();
+        var trailColorTexDropdown = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Color / Opacity").SetComponent<DropdownComponent>();
+        var trailColorTexIdx = trailTextureFiles.IndexOf(trail.ColorTextureName ?? "");
+        if (trailColorTexIdx < 0) trailColorTexIdx = 0;
+        trailColorTexDropdown.SetOptions(trailTextureFiles, trailColorTexIdx);
+        trailColorTexDropdown.OnSelectionChanged += idx =>
+        {
+            var t = data.BladeTrail!.Value;
+            t.ColorTextureName = idx > 0 ? trailTextureFiles[idx] : null;
+            data.SetBladeTrail(t);
+        };
+        var trailGlowTexDropdown = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Glow").SetComponent<DropdownComponent>();
+        var trailGlowTexIdx = trailTextureFiles.IndexOf(trail.GlowTextureName ?? "");
+        if (trailGlowTexIdx < 0) trailGlowTexIdx = 0;
+        trailGlowTexDropdown.SetOptions(trailTextureFiles, trailGlowTexIdx);
+        trailGlowTexDropdown.OnSelectionChanged += idx =>
+        {
+            var t = data.BladeTrail!.Value;
+            t.GlowTextureName = idx > 0 ? trailTextureFiles[idx] : null;
+            data.SetBladeTrail(t);
+        };
+
+        var trailWrapModeNames = new[] { "Clamp", "Repeat", "Mirror", "MirrorOnce" };
+        var trailWrapModeDropdown = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Wrap Mode").SetComponent<DropdownComponent>();
+        trailWrapModeDropdown.SetOptions(trailWrapModeNames, Mathf.Clamp((int)trail.TextureWrap, 0, trailWrapModeNames.Length - 1));
+        trailWrapModeDropdown.OnSelectionChanged += idx =>
+        {
+            var t = data.BladeTrail!.Value;
+            t.TextureWrap = (TextureWrapMode)Mathf.Clamp(idx, 0, trailWrapModeNames.Length - 1);
+            data.SetBladeTrail(t);
+        };
     }
 }

@@ -5,6 +5,10 @@ Shader "Unlit/vs_flatglow_2side"
             _ColorBoost ("RGB Multiplier", Range(0,4)) = 1
             _GlowBoost  ("Glow (Alpha) Multiplier", Range(0,4)) = 1
             _DepthOffset ("Depth Offset", Float) = 0
+            _ColorTex ("Albedo + Alpha", 2D) = "white" {}
+            _GlowTex ("Glow", 2D) = "white" {}
+            _ColorTexEnabled ("Color Texture Enabled", Float) = 0
+            _GlowTexEnabled ("Glow Texture Enabled", Float) = 0
         }
     
         SubShader
@@ -31,10 +35,13 @@ Shader "Unlit/vs_flatglow_2side"
     
                 float _ColorBoost;
                 float _DepthOffset;
+                sampler2D _ColorTex;
+                float _ColorTexEnabled;
     
                 struct appdata
                 {
                     float4 vertex : POSITION;
+                    float2 uv    : TEXCOORD0;
                     float4 color  : COLOR;
                     UNITY_VERTEX_INPUT_INSTANCE_ID
                 };
@@ -42,6 +49,7 @@ Shader "Unlit/vs_flatglow_2side"
                 struct v2f
                 {
                     float4 pos   : SV_POSITION;
+                    float2 uv    : TEXCOORD0;
                     fixed4 color : COLOR0;
                     UNITY_VERTEX_OUTPUT_STEREO
                 };
@@ -54,14 +62,21 @@ Shader "Unlit/vs_flatglow_2side"
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                     o.pos   = UnityObjectToClipPos(v.vertex);
                     o.pos.z += _DepthOffset;
+                    o.uv    = v.uv;
                     o.color = v.color;
                     return o;
                 }
     
                 fixed4 frag (v2f i) : SV_Target
                 {
-                    // Flat color: just vertex color RGB (scaled), alpha ignored here.
-                    return fixed4(saturate(i.color.rgb * _ColorBoost), i.color.a);
+                    fixed4 col = fixed4(saturate(i.color.rgb * _ColorBoost), i.color.a);
+                    if (_ColorTexEnabled > 0.5)
+                    {
+                        fixed4 texCol = tex2D(_ColorTex, i.uv);
+                        col.rgb *= texCol.rgb;
+                        col.a *= texCol.a;
+                    }
+                    return col;
                 }
                 ENDCG
             }
@@ -86,10 +101,13 @@ Shader "Unlit/vs_flatglow_2side"
     
                 float _GlowBoost;
                 float _DepthOffset;
+                sampler2D _GlowTex;
+                float _GlowTexEnabled;
     
                 struct appdata
                 {
                     float4 vertex : POSITION;
+                    float2 uv    : TEXCOORD0;
                     float4 color  : COLOR;
                     UNITY_VERTEX_INPUT_INSTANCE_ID
                 };
@@ -97,7 +115,8 @@ Shader "Unlit/vs_flatglow_2side"
                 struct v2f
                 {
                     float4 pos   : SV_POSITION;
-                    fixed  alpha : TEXCOORD0;
+                    float2 uv    : TEXCOORD0;
+                    fixed  alpha : TEXCOORD1;
                     UNITY_VERTEX_OUTPUT_STEREO
                 };
     
@@ -109,6 +128,7 @@ Shader "Unlit/vs_flatglow_2side"
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                     o.pos   = UnityObjectToClipPos(v.vertex);
                     o.pos.z += _DepthOffset;
+                    o.uv    = v.uv;
                     o.alpha = v.color.a;
                     return o;
                 }
@@ -116,7 +136,10 @@ Shader "Unlit/vs_flatglow_2side"
                 fixed4 frag (v2f i) : SV_Target
                 {
                     // Write only alpha (glow), RGB is discarded by ColorMask.
-                    return fixed4(0, 0, 0, saturate(i.alpha * _GlowBoost));
+                    float glow = saturate(i.alpha * _GlowBoost);
+                    if (_GlowTexEnabled > 0.5)
+                        glow *= tex2D(_GlowTex, i.uv).r;
+                    return fixed4(0, 0, 0, glow);
                 }
                 ENDCG
             }

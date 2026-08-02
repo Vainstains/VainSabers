@@ -48,7 +48,8 @@ internal class SaberTipTrail : MonoBehaviour
     {
         m_trailData = trailData;
         _lineRenderer.widthMultiplier = trailData.Width;
-        _lineRenderer.material.renderQueue = 3100 + trailData.QueueOffset;
+        _lineRenderer.sortingOrder = 100;
+        _lineRenderer.material.renderQueue = 3600 + trailData.QueueOffset;
         _lineRenderer.material.SetFloat("_GlowBoost", trailData.Glow);
         _lineRenderer.material.SetFloat("_DepthOffset", trailData.DepthOffset);
         m_trailColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
@@ -128,7 +129,7 @@ internal class SaberTipTrail : MonoBehaviour
         _colorKeys[0] = new GradientColorKey(m_trailColor, 0f);
         _colorKeys[1] = new GradientColorKey(m_trailColor, 1f);
         _alphaKeys[0] = new GradientAlphaKey(0.9f * opacity, 0f);
-        _alphaKeys[1] = new GradientAlphaKey(0f, 1f);
+        _alphaKeys[1] = new GradientAlphaKey(0.9f * opacity * (1f - m_trailData.Fade), 1f);
         _cachedGradient.SetKeys(_colorKeys, _alphaKeys);
         _lineRenderer.colorGradient = _cachedGradient;
     }
@@ -143,6 +144,7 @@ public class SaberRibbonTrail : MonoBehaviour
     
     private Vector3[] _vertices = null!;
     private Color[] _colors = null!;
+    private Vector2[] _uvs = null!;
     private int[] _triangles = null!;
     
     private float _opacity = 0.0f;
@@ -152,6 +154,9 @@ public class SaberRibbonTrail : MonoBehaviour
     
     private MovementHistoryProvider _movementHistory = null!;
     private Transform _saberTransform = null!;
+
+    private BlurSaberPart.AssetKeyCache m_colorTexKey = new();
+    private BlurSaberPart.AssetKeyCache m_glowTexKey = new();
 
     public void Init(MovementHistoryProvider movementHistory, SaberTrailData trailData, Transform saberTransform)
     {
@@ -175,9 +180,19 @@ public class SaberRibbonTrail : MonoBehaviour
     public void ApplyConfig(SaberTrailData trailData)
     {
         m_trailData = trailData;
-        _meshRenderer.material.renderQueue = 3100 + trailData.QueueOffset;
-        _meshRenderer.material.SetFloat("_GlowBoost", trailData.Glow);
-        _meshRenderer.material.SetFloat("_DepthOffset", trailData.DepthOffset);
+        var mat = _meshRenderer.material;
+        _meshRenderer.sortingOrder = 100;
+        mat.renderQueue = 3600 + trailData.QueueOffset;
+        mat.SetFloat("_GlowBoost", trailData.Glow);
+        mat.SetFloat("_DepthOffset", trailData.DepthOffset);
+
+        var colorTex = BlurSaberPart.LoadTexture(trailData.ColorTextureName, trailData.TextureWrap, trailData.ColorTextureBase64, ref m_colorTexKey);
+        var glowTex = BlurSaberPart.LoadTexture(trailData.GlowTextureName, trailData.TextureWrap, trailData.GlowTextureBase64, ref m_glowTexKey);
+        mat.SetTexture("_ColorTex", colorTex ?? Texture2D.whiteTexture);
+        mat.SetTexture("_GlowTex", glowTex ?? Texture2D.whiteTexture);
+        mat.SetFloat("_ColorTexEnabled", colorTex != null ? 1f : 0f);
+        mat.SetFloat("_GlowTexEnabled", glowTex != null ? 1f : 0f);
+
         m_trailColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
         UpdateFinalColor();
     }
@@ -200,6 +215,7 @@ public class SaberRibbonTrail : MonoBehaviour
         
         _vertices = new Vector3[vertexCount];
         _colors = new Color[vertexCount];
+        _uvs = new Vector2[vertexCount];
         _triangles = new int[triangleCount];
         
         for (int i = 0; i < SegmentCount; i++)
@@ -266,6 +282,9 @@ public class SaberRibbonTrail : MonoBehaviour
             
             _vertices[vertexIndex] = basePos;
             _vertices[vertexIndex + 1] = tipPos;
+
+            _uvs[vertexIndex] = new Vector2(t, 0f);
+            _uvs[vertexIndex + 1] = new Vector2(t, 1f);
             
             float segmentOpacity = CalculateSegmentOpacity(t);
             Color baseColor = new Color(m_trailColor.r, m_trailColor.g, m_trailColor.b, 0f);
@@ -280,13 +299,14 @@ public class SaberRibbonTrail : MonoBehaviour
         _mesh.Clear();
         _mesh.vertices = _vertices;
         _mesh.colors = _colors;
+        _mesh.uv = _uvs;
         _mesh.triangles = _triangles;
         _mesh.RecalculateBounds();
     }
 
     private float CalculateSegmentOpacity(float t)
     {
-        var a = Mathf.Lerp(0.9f, 0.0f, t) * Mathf.Pow(t, 0.02f);
+        var a = Mathf.Lerp(0.9f, 0.0f, t * m_trailData.Fade) * Mathf.Pow(t, 0.02f);
         return a * a;
     }
 

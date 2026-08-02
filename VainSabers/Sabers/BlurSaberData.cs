@@ -418,7 +418,13 @@ public class BlurSaberData : MonoBehaviour
                         width: td.Width,
                         length: td.Length,
                         queueOffset: td.QueueOffset,
-                        depthOffset: td.DepthOffset
+                        depthOffset: td.DepthOffset,
+                        fade: td.Fade,
+                        colorTextureName: td.ColorTexture,
+                        glowTextureName: td.GlowTexture,
+                        colorTextureBase64: td.ColorTextureBase64,
+                        glowTextureBase64: td.GlowTextureBase64,
+                        textureWrap: (TextureWrapMode)Mathf.Clamp(td.TextureWrap, 0, 3)
                     ));
                 }
             }
@@ -435,7 +441,13 @@ public class BlurSaberData : MonoBehaviour
                     width: bt.Width,
                     length: bt.Length,
                     queueOffset: bt.QueueOffset,
-                    depthOffset: bt.DepthOffset
+                    depthOffset: bt.DepthOffset,
+                    fade: bt.Fade,
+                    colorTextureName: bt.ColorTexture,
+                    glowTextureName: bt.GlowTexture,
+                    colorTextureBase64: bt.ColorTextureBase64,
+                    glowTextureBase64: bt.GlowTextureBase64,
+                    textureWrap: (TextureWrapMode)Mathf.Clamp(bt.TextureWrap, 0, 3)
                 );
             }
             else
@@ -619,7 +631,13 @@ public class BlurSaberData : MonoBehaviour
                     Width = td.Width,
                     Length = td.Length,
                     QueueOffset = td.QueueOffset,
-                    DepthOffset = td.DepthOffset
+                    DepthOffset = td.DepthOffset,
+                    Fade = td.Fade,
+                    ColorTexture = td.ColorTextureName,
+                    GlowTexture = td.GlowTextureName,
+                    ColorTextureBase64 = embedAssets ? LoadAssetBase64(td.ColorTextureName, td.ColorTextureBase64) : null,
+                    GlowTextureBase64 = embedAssets ? LoadAssetBase64(td.GlowTextureName, td.GlowTextureBase64) : null,
+                    TextureWrap = (int)td.TextureWrap
                 });
             }
         }
@@ -637,7 +655,13 @@ public class BlurSaberData : MonoBehaviour
                 Width = td.Width,
                 Length = td.Length,
                 QueueOffset = td.QueueOffset,
-                DepthOffset = td.DepthOffset
+                DepthOffset = td.DepthOffset,
+                Fade = td.Fade,
+                ColorTexture = td.ColorTextureName,
+                GlowTexture = td.GlowTextureName,
+                ColorTextureBase64 = embedAssets ? LoadAssetBase64(td.ColorTextureName, td.ColorTextureBase64) : null,
+                GlowTextureBase64 = embedAssets ? LoadAssetBase64(td.GlowTextureName, td.GlowTextureBase64) : null,
+                TextureWrap = (int)td.TextureWrap
             };
         }
 
@@ -1014,6 +1038,12 @@ public class BlurSaberData : MonoBehaviour
         public int Length { get; set; } = 140;
         public int QueueOffset { get; set; } = 0;
         public float DepthOffset { get; set; } = 0f;
+        public float Fade { get; set; } = 1f;
+        public string? ColorTexture { get; set; }
+        public string? GlowTexture { get; set; }
+        public string? ColorTextureBase64 { get; set; }
+        public string? GlowTextureBase64 { get; set; }
+        public int TextureWrap { get; set; }
     }
 
     private static Vector3 ArrToVec3(float[] arr) =>
