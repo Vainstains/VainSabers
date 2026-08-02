@@ -341,6 +341,7 @@ public class BlurSaberData : MonoBehaviour
                 part.ManualRingVerts = partData.ManualRingVerts;
                 part.RingVertsManual = partData.RingVertsManual;
                 part.Side = partData.Side;
+                part.MirrorOnLeftSaber = partData.MirrorOnLeft;
                 part.EndCapExtension = Mathf.Clamp(partData.EndCapExtension, 0f, 3f);
 
                 part.LookDir = ArrToVec3(partData.LookDir);
@@ -510,6 +511,8 @@ public class BlurSaberData : MonoBehaviour
                 SpriteDivisionsX = part.DivisionsX,
                 SpriteDivisionsY = part.DivisionsY,
                 DoubleSided = part.DoubleSided,
+                
+                MirrorOnLeft = part.MirrorOnLeftSaber,
                 
                 HueShift = part.HueShift,
 
@@ -937,6 +940,7 @@ public class BlurSaberData : MonoBehaviour
         public bool ManualRingVerts { get; set; }
         public int RingVertsManual { get; set; } = 20;
         public BlurSaberPart.SaberSide Side { get; set; } = BlurSaberPart.SaberSide.Both;
+        public bool MirrorOnLeft { get; set; } = false;
         public float EndCapExtension { get; set; } = 0.25f;
 
         public float[] LookDir { get; set; } = new float[3];

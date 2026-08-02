@@ -124,6 +124,8 @@ public enum GeometryType
         public string? ObjFileName;
         public string? ObjBase64;
         public float ObjScale = 1f;
+
+        public bool MirrorOnLeftSaber = false;
         
         public Vector3 LookDir = Vector3.zero;
         public bool UseLookDir = false;
@@ -554,8 +556,17 @@ public enum GeometryType
                 modulator.Apply(m_modulatableParams, Time.unscaledDeltaTime);
             }
 
-            transform.localPosition = m_modulatableParams.Position;
-            transform.localEulerAngles = m_modulatableParams.RotationEuler;
+            var pos = m_modulatableParams.Position;
+            var rot = m_modulatableParams.RotationEuler;
+            if (MirrorOnLeftSaber && m_saberData.IsLeftSaber)
+            {
+                pos.x *= -1;
+                rot.y *= -1;
+                rot.z *= -1;
+            }
+
+            transform.localPosition = pos;
+            transform.localEulerAngles = rot;
         }
 
         private void UpdateMotion()

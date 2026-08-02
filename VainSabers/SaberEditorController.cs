@@ -587,14 +587,14 @@ class SaberEditorComponent : UIComponent
         UpdatePartDropdown();
     }
 
-private void OnLinkChanged(int index)
-        {
-            if (m_selectedPartIndex < 0)
-                return;
+    private void OnLinkChanged(int index)
+    {
+        if (m_selectedPartIndex < 0)
+            return;
 
-            int linkIndex = index - 1;
-            ApplyToBothParts(part => part.LinkedPartIndex = linkIndex);
-        }
+        int linkIndex = index - 1;
+        ApplyToBothParts(part => part.LinkedPartIndex = linkIndex);
+    }
 
     private void OnSideChanged(int index)
     {
@@ -713,6 +713,13 @@ private void OnLinkChanged(int index)
         var sourcePart = ResolveSource(referencePart);
         
         // Part panel
+
+        
+        
+        m_partPanel.Content.AddChild<ToggleComponent>().WithPreferredHeight(4)
+            .WithLabel("Mirror").WithValue(referencePart.MirrorOnLeftSaber)
+            .OnValueChanged += val =>
+            ApplyToBothParts(part => part.MirrorOnLeftSaber = val);
 
         m_partPanel.Content.AddSubHeader("Position");
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
