@@ -1646,7 +1646,7 @@ class SaberEditorComponent : UIComponent
         removeBtn.Color = new Color(0.6f, 0.2f, 0.2f, 1f);
         removeBtn.OnClick += () =>
         {
-            data.RemoveTipTrail(m_selectedTipTrailIndex);
+            ApplyToBothSabers(s => s.Data.RemoveTipTrail(m_selectedTipTrailIndex));
             RebuildTrailPanel();
         };
         removeBtn.IsInteractable = data.TipTrails.Count > 0;
@@ -1655,7 +1655,7 @@ class SaberEditorComponent : UIComponent
         addBtn.Color = new Color(0.2f, 0.5f, 0.2f, 1f);
         addBtn.OnClick += () =>
         {
-            data.AddTipTrail();
+            ApplyToBothSabers(s => s.Data.AddTipTrail());
             m_selectedTipTrailIndex = data.TipTrails.Count - 1;
             RebuildTrailPanel();
         };
@@ -1793,7 +1793,7 @@ class SaberEditorComponent : UIComponent
     private void BuildBladeTrailEditor()
     {
         var data = EditingSaber.Data;
-        data.EnsureDefaultTrails();
+        ApplyToBothSabers(s => s.Data.EnsureDefaultTrails());
 
         var trail = data.BladeTrail!.Value;
 
@@ -1805,7 +1805,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.Position[0] = val;
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
@@ -1814,7 +1814,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.Position[1] = val;
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
@@ -1823,7 +1823,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.Position[2] = val;
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
 
         m_trailPanel.Content.AddSubHeader("Color");
@@ -1834,7 +1834,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.Color[0] = val;
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
@@ -1843,7 +1843,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.Color[1] = val;
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
@@ -1852,7 +1852,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.Color[2] = val;
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Custom Blend").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
@@ -1860,7 +1860,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.CustomBlend = val;
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
 
         m_trailPanel.Content.AddSubHeader("Properties");
@@ -1870,7 +1870,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.Glow = val;
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
@@ -1878,7 +1878,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.Opacity = val;
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Length (ms)").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 500f, 1f)
@@ -1886,7 +1886,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.Length = Mathf.RoundToInt(val);
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Queue Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-10f, 10f, 1f)
@@ -1894,7 +1894,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.QueueOffset = Mathf.RoundToInt(val);
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Depth Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.02f, 0.02f, 0.001f).WithSensitivityCoef(0.03f)
@@ -1902,7 +1902,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.DepthOffset = val;
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Fade Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
@@ -1910,7 +1910,7 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.Fade = val;
-                data.SetBladeTrail(t);
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
             };
 
         m_trailPanel.Content.AddSubHeader("Textures");
