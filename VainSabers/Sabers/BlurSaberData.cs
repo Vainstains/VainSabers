@@ -168,7 +168,8 @@ public class BlurSaberData : MonoBehaviour
             opacity: 1f,
             width: 0.008f,
             length: 140,
-            queueOffset: 0
+            queueOffset: 0,
+            depthOffset: 0f
         ));
         TrailsChanged?.Invoke();
     }
@@ -207,7 +208,8 @@ public class BlurSaberData : MonoBehaviour
                 opacity: 1f,
                 width: 0.008f,
                 length: m_config?.TipTrailMS ?? 140,
-                queueOffset: 0
+                queueOffset: 0,
+                depthOffset: 0f
             ));
         }
 
@@ -221,7 +223,8 @@ public class BlurSaberData : MonoBehaviour
                 opacity: 0.3f,
                 width: 0.01f,
                 length: m_config?.BladeTrailMS ?? 60,
-                queueOffset: 0
+                queueOffset: 0,
+                depthOffset: 0f
             );
         }
     }
@@ -414,7 +417,8 @@ public class BlurSaberData : MonoBehaviour
                         opacity: td.Opacity,
                         width: td.Width,
                         length: td.Length,
-                        queueOffset: td.QueueOffset
+                        queueOffset: td.QueueOffset,
+                        depthOffset: td.DepthOffset
                     ));
                 }
             }
@@ -430,7 +434,8 @@ public class BlurSaberData : MonoBehaviour
                     opacity: bt.Opacity,
                     width: bt.Width,
                     length: bt.Length,
-                    queueOffset: bt.QueueOffset
+                    queueOffset: bt.QueueOffset,
+                    depthOffset: bt.DepthOffset
                 );
             }
             else
@@ -613,7 +618,8 @@ public class BlurSaberData : MonoBehaviour
                     Opacity = td.Opacity,
                     Width = td.Width,
                     Length = td.Length,
-                    QueueOffset = td.QueueOffset
+                    QueueOffset = td.QueueOffset,
+                    DepthOffset = td.DepthOffset
                 });
             }
         }
@@ -630,7 +636,8 @@ public class BlurSaberData : MonoBehaviour
                 Opacity = td.Opacity,
                 Width = td.Width,
                 Length = td.Length,
-                QueueOffset = td.QueueOffset
+                QueueOffset = td.QueueOffset,
+                DepthOffset = td.DepthOffset
             };
         }
 
@@ -1006,6 +1013,7 @@ public class BlurSaberData : MonoBehaviour
         public float Width { get; set; } = 0.008f;
         public int Length { get; set; } = 140;
         public int QueueOffset { get; set; } = 0;
+        public float DepthOffset { get; set; } = 0f;
     }
 
     private static Vector3 ArrToVec3(float[] arr) =>

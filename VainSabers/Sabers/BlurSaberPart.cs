@@ -1163,6 +1163,7 @@ public enum GeometryType
         public float Width;
         public int Length;
         public int QueueOffset;
+        public float DepthOffset;
 
         public SaberTrailData(
             float[] position,
@@ -1172,7 +1173,8 @@ public enum GeometryType
             float opacity,
             float width,
             int length,
-            int queueOffset)
+            int queueOffset,
+            float depthOffset = 0f)
         {
             Position = position;
             Color = color;
@@ -1182,6 +1184,7 @@ public enum GeometryType
             Width = width;
             Length = length;
             QueueOffset = queueOffset;
+            DepthOffset = depthOffset;
         }
     }
 }

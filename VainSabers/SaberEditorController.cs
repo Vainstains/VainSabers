@@ -1772,6 +1772,14 @@ class SaberEditorComponent : UIComponent
                 t.QueueOffset = Mathf.RoundToInt(val);
                 ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
             };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Depth Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.02f, 0.02f, 0.001f).WithSensitivityCoef(0.03f)
+            .WithValue(trail.DepthOffset).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.DepthOffset = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
     }
 
     private void BuildBladeTrailEditor()
@@ -1878,6 +1886,14 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrail!.Value;
                 t.QueueOffset = Mathf.RoundToInt(val);
+                data.SetBladeTrail(t);
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Depth Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.02f, 0.02f, 0.001f).WithSensitivityCoef(0.03f)
+            .WithValue(trail.DepthOffset).OnValueChanged += val =>
+            {
+                var t = data.BladeTrail!.Value;
+                t.DepthOffset = val;
                 data.SetBladeTrail(t);
             };
     }

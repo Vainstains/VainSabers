@@ -49,6 +49,8 @@ internal class SaberTipTrail : MonoBehaviour
         m_trailData = trailData;
         _lineRenderer.widthMultiplier = trailData.Width;
         _lineRenderer.material.renderQueue = 3100 + trailData.QueueOffset;
+        _lineRenderer.material.SetFloat("_GlowBoost", trailData.Glow);
+        _lineRenderer.material.SetFloat("_DepthOffset", trailData.DepthOffset);
         m_trailColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
         UpdateFinalColor();
     }
@@ -174,6 +176,8 @@ public class SaberRibbonTrail : MonoBehaviour
     {
         m_trailData = trailData;
         _meshRenderer.material.renderQueue = 3100 + trailData.QueueOffset;
+        _meshRenderer.material.SetFloat("_GlowBoost", trailData.Glow);
+        _meshRenderer.material.SetFloat("_DepthOffset", trailData.DepthOffset);
         m_trailColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
         UpdateFinalColor();
     }

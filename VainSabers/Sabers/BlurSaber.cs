@@ -121,7 +121,8 @@ internal class BlurSaber : MonoBehaviour
             opacity: 1f,
             width: 0.008f,
             length: m_config.TipTrailMS,
-            queueOffset: 0
+            queueOffset: 0,
+            depthOffset: 0f
         );
         var tipGo = new GameObject("DefaultTipTrail");
         tipGo.transform.SetParent(transform, false);
@@ -136,7 +137,8 @@ internal class BlurSaber : MonoBehaviour
             opacity: 0.3f,
             width: 0.01f,
             length: m_config.BladeTrailMS,
-            queueOffset: 0
+            queueOffset: 0,
+            depthOffset: 0f
         );
         var bladeGo = new GameObject("DefaultRibbonTrail");
         bladeGo.transform.SetParent(transform, false);
@@ -160,7 +162,8 @@ internal class BlurSaber : MonoBehaviour
             opacity: 1f,
             width: 0.008f,
             length: m_config.TipTrailMS,
-            queueOffset: 0
+            queueOffset: 0,
+            depthOffset: 0f
         ));
         m_defaultRibbonTrail!.ApplyConfig(new SaberTrailData(
             position: new float[] { 0f, 0f, 1f },
@@ -170,7 +173,8 @@ internal class BlurSaber : MonoBehaviour
             opacity: 0.3f,
             width: 0.01f,
             length: m_config.BladeTrailMS,
-            queueOffset: 0
+            queueOffset: 0,
+            depthOffset: 0f
         ));
     }
 

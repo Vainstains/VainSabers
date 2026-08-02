@@ -4,6 +4,7 @@ Shader "Unlit/vs_flatglow"
         {
             _ColorBoost ("RGB Multiplier", Range(0,4)) = 1
             _GlowBoost  ("Glow (Alpha) Multiplier", Range(0,4)) = 1
+            _DepthOffset ("Depth Offset", Float) = 0
         }
     
         SubShader
@@ -29,6 +30,7 @@ Shader "Unlit/vs_flatglow"
                 #include "UnityCG.cginc"
     
                 float _ColorBoost;
+                float _DepthOffset;
     
                 struct appdata
                 {
@@ -51,10 +53,11 @@ Shader "Unlit/vs_flatglow"
                     UNITY_INITIALIZE_OUTPUT(v2f, o);
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                     o.pos   = UnityObjectToClipPos(v.vertex);
+                    o.pos.z += _DepthOffset;
                     o.color = v.color;
                     return o;
                 }
-    
+
                 fixed4 frag (v2f i) : SV_Target
                 {
                     // Flat color: just vertex color RGB (scaled), alpha ignored here.
@@ -82,6 +85,7 @@ Shader "Unlit/vs_flatglow"
                 #include "UnityCG.cginc"
     
                 float _GlowBoost;
+                float _DepthOffset;
     
                 struct appdata
                 {
@@ -104,6 +108,7 @@ Shader "Unlit/vs_flatglow"
                     UNITY_INITIALIZE_OUTPUT(v2f, o);
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                     o.pos   = UnityObjectToClipPos(v.vertex);
+                    o.pos.z += _DepthOffset;
                     o.alpha = v.color.a;
                     return o;
                 }
