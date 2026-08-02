@@ -20,14 +20,14 @@ namespace VainSabers.Sabers
     {
         private static readonly NumberFormatInfo Invariant = CultureInfo.InvariantCulture.NumberFormat;
 
-        public static ObjMeshData Load(string? fileName, string? embeddedBase64)
+        public static ObjMeshData Load(string? fileName, string? embeddedBase64, string cacheKey)
         {
             if (!string.IsNullOrEmpty(embeddedBase64))
             {
                 try
                 {
                     var text = Encoding.UTF8.GetString(Convert.FromBase64String(embeddedBase64!));
-                    return Parse(text, "embedded|" + embeddedBase64);
+                    return Parse(text, cacheKey);
                 }
                 catch (Exception ex)
                 {
@@ -54,7 +54,7 @@ namespace VainSabers.Sabers
                 return new ObjMeshData();
             }
 
-            return Parse(text2, fileName + "|" + System.IO.File.GetLastWriteTimeUtc(path).Ticks);
+            return Parse(text2, cacheKey);
         }
 
         public static ObjMeshData Parse(string text, string cacheKey)

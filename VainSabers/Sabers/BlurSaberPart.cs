@@ -8,6 +8,7 @@ using VainSabers.Helpers;
 
 namespace VainSabers.Sabers
 {
+    // this class is getting too large lmao
     [ExecuteInEditMode]
     public class BlurSaberPart : MonoBehaviour
     {
@@ -160,36 +161,82 @@ public enum GeometryType
         private Material? m_runtimeLitMaterial;
         private Material? m_runtimeLitInvertedMaterial;
         private MaterialPropertyBlock m_propertyBlock = null!;
+        private AssetKeyCache m_colorTexKey = new();
+        private AssetKeyCache m_glowTexKey = new();
+        private AssetKeyCache m_objKey = new();
         
         public PluginConfig Config = null!;
 
         private static readonly Dictionary<string, Texture2D> s_loadedTextures = new();
         private static readonly Dictionary<string, ObjMeshData> s_loadedObjs = new();
 
-        internal static ObjMeshData LoadObjData(string? fileName, string? embeddedBase64)
+        private static string ResolveAssetKey(string? base64, ref AssetKeyCache cache)
+        {
+            if (cache.Key != null && ReferenceEquals(cache.Base64, base64))
+                return cache.Key;
+
+            cache.Base64 = base64;
+            cache.Key = string.IsNullOrEmpty(base64) ? "" : Fnv64(base64!);
+            return cache.Key;
+        }
+
+        // wow thanks chatgpt:
+        private static string Fnv64(string text)
+        {
+            unchecked
+            {
+                ulong hash = 14695981039346656037UL;
+                for (var i = 0; i < text.Length; i++)
+                {
+                    hash ^= text[i];
+                    hash *= 1099511628211UL;
+                }
+                return hash.ToString("x16");
+            }
+        }
+
+        internal struct AssetKeyCache
+        {
+            public string? Base64;
+            public string? Key;
+        }
+
+        internal static ObjMeshData LoadObjData(string? fileName, string? embeddedBase64, ref AssetKeyCache keyCache)
         {
             if (string.IsNullOrEmpty(fileName) && string.IsNullOrEmpty(embeddedBase64))
                 return new ObjMeshData();
 
-            var cacheKey = !string.IsNullOrEmpty(embeddedBase64)
-                ? "embedded|" + embeddedBase64
-                : fileName + "|" + System.IO.File.GetLastWriteTimeUtc(System.IO.Path.Combine(ConfigUtil.ConfigDir, fileName!)).Ticks;
+            if (!string.IsNullOrEmpty(embeddedBase64))
+            {
+                var cacheKey = ResolveAssetKey(embeddedBase64, ref keyCache);
+                if (cacheKey.Length > 0 && s_loadedObjs.TryGetValue(cacheKey, out var cached))
+                    return cached;
 
-            if (s_loadedObjs.TryGetValue(cacheKey, out var cached))
-                return cached;
+                var data = OBJLoader.Load(fileName, embeddedBase64, cacheKey);
+                if (data.Positions.Length > 0)
+                    s_loadedObjs[cacheKey] = data;
+                return data;
+            }
 
-            var data = OBJLoader.Load(fileName, embeddedBase64);
-            if (data.Positions.Length > 0)
-                s_loadedObjs[cacheKey] = data;
-            return data;
+            var fileKey = fileName + "|" + System.IO.File.GetLastWriteTimeUtc(System.IO.Path.Combine(ConfigUtil.ConfigDir, fileName!)).Ticks;
+            if (s_loadedObjs.TryGetValue(fileKey, out var cachedFile))
+                return cachedFile;
+
+            var fileData = OBJLoader.Load(fileName, embeddedBase64, fileKey);
+            if (fileData.Positions.Length > 0)
+                s_loadedObjs[fileKey] = fileData;
+            return fileData;
         }
 
-        internal static Texture2D? LoadTexture(string? fileName, TextureWrapMode wrapMode, string? embeddedBase64 = null)
+        internal static Texture2D? LoadTexture(string? fileName, TextureWrapMode wrapMode, string? embeddedBase64, ref AssetKeyCache keyCache)
         {
             if (string.IsNullOrEmpty(fileName))
                 return null;
 
-            var cacheKey = $"{fileName}|{(int)wrapMode}|{embeddedBase64}";
+            var assetKey = ResolveAssetKey(embeddedBase64, ref keyCache);
+            var cacheKey = assetKey.Length > 0
+                ? $"{fileName}|{(int)wrapMode}|{assetKey}"
+                : $"{fileName}|{(int)wrapMode}";
 
             if (s_loadedTextures.TryGetValue(cacheKey, out var tex))
                 return tex;
@@ -384,8 +431,8 @@ public enum GeometryType
                 m_propertyBlock.SetFloat("_FresnelPower", FresnelPower);
                 m_propertyBlock.SetColor("_RimColor", RimColor);
 
-                var colorTex = LoadTexture(ColorTextureName, TextureWrap, ColorTextureBase64);
-                var glowTex = LoadTexture(GlowTextureName, TextureWrap, GlowTextureBase64);
+                var colorTex = LoadTexture(ColorTextureName, TextureWrap, ColorTextureBase64, ref m_colorTexKey);
+                var glowTex = LoadTexture(GlowTextureName, TextureWrap, GlowTextureBase64, ref m_glowTexKey);
                 if (colorTex != null) m_propertyBlock.SetTexture("_ColorTex", colorTex);
                 else m_propertyBlock.SetTexture("_ColorTex", Texture2D.whiteTexture);
                 if (glowTex != null) m_propertyBlock.SetTexture("_GlowTex", glowTex);
@@ -445,7 +492,7 @@ public enum GeometryType
                     m_blurSprite = null;
                 }
 
-                var objData = LoadObjData(ObjFileName, ObjBase64);
+                var objData = LoadObjData(ObjFileName, ObjBase64, ref m_objKey);
                 if (objData.Positions.Length == 0)
                 {
                     m_blurObj?.Destroy();
@@ -558,7 +605,7 @@ public enum GeometryType
 
             var pos = m_modulatableParams.Position;
             var rot = m_modulatableParams.RotationEuler;
-            if (MirrorOnLeftSaber && m_saberData.IsLeftSaber)
+            if (MirrorOnLeftSaber && m_saberData is { IsLeftSaber: true })
             {
                 pos.x *= -1;
                 rot.y *= -1;
