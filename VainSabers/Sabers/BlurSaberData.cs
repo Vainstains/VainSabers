@@ -351,6 +351,8 @@ public class BlurSaberData : MonoBehaviour
                 part.MinimumRings = Mathf.Clamp(partData.MinimumRings, 2, 10);
                 part.RenderQueueOffset = partData.RenderQueueOffset;
                 part.DepthOffset = partData.DepthOffset;
+                part.DisableGlowPass = partData.DisableGlowPass;
+                part.DisableDepthPrepass = partData.DisableDepthPrepass;
 
                 part.RimFactor = partData.RimFactor;
                 part.RimPower = partData.RimPower;
@@ -541,6 +543,8 @@ public class BlurSaberData : MonoBehaviour
                 MinimumRings = part.MinimumRings,
                 RenderQueueOffset = part.RenderQueueOffset,
                 DepthOffset = part.DepthOffset,
+                DisableGlowPass = part.DisableGlowPass,
+                DisableDepthPrepass = part.DisableDepthPrepass,
 
                 RimFactor = part.RimFactor,
                 RimPower = part.RimPower,
@@ -942,6 +946,8 @@ public class BlurSaberData : MonoBehaviour
         public int MinimumRings { get; set; } = 4;
         public int RenderQueueOffset { get; set; }
         public float DepthOffset { get; set; }
+        public bool DisableGlowPass { get; set; }
+        public bool DisableDepthPrepass { get; set; }
 
         public float RimFactor { get; set; }
         public float RimPower { get; set; } = 3f;

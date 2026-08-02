@@ -74,6 +74,9 @@ public enum GeometryType
 
         public float DepthOffset = 0f;
 
+        public bool DisableGlowPass;
+        public bool DisableDepthPrepass;
+
         public bool Inverted;
         public bool Lit;
 
@@ -302,6 +305,8 @@ public enum GeometryType
             StartOpacity = source.StartOpacity;
             EndOpacity = source.EndOpacity;
             DepthOffset = source.DepthOffset;
+            DisableGlowPass = source.DisableGlowPass;
+            DisableDepthPrepass = source.DisableDepthPrepass;
             Inverted = source.Inverted;
             Lit = source.Lit;
             BlurFactor = source.BlurFactor;
@@ -354,6 +359,11 @@ public enum GeometryType
             if (activeMat != null)
             {
                 activeMat.renderQueue = 3600 + RenderQueueOffset;
+
+                if (DisableGlowPass) activeMat.EnableKeyword("_DISABLE_GLOW_PASS");
+                else activeMat.DisableKeyword("_DISABLE_GLOW_PASS");
+                if (DisableDepthPrepass) activeMat.EnableKeyword("_DISABLE_DEPTH_PREPASS");
+                else activeMat.DisableKeyword("_DISABLE_DEPTH_PREPASS");
 
                 m_propertyBlock ??= new MaterialPropertyBlock();
                 m_propertyBlock.SetFloat("_DepthOffset", DepthOffset + (Inverted ? 0f : 0.001f));

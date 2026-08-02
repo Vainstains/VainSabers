@@ -30,18 +30,23 @@
             CGPROGRAM
             // #pragma multi_compile_instancing
             #pragma fragment frag
+            #pragma multi_compile _ _DISABLE_DEPTH_PREPASS
             // #pragma target 2.0
             #include "UnityCG.cginc"
             #include "BlurPart.cginc"
 
             fixed4 frag(v2f i) : SV_Target
             {
+#if defined(_DISABLE_DEPTH_PREPASS)
+                discard;
+#else
                 // UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 SaberFragVariables vars = GetCommonSaberVars(i);
                 if(vars.alpha > 0.999)
                     return 1; // color ignored, depth written
                 discard;
                 return 0;
+#endif
             }
             ENDCG 
         }
@@ -162,12 +167,17 @@
 
             CGPROGRAM
             #pragma fragment frag
+            #pragma multi_compile _ _DISABLE_GLOW_PASS
             #include "UnityCG.cginc"
             #include "BlurPart.cginc"
 
             fixed4 frag(v2f i) : SV_Target
             {
+#if defined(_DISABLE_GLOW_PASS)
                 return fixed4(0.0, 0.0, 0.0, 0.0);
+#else
+                return fixed4(0.0, 0.0, 0.0, 0.0);
+#endif
             }
             ENDCG
         }

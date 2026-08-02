@@ -892,6 +892,14 @@ private void OnLinkChanged(int index)
             .WithLabel("Queue Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-10f, 10f, 1f)
             .WithValue(sourcePart.RenderQueueOffset).OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.RenderQueueOffset = Mathf.RoundToInt(val));
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Disable Glow Pass").SetComponent<ToggleComponent>().WithValue(sourcePart.DisableGlowPass)
+            .OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.DisableGlowPass = val);
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Disable Depth Prepass").SetComponent<ToggleComponent>().WithValue(sourcePart.DisableDepthPrepass)
+            .OnValueChanged += val =>
+            ApplyToBothResolvedParts(part => part.DisableDepthPrepass = val);
         
         // Geometry panel
         var typeDropdown = m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
