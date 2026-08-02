@@ -22,8 +22,8 @@ internal class BlurSaber : MonoBehaviour
     private MovementTracker m_tracker = null!;
     private Transform m_parkedTarget = null!;
     private Color m_gameColor = Color.white;
-    private bool m_inPreviewMode;
-    private Transform m_savedTrackerTarget = null!;
+    private Transform m_editorPreviewTarget = null!;
+    private Transform m_staticTarget = null!;
     
     public BlurSaberData Data => m_blurSaberData!;
 
@@ -280,44 +280,47 @@ internal class BlurSaber : MonoBehaviour
     public void SetPreviewTransform(Transform? previewTransform)
     {
         if (m_tracker == null) return;
+        m_editorPreviewTarget = previewTransform!;
+        ApplyTargetMode();
+    }
 
-        if (previewTransform != null)
+    public void SetStaticTarget(Transform? staticTarget)
+    {
+        if (m_tracker == null) return;
+        m_staticTarget = staticTarget!;
+        ApplyTargetMode();
+    }
+
+    private void ApplyTargetMode()
+    {
+        if (m_tracker == null) return;
+        var desired = ResolveTarget();
+        if (m_tracker.Target != desired)
         {
-            if (!m_inPreviewMode)
-            {
-                m_savedTrackerTarget = m_tracker.Target;
-                m_inPreviewMode = true;
-            }
-            m_tracker.Target = previewTransform;
+            m_tracker.Target = desired;
             m_tracker.ClearHistory();
         }
-        else if (m_inPreviewMode)
-        {
-            m_tracker.Target = m_savedTrackerTarget;
-            m_tracker.ClearHistory();
-            m_savedTrackerTarget = null!;
-            m_inPreviewMode = false;
-        }
+    }
+
+    private Transform ResolveTarget()
+    {
+        if (m_editorPreviewTarget != null) return m_editorPreviewTarget;
+        if (m_staticTarget != null) return m_staticTarget;
+        if (Helpers.Helpers.GetIsFpfc()) return m_parkedTarget;
+        return m_saberTransform;
     }
 
     private void FixedUpdate()
     {
         Shader.SetGlobalFloat("_VainSaberBlurSoftness", m_config.BlurSoftness);
+        ApplyTargetMode();
+    }
 
-        if (m_inPreviewMode)
-            return;
-        
-        // prolly a better way to do this
-        bool isFpfc = Helpers.Helpers.GetIsFpfc();
-        if (isFpfc && m_tracker.Target != m_parkedTarget)
-        {
-            m_tracker.Target = m_parkedTarget;
-            m_tracker.ClearHistory();
-        }
-        else if (!isFpfc && m_tracker.Target == m_parkedTarget)
-        {
-            m_tracker.Target = m_saberTransform;
-            m_tracker.ClearHistory();
-        }
+    private void LateUpdate()
+    {
+        if (m_editorPreviewTarget == null && m_staticTarget == null) return;
+        if (m_tracker == null || m_tracker.Target == null) return;
+        transform.position = m_tracker.Target.position;
+        transform.rotation = m_tracker.Target.rotation;
     }
 }

@@ -19,6 +19,10 @@ public class MenuSaberManager : IDisposable
     
     private (BlurSaber left, BlurSaber right) Sabers => (m_leftSaber, m_rightSaber);
     
+    private GameObject? m_leftStaticAnchor;
+    private GameObject? m_rightStaticAnchor;
+    private bool m_staticDisplayActive;
+    
     public MenuSaberManager(MenuPointers menuPointers, ColorSchemesSettings colorSchemesSettings, PluginConfig config)
     {
         m_config = config;
@@ -63,11 +67,15 @@ public class MenuSaberManager : IDisposable
 
     public void SetActive(bool active, bool editorOpen = false)
     {
+        bool panelOpen = active;
         active = active || m_config.ActiveInMenu;
 
         if (Helpers.Helpers.GetIsFpfc())
         {
-            active = editorOpen;
+            if (panelOpen && !editorOpen)
+                EnterStaticDisplay();
+            else
+                ExitStaticDisplay();
         }
 
         m_menuPointers.SetPointerVisibility(!active);
@@ -82,6 +90,41 @@ public class MenuSaberManager : IDisposable
         
         m_leftSaber.SetPreset(m_config.CurrentSaber);
         m_rightSaber.SetPreset(m_config.CurrentSaber);
+    }
+
+    private void EnterStaticDisplay()
+    {
+        if (m_staticDisplayActive) return;
+
+        m_leftStaticAnchor = new GameObject("LeftSaberStaticAnchor");
+        m_leftStaticAnchor.transform.position = new Vector3(-3.6f, 0.5f, 1.7f);
+        m_leftStaticAnchor.transform.rotation = Quaternion.LookRotation(Vector3.up, -m_leftStaticAnchor.transform.position);
+
+        m_rightStaticAnchor = new GameObject("RightSaberStaticAnchor");
+        m_rightStaticAnchor.transform.position = new Vector3(-3.0f, 0.5f, 2.8f);
+        m_rightStaticAnchor.transform.rotation = Quaternion.LookRotation(Vector3.up, -m_rightStaticAnchor.transform.position);
+
+        m_leftSaber.SetStaticTarget(m_leftStaticAnchor.transform);
+        m_rightSaber.SetStaticTarget(m_rightStaticAnchor.transform);
+
+        m_staticDisplayActive = true;
+    }
+
+    private void ExitStaticDisplay()
+    {
+        if (!m_staticDisplayActive) return;
+
+        m_leftSaber.SetStaticTarget(null);
+        m_rightSaber.SetStaticTarget(null);
+
+        if (m_leftStaticAnchor != null)
+            UnityEngine.Object.Destroy(m_leftStaticAnchor);
+        if (m_rightStaticAnchor != null)
+            UnityEngine.Object.Destroy(m_rightStaticAnchor);
+
+        m_leftStaticAnchor = null;
+        m_rightStaticAnchor = null;
+        m_staticDisplayActive = false;
     }
 
     public void Update(string presetName)
