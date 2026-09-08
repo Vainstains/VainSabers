@@ -8,6 +8,7 @@ using VainSabers.Config;
 
 namespace VainSabers.Sabers;
 
+[DefaultExecutionOrder(-100)]
 public class BlurSaberData : MonoBehaviour
 {
     private const int CurrentVersion = 1;
@@ -32,7 +33,14 @@ public class BlurSaberData : MonoBehaviour
 
     public bool IsLeftSaber { get; set; }
 
+    public float SaberTimeAlive { get; private set; }
+
     public event Action? TrailsChanged;
+
+    private void Update()
+    {
+        SaberTimeAlive += Time.unscaledDeltaTime;
+    }
 
     public void Init(PluginConfig config)
     {
