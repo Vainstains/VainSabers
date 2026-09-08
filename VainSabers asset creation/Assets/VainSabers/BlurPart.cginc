@@ -75,6 +75,8 @@ struct SaberFragVariables {
 #define MINIMUM_EDGE_SOFTNESS 0.05
 
 float _VainSaberBlurSoftness;
+static const float _BlurTunableConstant = 2.5; // tuneable b scale - edit in HLSL, not C#
+float _BlurPartIsBlade;
 
 float _RimFactor;
 float _RimPower;
@@ -94,41 +96,17 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float viewDeltaLenSq = dot(viewDelta, viewDelta);
     float3 viewDir = (viewDeltaLenSq > 1e-6) ? normalize(viewDelta) : float3(0,0,1);
 
-    // Sweep factor from uv2 (sweepCoord = x, sweepRatio = y)
-    float sweepCoord = vertStage.uv2.x;
     float sweepRatio = vertStage.uv2.y;
-    float sweepFactor = sweepRatio * 1.5 * _VainSaberBlurSoftness;
-    float blurFac = sweepFactor;
-    
-    float distanceToEdge = min(sweepCoord * 2.0, 2.0 - 2.0 * sweepCoord);
-    distanceToEdge += 0.1 / max(sweepFactor, 0.01);
-    distanceToEdge *= 2;
 
-    float3 planeNormal = (dot(vertStage.planeNormal.xyz, vertStage.planeNormal.xyz) > 1e-6)
-                         ? normalize(vertStage.planeNormal.xyz)
-                         : float3(0,0,1);
-
-    float3 blade = normalize(vertStage.bladeDir);
-    float3 motionDirRaw = cross(blade, planeNormal);
-    float3 motionDir = (dot(motionDirRaw, motionDirRaw) > 1e-6)
-                       ? normalize(motionDirRaw)
-                       : float3(0,0,1);
-                       
-    float blurStrength = saturate(1.3 - 1.5 * abs(dot(motionDir, viewDir)));
+    float b = sweepRatio * _BlurTunableConstant * _VainSaberBlurSoftness;
+    float a = saturate(b);
+    float blurFac = b;
 
     SaberFragVariables commonVars;
     commonVars.color = vertStage.color;
     commonVars.glowStrength = _Glow * vertStage.color.w;
-    commonVars.sweepRatio = 1 - sweepFactor;
 
-    float denom = max(sweepFactor, 0.01);
-    commonVars.alpha = saturate(distanceToEdge * distanceToEdge / (1.9 * denom));
-    commonVars.alpha = 1.0 - blurStrength * (commonVars.alpha - 1.0) * (commonVars.alpha - 1.0);
-    commonVars.alpha /= denom + 1;
-    commonVars.alpha *= 1.1;
-    commonVars.alpha = saturate(commonVars.alpha);
-    commonVars.alpha *= pow(vertStage.bladeDir.w, 1.5); // looks better with ^1.5 i think
-    commonVars.alpha = saturate(commonVars.alpha);
+    commonVars.sweepRatio = 1 - saturate(b);
 
     commonVars.viewDir = viewDir;
     commonVars.normal = (dot(vertStage.normal, vertStage.normal) > 1e-6)
@@ -138,15 +116,33 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float3 N = commonVars.normal;
     float3 V = commonVars.viewDir;
 
-    float fresnelFull = 1.0 - saturate(abs(dot(N, V)));
-    commonVars.alpha *= saturate(getFresnelBlurFadeFactor(fresnelFull, blurFac));
-
+    float3 blade = (dot(vertStage.bladeDir.xyz, vertStage.bladeDir.xyz) > 1e-6)
+                   ? normalize(vertStage.bladeDir.xyz)
+                   : float3(0,1,0);
+    
     float3 Nperp = N - blade * dot(N, blade);
-    float3 Vperp = V - blade * dot(V, blade);
     float nPerpLenSq = dot(Nperp, Nperp);
-    float vPerpLenSq = dot(Vperp, Vperp);
     Nperp = (nPerpLenSq > 1e-6) ? Nperp * rsqrt(nPerpLenSq) : N;
+
+    float3 Vperp = V - blade * dot(V, blade);
+    float vPerpLenSq = dot(Vperp, Vperp);
     Vperp = (vPerpLenSq > 1e-6) ? Vperp * rsqrt(vPerpLenSq) : V;
+    float isBlade = saturate(_BlurPartIsBlade);
+    float3 Vfinal = normalize(lerp(V, Vperp, isBlade));
+
+    float x = saturate(dot(Nperp, Vfinal));
+
+    // Opacity = (1 - saturate(10a) * saturate(1-x)^(2/a) )^2 * 1/((0.5b)^2+1)
+    float safeA = max(a, 0.001);
+    float powTerm = pow(saturate(1.0 - x), 2.0 / safeA);
+    float term = saturate(10.0 * a) * powTerm;
+    float opacity = pow(saturate(1.0 - term), 2.0) / ((0.5 * b)*(0.5 * b) + 1.0);
+    opacity = saturate(opacity);
+
+    opacity *= pow(saturate(vertStage.bladeDir.w), 1.5);
+    commonVars.alpha = saturate(opacity);
+    
+    float fresnelFull = 1.0 - saturate(abs(dot(N, V)));
     float fresnelPerp = 1.0 - saturate(dot(Nperp, Vperp));
 
     float fresnelTerm = lerp(fresnelFull, fresnelPerp, saturate(_RimPerpendicular));

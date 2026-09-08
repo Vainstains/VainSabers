@@ -421,6 +421,10 @@ public enum GeometryType
                 m_propertyBlock.SetFloat("_RimPower", RimPower);
                 m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
 
+                // _BlurPartIsBlade: 1 for blade geometry (Simple/Advanced tubes), 0 for images/obj (Sprite/Obj)
+                m_propertyBlock.SetFloat("_BlurPartIsBlade",
+                    (GeometryHandling == GeometryType.Simple || GeometryHandling == GeometryType.Advanced) ? 1f : 0f);
+
                 m_propertyBlock.SetFloat("_SpecularStrength", SpecularStrength);
                 m_propertyBlock.SetFloat("_SpecularPower", SpecularPower);
                 m_propertyBlock.SetFloat("_Metallic", Metallic);
