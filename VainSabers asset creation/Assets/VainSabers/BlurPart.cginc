@@ -75,7 +75,7 @@ struct SaberFragVariables {
 #define MINIMUM_EDGE_SOFTNESS 0.05
 
 float _VainSaberBlurSoftness;
-static const float _BlurTunableConstant = 2.5; // tuneable b scale - edit in HLSL, not C#
+static const float _BlurTunableConstant = 3.0;
 float _BlurPartIsBlade;
 
 float _RimFactor;
@@ -97,6 +97,7 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float3 viewDir = (viewDeltaLenSq > 1e-6) ? normalize(viewDelta) : float3(0,0,1);
 
     float sweepRatio = vertStage.uv2.y;
+    float sweepCoord = vertStage.uv2.x;
 
     float b = sweepRatio * _BlurTunableConstant * _VainSaberBlurSoftness;
     float a = saturate(b);
@@ -130,7 +131,8 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float isBlade = saturate(_BlurPartIsBlade);
     float3 Vfinal = normalize(lerp(V, Vperp, isBlade));
 
-    float x = saturate(dot(Nperp, Vfinal));
+    float x = sqrt(saturate(dot(Nperp, Vfinal))) * 4 * (sweepCoord - sweepCoord * sweepCoord);
+    // that is super janky but uhh... i think it works
 
     // Opacity = (1 - saturate(10a) * saturate(1-x)^(2/a) )^2 * 1/((0.5b)^2+1)
     float safeA = max(a, 0.001);
