@@ -77,6 +77,12 @@ struct SaberFragVariables {
 float _VainSaberBlurSoftness;
 static const float _BlurTunableConstant = 3.0;
 float _BlurPartIsBlade;
+static const float _MotionViewBoost = 1.0;
+static const float _MotionViewPower = 2.0;
+static const float _MotionViewThreshold = 0.30;
+static const float _PlanarCoplanarBoost = 1.0;
+static const float _PlanarCoplanarPower = 7.0;
+static const float _PlanarCoplanarThreshold = 0.65;
 
 float _RimFactor;
 float _RimPower;
@@ -140,6 +146,41 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float term = saturate(10.0 * a) * powTerm;
     float opacity = pow(saturate(1.0 - term), 2.0) / ((0.5 * b)*(0.5 * b) + 1.0);
     opacity = saturate(opacity);
+
+    // fix blur when saber moves toward/away from eye
+    {
+        float3 planeN = vertStage.planeNormal.xyz;
+        float lenSq = dot(planeN, planeN);
+        float motionView = 0;
+        if (lenSq > 1e-6)
+        {
+            planeN *= rsqrt(lenSq);
+            float3 motionDir = cross(blade, planeN);
+            float mLenSq = dot(motionDir, motionDir);
+            if (mLenSq > 1e-6)
+            {
+                motionDir *= rsqrt(mLenSq);
+                motionView = abs(dot(motionDir, viewDir));
+            }
+        }
+        float motionBiased = saturate((motionView - _MotionViewThreshold) / (1.0 - _MotionViewThreshold));
+        float motionP = pow(motionBiased, _MotionViewPower);
+        opacity = lerp(opacity, 1.0, motionP * _MotionViewBoost);
+    }
+    {
+        float3 planeN2 = vertStage.planeNormal.xyz;
+        float lenSq2 = dot(planeN2, planeN2);
+        float planarView = 0;
+        if (lenSq2 > 1e-6)
+        {
+            planeN2 *= rsqrt(lenSq2);
+            planarView = abs(dot(planeN2, viewDir));
+        }
+        float planar = saturate(1.0 - planarView);
+        float planarBiased = saturate((planar - _PlanarCoplanarThreshold) / (1.0 - _PlanarCoplanarThreshold));
+        float planarP = pow(planarBiased, _PlanarCoplanarPower);
+        opacity = lerp(opacity, 1.0, planarP * _PlanarCoplanarBoost);
+    }
 
     opacity *= pow(saturate(vertStage.bladeDir.w), 1.5);
     commonVars.alpha = saturate(opacity);
