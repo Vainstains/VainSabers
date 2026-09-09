@@ -81,8 +81,10 @@ static const float _MotionViewBoost = 1.0;
 static const float _MotionViewPower = 2.0;
 static const float _MotionViewThreshold = 0.30;
 static const float _PlanarCoplanarBoost = 1.0;
-static const float _PlanarCoplanarPower = 7.0;
-static const float _PlanarCoplanarThreshold = 0.65;
+static const float _PlanarCoplanarPower = 14.0;
+static const float _PlanarCoplanarThreshold = 0.8;
+static const float _OppositeSideFade = 1.0;
+static const float _OppositeSideSharpness = 1.5;
 
 float _RimFactor;
 float _RimPower;
@@ -180,6 +182,22 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
         float planarBiased = saturate((planar - _PlanarCoplanarThreshold) / (1.0 - _PlanarCoplanarThreshold));
         float planarP = pow(planarBiased, _PlanarCoplanarPower);
         opacity = lerp(opacity, 1.0, planarP * _PlanarCoplanarBoost);
+    }
+    // fade opposite side of sweep plane when in motion
+    {
+        float3 planeN3 = vertStage.planeNormal.xyz;
+        float lenSq3 = dot(planeN3, planeN3);
+        if (lenSq3 > 1e-6 && a > 0.01)
+        {
+            planeN3 *= rsqrt(lenSq3);
+            float normalSide = dot(N, planeN3);
+            float cameraSide = dot(viewDir, planeN3);
+            float opposite = saturate(-normalSide * cameraSide * _OppositeSideSharpness);
+            float motionFade = saturate(a * 25);
+            opposite *= motionFade;
+            float bladeMask = saturate(_BlurPartIsBlade + 0.1);
+            opacity *= lerp(1.0, saturate(1.0 - opposite * _OppositeSideFade), bladeMask);
+        }
     }
 
     opacity *= pow(saturate(vertStage.bladeDir.w), 1.5);

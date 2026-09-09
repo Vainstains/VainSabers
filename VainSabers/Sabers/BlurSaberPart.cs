@@ -630,10 +630,10 @@ public enum GeometryType
             var past = m_movementHistoryProvider.GetPoseAgo(BlurTime);
 
             var rawMotion = Vector3.Angle(present.forward, past.forward) + 40 * Vector3.Distance(present.position, past.position);
-            rawMotion *= 0.2f;
+            rawMotion *= 0.38f;
             float dt = Time.deltaTime;
-            float attack = 1f - Mathf.Exp(-12f * dt);
-            float release = 1f - Mathf.Exp(-8.5f * dt);
+            float attack = 1f - Mathf.Exp(-350f * dt);
+            float release = 1f - Mathf.Exp(-70.5f * dt);
             m_smoothedMotion = Mathf.Lerp(m_smoothedMotion, rawMotion, rawMotion > m_smoothedMotion ? attack : release);
 
             float targetFactor = Mathf.Clamp01(Mathf.InverseLerp(0.3f, 4f, m_smoothedMotion));
@@ -865,7 +865,7 @@ public enum GeometryType
             motionDir = Vector3.ProjectOnPlane(motionDir, avgFwd).normalized;
             var plane = Vector3.Cross(motionDir, avgFwd);
 
-            var sweepRatio = Config.BlurSoftness * 1.5f * dst / (1.5f * radius);
+            var sweepRatio = Config.BlurSoftness * 1.5f * dst / (0.035f * Mathf.Sqrt(radius + 0.04f));
             
             if (isZero)
             {
@@ -888,6 +888,8 @@ public enum GeometryType
                 var offsetDir = sign * Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
 
                 var dot = Vector3.Dot(offsetDir, motionDir);
+                var dotSign = Mathf.Sign(dot);
+                dot *= dot * dotSign;
                 var tSample = (dot + 1.0f) * 0.5f;
 
                 var interpSample = SampleAlongCurve(samples, tSample);
