@@ -1790,6 +1790,14 @@ class SaberEditorComponent : UIComponent
                 t.Fade = val;
                 ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
             };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Motion Activation").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(trail.MotionActivation).OnValueChanged += val =>
+            {
+                var t = data.TipTrails[m_selectedTipTrailIndex];
+                t.MotionActivation = val;
+                ApplyToBothSabers(s => s.Data.SetTipTrail(m_selectedTipTrailIndex, t));
+            };
     }
 
     private void BuildBladeTrailEditor()
@@ -1976,6 +1984,14 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.Fade = val;
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Motion Activation").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(trail.MotionActivation).OnValueChanged += val =>
+            {
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
+                t.MotionActivation = val;
                 ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
 

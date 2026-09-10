@@ -78,9 +78,9 @@ public static class VainSabersAssets
 
     public static Shader? TestShader { get; private set; }
     public static Shader? SaberShader { get; private set; }
-    public static Shader? VertexGlowShader { get; private set; }
+    public static Shader? VertexGlowShaderUntextured { get; private set; }
     
-    public static Shader? VertexGlowShader2Side { get; private set; }
+    public static Shader? VertexGlowShader { get; private set; }
     
     public static Material? NormalSaberMaterial { get; private set; }
     public static Material? InvertedSaberMaterial { get; private set; }
@@ -108,8 +108,8 @@ public static class VainSabersAssets
             }
             TestShader = assets.LoadAsset<Shader>("vs_test");
             SaberShader = assets.LoadAsset<Shader>("vs_saber");
-            VertexGlowShader = assets.LoadAsset<Shader>("vs_flatglow");
-            VertexGlowShader2Side = assets.LoadAsset<Shader>("vs_flatglow_2side");
+            VertexGlowShaderUntextured = assets.LoadAsset<Shader>("vs_flatglow");
+            VertexGlowShader = assets.LoadAsset<Shader>("vs_flatglow_2side");
             
             NormalSaberMaterial = assets.LoadAsset<Material>("saber");
             InvertedSaberMaterial = assets.LoadAsset<Material>("saberinverted");

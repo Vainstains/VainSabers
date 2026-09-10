@@ -194,7 +194,8 @@ public class BlurSaberData : MonoBehaviour
             width: 0.008f,
             length: 140,
             queueOffset: 0,
-            depthOffset: 0f
+            depthOffset: 0f,
+            motionActivation: 0f
         ));
         TrailsChanged?.Invoke();
     }
@@ -240,7 +241,8 @@ public class BlurSaberData : MonoBehaviour
             width: 0.01f,
             length: m_config?.BladeTrailMS ?? 60,
             queueOffset: 0,
-            depthOffset: 0f
+            depthOffset: 0f,
+            motionActivation: 0f
         ));
         TrailsChanged?.Invoke();
     }
@@ -487,7 +489,8 @@ public class BlurSaberData : MonoBehaviour
                         glowTextureName: td.GlowTexture,
                         colorTextureBase64: td.ColorTextureBase64,
                         glowTextureBase64: td.GlowTextureBase64,
-                        textureWrap: (TextureWrapMode)Mathf.Clamp(td.TextureWrap, 0, 3)
+                        textureWrap: (TextureWrapMode)Mathf.Clamp(td.TextureWrap, 0, 3),
+                        motionActivation: td.MotionActivation
                     ));
                 }
             }
@@ -513,7 +516,8 @@ public class BlurSaberData : MonoBehaviour
                         glowTextureName: bt.GlowTexture,
                         colorTextureBase64: bt.ColorTextureBase64,
                         glowTextureBase64: bt.GlowTextureBase64,
-                        textureWrap: (TextureWrapMode)Mathf.Clamp(bt.TextureWrap, 0, 3)
+                        textureWrap: (TextureWrapMode)Mathf.Clamp(bt.TextureWrap, 0, 3),
+                        motionActivation: bt.MotionActivation
                     ));
                 }
             }
@@ -536,7 +540,8 @@ public class BlurSaberData : MonoBehaviour
                     glowTextureName: bt.GlowTexture,
                     colorTextureBase64: bt.ColorTextureBase64,
                     glowTextureBase64: bt.GlowTextureBase64,
-                    textureWrap: (TextureWrapMode)Mathf.Clamp(bt.TextureWrap, 0, 3)
+                    textureWrap: (TextureWrapMode)Mathf.Clamp(bt.TextureWrap, 0, 3),
+                    motionActivation: bt.MotionActivation
                 ));
             }
 
@@ -722,7 +727,8 @@ public class BlurSaberData : MonoBehaviour
                     GlowTexture = td.GlowTextureName,
                     ColorTextureBase64 = embedAssets ? LoadAssetBase64(td.ColorTextureName, td.ColorTextureBase64) : null,
                     GlowTextureBase64 = embedAssets ? LoadAssetBase64(td.GlowTextureName, td.GlowTextureBase64) : null,
-                    TextureWrap = (int)td.TextureWrap
+                    TextureWrap = (int)td.TextureWrap,
+                    MotionActivation = td.MotionActivation
                 });
             }
         }
@@ -748,7 +754,8 @@ public class BlurSaberData : MonoBehaviour
                     GlowTexture = td.GlowTextureName,
                     ColorTextureBase64 = embedAssets ? LoadAssetBase64(td.ColorTextureName, td.ColorTextureBase64) : null,
                     GlowTextureBase64 = embedAssets ? LoadAssetBase64(td.GlowTextureName, td.GlowTextureBase64) : null,
-                    TextureWrap = (int)td.TextureWrap
+                    TextureWrap = (int)td.TextureWrap,
+                    MotionActivation = td.MotionActivation
                 });
             }
             // keep v1 field null for v2 presets to avoid duplication
@@ -1137,6 +1144,7 @@ public class BlurSaberData : MonoBehaviour
         public string? ColorTextureBase64 { get; set; }
         public string? GlowTextureBase64 { get; set; }
         public int TextureWrap { get; set; }
+        public float MotionActivation { get; set; } = 1f;
     }
 
     private static Vector3 ArrToVec3(float[] arr) =>

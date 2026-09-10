@@ -1177,6 +1177,7 @@ public enum GeometryType
         public string? ColorTextureBase64;
         public string? GlowTextureBase64;
         public TextureWrapMode TextureWrap;
+        public float MotionActivation; // 0=always visible, 1=gated by movement, exponential toward 0
 
         public SaberTrailData(
             float[] position,
@@ -1193,7 +1194,8 @@ public enum GeometryType
             string? glowTextureName = null,
             string? colorTextureBase64 = null,
             string? glowTextureBase64 = null,
-            TextureWrapMode textureWrap = TextureWrapMode.Clamp)
+            TextureWrapMode textureWrap = TextureWrapMode.Clamp,
+            float motionActivation = 1f)
         {
             Position = position;
             Color = color;
@@ -1210,6 +1212,7 @@ public enum GeometryType
             ColorTextureBase64 = colorTextureBase64;
             GlowTextureBase64 = glowTextureBase64;
             TextureWrap = textureWrap;
+            MotionActivation = motionActivation;
         }
     }
 }

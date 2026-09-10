@@ -11,7 +11,7 @@ Shader "Unlit/vs_flatglow"
         {
             Tags { "Queue"="Transparent+180" "RenderType"="Transparent" "IgnoreProjector"="True" }
             LOD 100
-            Cull Back
+            Cull Off
             ZWrite Off
             // ZTest defaults to LEqual; keep it unless you need different sorting behavior
     
