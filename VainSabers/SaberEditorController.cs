@@ -372,8 +372,10 @@ class SaberEditorComponent : UIComponent
 
     // trail editor
     private int m_selectedTipTrailIndex = 0;
+    private int m_selectedBladeTrailIndex = 0;
     private int m_selectedTrailMode = 0;
     private TextComponent m_tipTrailIndexText = null!;
+    private TextComponent m_bladeTrailIndexText = null!;
     private DropdownComponent m_trailModeDropdown = null!;
 
     protected override void Init()
@@ -1574,7 +1576,7 @@ class SaberEditorComponent : UIComponent
             return;
 
         m_trailModeDropdown = m_trailPanel.Content.AddChild<DropdownComponent>().WithPreferredHeight(4);
-        m_trailModeDropdown.SetOptions(new List<string> { "Tip Trails", "Blade Trail" }, m_selectedTrailMode);
+        m_trailModeDropdown.SetOptions(new List<string> { "Tip Trails", "Blade Trails" }, m_selectedTrailMode);
         m_trailModeDropdown.OnSelectionChanged += index =>
         {
             m_selectedTrailMode = index;
@@ -1795,7 +1797,71 @@ class SaberEditorComponent : UIComponent
         var data = EditingSaber.Data;
         ApplyToBothSabers(s => s.Data.EnsureDefaultTrails());
 
-        var trail = data.BladeTrail!.Value;
+        if (m_selectedBladeTrailIndex >= data.BladeTrails.Count)
+            m_selectedBladeTrailIndex = data.BladeTrails.Count - 1;
+        if (m_selectedBladeTrailIndex < 0)
+            m_selectedBladeTrailIndex = 0;
+
+        var navRow = m_trailPanel.Content.AddChild<UIComponent>().WithPreferredHeight(4);
+        var navLayout = navRow.AddChild<HorizontalLayoutGroupComponent>().ToFill();
+        navLayout.WithSpacing(0.5f).WithPadding(0);
+        navLayout.ChildControlWidth = true;
+        navLayout.ChildControlHeight = true;
+        navLayout.ChildForceExpandWidth = true;
+        navLayout.ChildForceExpandHeight = true;
+
+        var prevBtn = navLayout.AddChild<TextButtonComponent>().WithText("<");
+        prevBtn.Color = new Color(0.3f, 0.3f, 0.35f, 1f);
+        prevBtn.OnClick += () =>
+        {
+            if (m_selectedBladeTrailIndex > 0)
+            {
+                m_selectedBladeTrailIndex--;
+                RebuildTrailPanel();
+            }
+        };
+
+        m_bladeTrailIndexText = navLayout.AddChild<TextComponent>();
+        m_bladeTrailIndexText.Alignment = TextAlignmentOptions.Center;
+        m_bladeTrailIndexText.Color = new Color(0.9f, 0.9f, 0.9f, 1f);
+        m_bladeTrailIndexText.FontSize = 3.5f;
+        m_bladeTrailIndexText.Text = data.BladeTrails.Count > 0
+            ? $"{m_selectedBladeTrailIndex + 1}/{data.BladeTrails.Count}"
+            : "0/0";
+
+        var nextBtn = navLayout.AddChild<TextButtonComponent>().WithText(">");
+        nextBtn.Color = new Color(0.3f, 0.3f, 0.35f, 1f);
+        nextBtn.OnClick += () =>
+        {
+            if (m_selectedBladeTrailIndex < data.BladeTrails.Count - 1)
+            {
+                m_selectedBladeTrailIndex++;
+                RebuildTrailPanel();
+            }
+        };
+
+        var removeBtn = navLayout.AddChild<TextButtonComponent>().WithText("-");
+        removeBtn.Color = new Color(0.6f, 0.2f, 0.2f, 1f);
+        removeBtn.OnClick += () =>
+        {
+            ApplyToBothSabers(s => s.Data.RemoveBladeTrail(m_selectedBladeTrailIndex));
+            RebuildTrailPanel();
+        };
+        removeBtn.IsInteractable = data.BladeTrails.Count > 0;
+
+        var addBtn = navLayout.AddChild<TextButtonComponent>().WithText("+");
+        addBtn.Color = new Color(0.2f, 0.5f, 0.2f, 1f);
+        addBtn.OnClick += () =>
+        {
+            ApplyToBothSabers(s => s.Data.AddBladeTrail());
+            m_selectedBladeTrailIndex = data.BladeTrails.Count - 1;
+            RebuildTrailPanel();
+        };
+
+        if (data.BladeTrails.Count == 0)
+            return;
+
+        var trail = data.BladeTrails[m_selectedBladeTrailIndex];
 
         m_trailPanel.Content.AddSubHeader("Position");
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
@@ -1803,27 +1869,27 @@ class SaberEditorComponent : UIComponent
             .WithTint(RedColor)
             .WithValue(trail.Position[0]).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.Position[0] = val;
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
             .WithTint(GreenColor)
             .WithValue(trail.Position[1]).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.Position[1] = val;
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f).WithSensitivityCoef(0.25f)
             .WithTint(BlueColor)
             .WithValue(trail.Position[2]).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.Position[2] = val;
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
 
         m_trailPanel.Content.AddSubHeader("Color");
@@ -1832,35 +1898,35 @@ class SaberEditorComponent : UIComponent
             .WithTint(RedColor)
             .WithValue(trail.Color[0]).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.Color[0] = val;
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("G").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithTint(GreenColor)
             .WithValue(trail.Color[1]).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.Color[1] = val;
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("B").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.005f)
             .WithTint(BlueColor)
             .WithValue(trail.Color[2]).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.Color[2] = val;
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Custom Blend").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
             .WithValue(trail.CustomBlend).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.CustomBlend = val;
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
 
         m_trailPanel.Content.AddSubHeader("Properties");
@@ -1868,49 +1934,49 @@ class SaberEditorComponent : UIComponent
             .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
             .WithValue(trail.Glow).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.Glow = val;
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Opacity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
             .WithValue(trail.Opacity).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.Opacity = val;
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Length (ms)").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 500f, 1f)
             .WithValue(trail.Length).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.Length = Mathf.RoundToInt(val);
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Queue Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-10f, 10f, 1f)
             .WithValue(trail.QueueOffset).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.QueueOffset = Mathf.RoundToInt(val);
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Depth Offset").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.02f, 0.02f, 0.001f).WithSensitivityCoef(0.03f)
             .WithValue(trail.DepthOffset).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.DepthOffset = val;
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Fade Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
             .WithValue(trail.Fade).OnValueChanged += val =>
             {
-                var t = data.BladeTrail!.Value;
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.Fade = val;
-                ApplyToBothSabers(s => s.Data.SetBladeTrail(t));
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
 
         m_trailPanel.Content.AddSubHeader("Textures");
@@ -1922,9 +1988,9 @@ class SaberEditorComponent : UIComponent
         trailColorTexDropdown.SetOptions(trailTextureFiles, trailColorTexIdx);
         trailColorTexDropdown.OnSelectionChanged += idx =>
         {
-            var t = data.BladeTrail!.Value;
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
             t.ColorTextureName = idx > 0 ? trailTextureFiles[idx] : null;
-            data.SetBladeTrail(t);
+            data.SetBladeTrail(m_selectedBladeTrailIndex, t);
         };
         var trailGlowTexDropdown = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Glow").SetComponent<DropdownComponent>();
@@ -1933,9 +1999,9 @@ class SaberEditorComponent : UIComponent
         trailGlowTexDropdown.SetOptions(trailTextureFiles, trailGlowTexIdx);
         trailGlowTexDropdown.OnSelectionChanged += idx =>
         {
-            var t = data.BladeTrail!.Value;
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
             t.GlowTextureName = idx > 0 ? trailTextureFiles[idx] : null;
-            data.SetBladeTrail(t);
+            data.SetBladeTrail(m_selectedBladeTrailIndex, t);
         };
 
         var trailWrapModeNames = new[] { "Clamp", "Repeat", "Mirror", "MirrorOnce" };
@@ -1944,9 +2010,9 @@ class SaberEditorComponent : UIComponent
         trailWrapModeDropdown.SetOptions(trailWrapModeNames, Mathf.Clamp((int)trail.TextureWrap, 0, trailWrapModeNames.Length - 1));
         trailWrapModeDropdown.OnSelectionChanged += idx =>
         {
-            var t = data.BladeTrail!.Value;
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
             t.TextureWrap = (TextureWrapMode)Mathf.Clamp(idx, 0, trailWrapModeNames.Length - 1);
-            data.SetBladeTrail(t);
+            data.SetBladeTrail(m_selectedBladeTrailIndex, t);
         };
     }
 }

@@ -9,15 +9,29 @@ internal class SaberTipTrail : MonoBehaviour
     private Transform _saber = null!;
     private MovementHistoryProvider _sweepData = null!;
     
-    private const int CoarseSampleCount = 24; 
-    private const int RefinedSampleCount = CoarseSampleCount * 2 - 1;
-    private const int RefinedSampleCount2 = RefinedSampleCount * 2 - 1; 
+    private int _coarseSampleCount = 24;
+    private int _refinedSampleCount = 47;
+    private int _refinedSampleCount2 = 93;
     
-    private readonly Pose[] _poseBuffer = new Pose[CoarseSampleCount];
+    private Pose[] _poseBuffer = new Pose[24];
+    private Vector3[] _coarsePositions = new Vector3[24];
+    private Vector3[] _refinedPositions = new Vector3[47];
+    private Vector3[] _refinedPositions2 = new Vector3[93];
 
-    private readonly Vector3[] _coarsePositions = new Vector3[CoarseSampleCount];
-    private readonly Vector3[] _refinedPositions = new Vector3[RefinedSampleCount];
-    private readonly Vector3[] _refinedPositions2 = new Vector3[RefinedSampleCount2];
+    private void UpdateSampleCounts(int lengthMs)
+    {
+        int coarse = Mathf.Clamp(lengthMs / 4, 4, 256);
+        if (coarse == _coarseSampleCount) return;
+        _coarseSampleCount = coarse;
+        _refinedSampleCount = _coarseSampleCount * 2 - 1;
+        _refinedSampleCount2 = _refinedSampleCount * 2 - 1;
+        _poseBuffer = new Pose[_coarseSampleCount];
+        _coarsePositions = new Vector3[_coarseSampleCount];
+        _refinedPositions = new Vector3[_refinedSampleCount];
+        _refinedPositions2 = new Vector3[_refinedSampleCount2];
+        if (_lineRenderer != null)
+            _lineRenderer.positionCount = _refinedSampleCount2;
+    }
 
     private float m_opacity = 0.0f;
     private Color m_trailColor = Color.white;
@@ -30,10 +44,11 @@ internal class SaberTipTrail : MonoBehaviour
         _saber = saberTransform;
         m_trailData = trailData;
 
+        UpdateSampleCounts(trailData.Length);
         _lineRenderer = gameObject.AddComponent<LineRenderer>();
         _lineRenderer.material = new Material(VainSabersAssets.VertexGlowShader);
         _lineRenderer.useWorldSpace = true;
-        _lineRenderer.positionCount = RefinedSampleCount;
+        _lineRenderer.positionCount = _refinedSampleCount2;
 
         AnimationCurve curve = new AnimationCurve();
         curve.AddKey(0.0f, 0.0f);
@@ -47,6 +62,9 @@ internal class SaberTipTrail : MonoBehaviour
     public void ApplyConfig(SaberTrailData trailData)
     {
         m_trailData = trailData;
+        UpdateSampleCounts(trailData.Length);
+        if (_lineRenderer == null) return;
+        _lineRenderer.positionCount = _refinedSampleCount2;
         _lineRenderer.widthMultiplier = trailData.Width;
         _lineRenderer.sortingOrder = 100;
         _lineRenderer.material.renderQueue = 3600 + trailData.QueueOffset;
@@ -75,8 +93,8 @@ internal class SaberTipTrail : MonoBehaviour
         float tipSpeed = EstimateTipSpeed();
         Vector3 localOffset = new Vector3(m_trailData.Position[0], m_trailData.Position[1], m_trailData.Position[2]);
 
-        _sweepData.SampleNonAlloc(CoarseSampleCount, m_trailData.Length * 0.001f, _poseBuffer);
-        for (var i = 0; i < CoarseSampleCount; i++)
+        _sweepData.SampleNonAlloc(_coarseSampleCount, m_trailData.Length * 0.001f, _poseBuffer);
+        for (var i = 0; i < _coarseSampleCount; i++)
             _coarsePositions[i] = _poseBuffer[i].position + _poseBuffer[i].rotation * localOffset;
 
         _lineRenderer.enabled = m_trailData.Length > 0;
@@ -136,7 +154,19 @@ internal class SaberTipTrail : MonoBehaviour
 }
 public class SaberRibbonTrail : MonoBehaviour
 {
-    public int SegmentCount = 30;
+    public int SegmentCount => _segmentCount;
+    private int _segmentCount = 30;
+
+    private void UpdateSegmentCount(int lengthMs)
+    {
+        int target = Mathf.Clamp(lengthMs / 4, 4, 512);
+        if (target == _segmentCount) return;
+        _segmentCount = target;
+        InitializeMeshData();
+        // reassign mesh after reinit
+        if (_meshFilter != null && _mesh != null)
+            _meshFilter.mesh = _mesh;
+    }
     
     private MeshRenderer _meshRenderer = null!;
     private MeshFilter _meshFilter = null!;
@@ -173,13 +203,15 @@ public class SaberRibbonTrail : MonoBehaviour
         
         _meshRenderer.material = new Material(VainSabersAssets.VertexGlowShader2Side);
         
-        InitializeMeshData();
+        UpdateSegmentCount(trailData.Length);
+        // InitializeMeshData called by UpdateSegmentCount
         ApplyConfig(trailData);
     }
 
     public void ApplyConfig(SaberTrailData trailData)
     {
         m_trailData = trailData;
+        UpdateSegmentCount(trailData.Length);
         var mat = _meshRenderer.material;
         _meshRenderer.sortingOrder = 100;
         mat.renderQueue = 3600 + trailData.QueueOffset;

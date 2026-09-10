@@ -15,7 +15,7 @@ internal class BlurSaber : MonoBehaviour
     private SaberRibbonTrail m_defaultRibbonTrail = null!;
     
     private readonly List<SaberTipTrail> m_customTipTrails = new();
-    private SaberRibbonTrail? m_customBladeTrail;
+    private readonly List<SaberRibbonTrail> m_customBladeTrails = new();
 
     private Transform m_saberTransform = null!;
     private MovementHistoryProvider m_historyProvider = null!;
@@ -82,7 +82,8 @@ internal class BlurSaber : MonoBehaviour
         {
             foreach (var trail in m_customTipTrails)
                 trail?.SetGameColor(color);
-            m_customBladeTrail?.SetGameColor(color);
+            foreach (var trail in m_customBladeTrails)
+                trail?.SetGameColor(color);
         }
     }
     
@@ -221,14 +222,26 @@ internal class BlurSaber : MonoBehaviour
             m_customTipTrails.Add(trail);
         }
 
-        if (m_blurSaberData.BladeTrail.HasValue)
+        for (int i = 0; i < m_blurSaberData.BladeTrails.Count; i++)
+        {
+            var data = m_blurSaberData.BladeTrails[i];
+            var go = new GameObject($"CustomBladeTrail_{i}");
+            go.transform.SetParent(transform, false);
+            var trail = go.AddComponent<SaberRibbonTrail>();
+            trail.Init(m_historyProvider, data, m_saberTransform);
+            trail.SetGameColor(m_gameColor);
+            m_customBladeTrails.Add(trail);
+        }
+        // v1 compat: if BladeTrails empty but BladeTrail has value (should not happen after migration, but keep)
+        if (m_customBladeTrails.Count == 0 && m_blurSaberData.BladeTrail.HasValue)
         {
             var data = m_blurSaberData.BladeTrail.Value;
             var go = new GameObject("CustomBladeTrail");
             go.transform.SetParent(transform, false);
-            m_customBladeTrail = go.AddComponent<SaberRibbonTrail>();
-            m_customBladeTrail.Init(m_historyProvider, data, m_saberTransform);
-            m_customBladeTrail.SetGameColor(m_gameColor);
+            var trail = go.AddComponent<SaberRibbonTrail>();
+            trail.Init(m_historyProvider, data, m_saberTransform);
+            trail.SetGameColor(m_gameColor);
+            m_customBladeTrails.Add(trail);
         }
     }
 
@@ -250,18 +263,21 @@ internal class BlurSaber : MonoBehaviour
         }
         m_customTipTrails.Clear();
 
-        if (m_customBladeTrail != null)
+        foreach (var trail in m_customBladeTrails)
         {
+            if (trail != null)
+            {
 #if UNITY_EDITOR
-            if (Application.isEditor)
-                DestroyImmediate(m_customBladeTrail.gameObject);
-            else
-                Destroy(m_customBladeTrail.gameObject);
+                if (Application.isEditor)
+                    DestroyImmediate(trail.gameObject);
+                else
+                    Destroy(trail.gameObject);
 #else
-            Destroy(m_customBladeTrail.gameObject);
+                Destroy(trail.gameObject);
 #endif
-            m_customBladeTrail = null;
+            }
         }
+        m_customBladeTrails.Clear();
     }
     
     Color SquarePreserveLuminance(Color c)
