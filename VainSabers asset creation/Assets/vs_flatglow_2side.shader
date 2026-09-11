@@ -9,6 +9,10 @@ Shader "Unlit/vs_flatglow_2side"
             _GlowTex ("Glow", 2D) = "white" {}
             _ColorTexEnabled ("Color Texture Enabled", Float) = 0
             _GlowTexEnabled ("Glow Texture Enabled", Float) = 0
+            _NoiseTex ("Noise 3D", 3D) = "white" {}
+            _NoiseIntensity ("Noise Intensity", Float) = 0
+            _NoiseScale ("Noise Scale", Float) = 1
+            _NoiseSpeed ("Noise Speed", Float) = 0
         }
     
         SubShader
@@ -31,12 +35,17 @@ Shader "Unlit/vs_flatglow_2side"
                 CGPROGRAM
                 #pragma vertex vert
                 #pragma fragment frag
+                #pragma target 3.0
                 #include "UnityCG.cginc"
     
                 float _ColorBoost;
                 float _DepthOffset;
                 sampler2D _ColorTex;
                 float _ColorTexEnabled;
+                sampler3D _NoiseTex;
+                float _NoiseIntensity;
+                float _NoiseScale;
+                float _NoiseSpeed;
     
                 struct appdata
                 {
@@ -60,6 +69,18 @@ Shader "Unlit/vs_flatglow_2side"
                     UNITY_SETUP_INSTANCE_ID(v);
                     UNITY_INITIALIZE_OUTPUT(v2f, o);
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                    float t = v.uv.x;
+                    float noiseFactor = t * _NoiseIntensity;
+                    if (noiseFactor > 0.0001)
+                    {
+                        float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
+                        float scroll = _Time.y * _NoiseSpeed;
+                        float3 noiseCoord = worldPos * _NoiseScale * 0.03125 + float3(scroll, scroll, scroll) * 0.2;
+                        float4 n = tex3Dlod(_NoiseTex, float4(noiseCoord, 0));
+                        float3 dispWorld = (n.rgb * 2.0 - 1.0) * noiseFactor;
+                        float3 dispObj = mul((float3x3)unity_WorldToObject, dispWorld);
+                        v.vertex.xyz += dispObj;
+                    }
                     o.pos   = UnityObjectToClipPos(v.vertex);
                     o.pos.z += _DepthOffset;
                     o.uv    = v.uv;
@@ -97,12 +118,17 @@ Shader "Unlit/vs_flatglow_2side"
                 CGPROGRAM
                 #pragma vertex vert
                 #pragma fragment frag
+                #pragma target 3.0
                 #include "UnityCG.cginc"
     
                 float _GlowBoost;
                 float _DepthOffset;
                 sampler2D _GlowTex;
                 float _GlowTexEnabled;
+                sampler3D _NoiseTex;
+                float _NoiseIntensity;
+                float _NoiseScale;
+                float _NoiseSpeed;
     
                 struct appdata
                 {
@@ -126,6 +152,18 @@ Shader "Unlit/vs_flatglow_2side"
                     UNITY_SETUP_INSTANCE_ID(v);
                     UNITY_INITIALIZE_OUTPUT(v2f, o);
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                    float t = v.uv.x;
+                    float noiseFactor = t * _NoiseIntensity;
+                    if (noiseFactor > 0.0001)
+                    {
+                        float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
+                        float scroll = _Time.y * _NoiseSpeed;
+                        float3 noiseCoord = worldPos * _NoiseScale * 0.03125 + float3(scroll, scroll, scroll) * 0.2;
+                        float4 n = tex3Dlod(_NoiseTex, float4(noiseCoord, 0));
+                        float3 dispWorld = (n.rgb * 2.0 - 1.0) * noiseFactor;
+                        float3 dispObj = mul((float3x3)unity_WorldToObject, dispWorld);
+                        v.vertex.xyz += dispObj;
+                    }
                     o.pos   = UnityObjectToClipPos(v.vertex);
                     o.pos.z += _DepthOffset;
                     o.uv    = v.uv;

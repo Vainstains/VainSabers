@@ -1179,6 +1179,12 @@ public enum GeometryType
         public TextureWrapMode TextureWrap;
         public float MotionActivation; // 0=always visible, 1=gated by movement, exponential toward 0
 
+        // Blade trail vertex noise (world-space 3D noise, blade trails only via vs_flatglow_2side)
+        public bool NoiseEnabled;
+        public float NoiseIntensity;
+        public float NoiseScale;
+        public float NoiseSpeed;
+
         public SaberTrailData(
             float[] position,
             float[] color,
@@ -1195,7 +1201,11 @@ public enum GeometryType
             string? colorTextureBase64 = null,
             string? glowTextureBase64 = null,
             TextureWrapMode textureWrap = TextureWrapMode.Clamp,
-            float motionActivation = 1f)
+            float motionActivation = 1f,
+            bool noiseEnabled = false,
+            float noiseIntensity = 0.02f,
+            float noiseScale = 2f,
+            float noiseSpeed = 1f)
         {
             Position = position;
             Color = color;
@@ -1213,6 +1223,10 @@ public enum GeometryType
             GlowTextureBase64 = glowTextureBase64;
             TextureWrap = textureWrap;
             MotionActivation = motionActivation;
+            NoiseEnabled = noiseEnabled;
+            NoiseIntensity = noiseIntensity;
+            NoiseScale = noiseScale;
+            NoiseSpeed = noiseSpeed;
         }
     }
 }

@@ -490,7 +490,11 @@ public class BlurSaberData : MonoBehaviour
                         colorTextureBase64: td.ColorTextureBase64,
                         glowTextureBase64: td.GlowTextureBase64,
                         textureWrap: (TextureWrapMode)Mathf.Clamp(td.TextureWrap, 0, 3),
-                        motionActivation: td.MotionActivation
+                        motionActivation: td.MotionActivation,
+                        noiseEnabled: td.NoiseEnabled,
+                        noiseIntensity: td.NoiseIntensity,
+                        noiseScale: td.NoiseScale > 0.01f ? td.NoiseScale : 2f,
+                        noiseSpeed: td.NoiseSpeed
                     ));
                 }
             }
@@ -517,7 +521,11 @@ public class BlurSaberData : MonoBehaviour
                         colorTextureBase64: bt.ColorTextureBase64,
                         glowTextureBase64: bt.GlowTextureBase64,
                         textureWrap: (TextureWrapMode)Mathf.Clamp(bt.TextureWrap, 0, 3),
-                        motionActivation: bt.MotionActivation
+                        motionActivation: bt.MotionActivation,
+                        noiseEnabled: bt.NoiseEnabled,
+                        noiseIntensity: bt.NoiseIntensity,
+                        noiseScale: bt.NoiseScale > 0.01f ? bt.NoiseScale : 2f,
+                        noiseSpeed: bt.NoiseSpeed
                     ));
                 }
             }
@@ -541,7 +549,11 @@ public class BlurSaberData : MonoBehaviour
                     colorTextureBase64: bt.ColorTextureBase64,
                     glowTextureBase64: bt.GlowTextureBase64,
                     textureWrap: (TextureWrapMode)Mathf.Clamp(bt.TextureWrap, 0, 3),
-                    motionActivation: bt.MotionActivation
+                    motionActivation: bt.MotionActivation,
+                    noiseEnabled: bt.NoiseEnabled,
+                    noiseIntensity: bt.NoiseIntensity,
+                    noiseScale: bt.NoiseScale > 0.01f ? bt.NoiseScale : 2f,
+                    noiseSpeed: bt.NoiseSpeed
                 ));
             }
 
@@ -728,7 +740,11 @@ public class BlurSaberData : MonoBehaviour
                     ColorTextureBase64 = embedAssets ? LoadAssetBase64(td.ColorTextureName, td.ColorTextureBase64) : null,
                     GlowTextureBase64 = embedAssets ? LoadAssetBase64(td.GlowTextureName, td.GlowTextureBase64) : null,
                     TextureWrap = (int)td.TextureWrap,
-                    MotionActivation = td.MotionActivation
+                    MotionActivation = td.MotionActivation,
+                    NoiseEnabled = td.NoiseEnabled,
+                    NoiseIntensity = td.NoiseIntensity,
+                    NoiseScale = td.NoiseScale,
+                    NoiseSpeed = td.NoiseSpeed
                 });
             }
         }
@@ -755,7 +771,11 @@ public class BlurSaberData : MonoBehaviour
                     ColorTextureBase64 = embedAssets ? LoadAssetBase64(td.ColorTextureName, td.ColorTextureBase64) : null,
                     GlowTextureBase64 = embedAssets ? LoadAssetBase64(td.GlowTextureName, td.GlowTextureBase64) : null,
                     TextureWrap = (int)td.TextureWrap,
-                    MotionActivation = td.MotionActivation
+                    MotionActivation = td.MotionActivation,
+                    NoiseEnabled = td.NoiseEnabled,
+                    NoiseIntensity = td.NoiseIntensity,
+                    NoiseScale = td.NoiseScale,
+                    NoiseSpeed = td.NoiseSpeed
                 });
             }
             // keep v1 field null for v2 presets to avoid duplication
@@ -1145,6 +1165,10 @@ public class BlurSaberData : MonoBehaviour
         public string? GlowTextureBase64 { get; set; }
         public int TextureWrap { get; set; }
         public float MotionActivation { get; set; } = 1f;
+        public bool NoiseEnabled { get; set; } = false;
+        public float NoiseIntensity { get; set; } = 0.02f;
+        public float NoiseScale { get; set; } = 2f;
+        public float NoiseSpeed { get; set; } = 1f;
     }
 
     private static Vector3 ArrToVec3(float[] arr) =>

@@ -1955,7 +1955,7 @@ class SaberEditorComponent : UIComponent
                 ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
         m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Length (ms)").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 500f, 1f)
+            .WithLabel("Length (ms)").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 500f, 1f).WithSensitivityCoef(200)
             .WithValue(trail.Length).OnValueChanged += val =>
             {
                 var t = data.BladeTrails[m_selectedBladeTrailIndex];
@@ -1994,6 +1994,44 @@ class SaberEditorComponent : UIComponent
                 t.MotionActivation = val;
                 ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
+
+        m_trailPanel.Content.AddSubHeader("Noise");
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Noise").SetComponent<ToggleComponent>().WithValue(trail.NoiseEnabled)
+            .OnValueChanged += val =>
+            {
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
+                t.NoiseEnabled = val;
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+                RebuildTrailPanel();
+            };
+        if (trail.NoiseEnabled)
+        {
+            m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Intensity").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.0f, 0.001f).WithSensitivityCoef(0.5f)
+                .WithValue(trail.NoiseIntensity).OnValueChanged += val =>
+                {
+                    var t = data.BladeTrails[m_selectedBladeTrailIndex];
+                    t.NoiseIntensity = val;
+                    ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+                };
+            m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Scale").SetComponent<NumberInputComponent>().WithMinMaxStep(1f, 10f, 0.1f).WithSensitivityCoef(0.3f)
+                .WithValue(trail.NoiseScale).OnValueChanged += val =>
+                {
+                    var t = data.BladeTrails[m_selectedBladeTrailIndex];
+                    t.NoiseScale = val;
+                    ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+                };
+            m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Speed").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 10f, 0.05f).WithSensitivityCoef(0.2f)
+                .WithValue(trail.NoiseSpeed).OnValueChanged += val =>
+                {
+                    var t = data.BladeTrails[m_selectedBladeTrailIndex];
+                    t.NoiseSpeed = val;
+                    ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+                };
+        }
 
         m_trailPanel.Content.AddSubHeader("Textures");
         var trailTextureFiles = GetTextureFileNames();

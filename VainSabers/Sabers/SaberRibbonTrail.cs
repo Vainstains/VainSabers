@@ -38,6 +38,28 @@ public class SaberRibbonTrail : MonoBehaviour
     private BlurSaberPart.AssetKeyCache m_colorTexKey = new();
     private BlurSaberPart.AssetKeyCache m_glowTexKey = new();
 
+    // Shared 32x32x32 random RGB 3D noise texture, sampled in vertex shader with tex3Dlod
+    private static Texture3D? s_noiseTex;
+    private static Texture3D GetOrCreateNoiseTexture()
+    {
+        if (s_noiseTex != null) return s_noiseTex;
+        const int size = 32;
+        s_noiseTex = new Texture3D(size, size, size, TextureFormat.RGBA32, false);
+        s_noiseTex.wrapMode = TextureWrapMode.Repeat;
+        s_noiseTex.filterMode = FilterMode.Bilinear;
+        var rand = new System.Random(12345);
+        var colors = new Color[size * size * size];
+        for (int z = 0; z < size; z++)
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            colors[x + y * size + z * size * size] = new Color((float)rand.NextDouble(), (float)rand.NextDouble(), (float)rand.NextDouble());
+        }
+        s_noiseTex.SetPixels(colors);
+        s_noiseTex.Apply();
+        return s_noiseTex;
+    }
+
     public void Init(MovementHistoryProvider movementHistory, SaberTrailData trailData, Transform saberTransform)
     {
         _movementHistory = movementHistory;
@@ -74,6 +96,14 @@ public class SaberRibbonTrail : MonoBehaviour
         mat.SetTexture("_GlowTex", glowTex ?? Texture2D.whiteTexture);
         mat.SetFloat("_ColorTexEnabled", colorTex != null ? 1f : 0f);
         mat.SetFloat("_GlowTexEnabled", glowTex != null ? 1f : 0f);
+
+        // Noise: world-space 3D scrolling noise. If NoiseEnabled is false, intensity is forced to 0.
+        var noiseTex = GetOrCreateNoiseTexture();
+        mat.SetTexture("_NoiseTex", noiseTex);
+        float effectiveIntensity = trailData.NoiseEnabled ? trailData.NoiseIntensity : 0f;
+        mat.SetFloat("_NoiseIntensity", effectiveIntensity);
+        mat.SetFloat("_NoiseScale", trailData.NoiseScale);
+        mat.SetFloat("_NoiseSpeed", trailData.NoiseSpeed);
 
         m_trailColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
         UpdateFinalColor();
