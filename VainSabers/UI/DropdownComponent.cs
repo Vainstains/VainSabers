@@ -178,18 +178,33 @@ public class DropdownComponent : UIComponent
         RebuildOptionButtons();
         SetSelectedIndex(m_selectedIndex, false);
         m_listBackground.gameObject.SetActive(true);
-        m_blocker.IsInteractable = true;
+        PopupStack.Register(m_listCanvas, m_blocker);
 
         m_arrow.RectTransform.eulerAngles = new Vector3(0f, 0f, 0f);
     }
 
     public void Close()
     {
+        if (!m_isOpen)
+        {
+            // still ensure unregistered if somehow orphaned
+            PopupStack.Unregister(m_listCanvas);
+            m_blocker.IsInteractable = false;
+            return;
+        }
         m_isOpen = false;
+        PopupStack.Unregister(m_listCanvas);
         m_listBackground.gameObject.SetActive(false);
         m_blocker.IsInteractable = false;
 
         m_arrow.RectTransform.eulerAngles = new Vector3(0f, 0f, -90f);
+    }
+
+    private void OnBlockerClicked()
+    {
+        if (!PopupStack.IsTopmost(m_listCanvas))
+            return;
+        Close();
     }
 
     public void Toggle()
@@ -256,7 +271,7 @@ public class DropdownComponent : UIComponent
         m_blocker = AddChild<ButtonComponent>()
             .ToFill().Extend(200);
         m_blocker.Color = new Color(0, 0, 0, 0);
-        m_blocker.OnClick += Close;
+        m_blocker.OnClick += OnBlockerClicked;
         m_blocker.IsInteractable = false;
 
         m_label = m_headerButton.AddChild<TextComponent>().ToFill().Inset(1).InsetLeft(1);

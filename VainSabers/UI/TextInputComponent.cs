@@ -141,7 +141,7 @@ public class TextInputComponent : UIComponent
         BuildKeyboard();
         UpdateShiftVisuals();
         m_popupBackground.gameObject.SetActive(true);
-        m_popupBlocker.IsInteractable = true;
+        PopupStack.Register(m_popupCanvas, m_popupBlocker);
         m_headerButton.gameObject.SetActive(false);
     }
 
@@ -151,9 +151,17 @@ public class TextInputComponent : UIComponent
             return;
 
         m_isPopupOpen = false;
+        PopupStack.Unregister(m_popupCanvas);
         m_popupBackground.gameObject.SetActive(false);
         m_popupBlocker.IsInteractable = false;
         m_headerButton.gameObject.SetActive(true);
+    }
+
+    private void OnBlockerClicked()
+    {
+        if (!PopupStack.IsTopmost(m_popupCanvas))
+            return;
+        ClosePopup();
     }
 
     public void TogglePopup()
@@ -182,7 +190,7 @@ public class TextInputComponent : UIComponent
 
         m_popupBlocker = AddChild<ButtonComponent>().ToFill().Extend(200);
         m_popupBlocker.Color = new Color(0, 0, 0, 0);
-        m_popupBlocker.OnClick += ClosePopup;
+        m_popupBlocker.OnClick += OnBlockerClicked;
         m_popupBlocker.IsInteractable = false;
 
         m_popupBackground = AddChild<RoundRectComponent>().ToBottomCenter().Move(0, PopupHeight * 0.5f);

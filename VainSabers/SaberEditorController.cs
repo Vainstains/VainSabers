@@ -714,7 +714,7 @@ class SaberEditorComponent : UIComponent
         var referencePart = EditingSaber.Data.Components[m_selectedPartIndex];
         var sourcePart = ResolveSource(referencePart);
         
-        // Part panel
+        #region Part panel
 
         
         
@@ -768,8 +768,8 @@ class SaberEditorComponent : UIComponent
             ApplyToBothResolvedParts(part => part.Length = val);
 
         BuildAnimatorsSection(referencePart);
-        
-        // Material panel
+        #endregion
+        #region Material panel
         m_materialPanel.Content.AddSubHeader("General");
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Hue Shift").SetComponent<NumberInputComponent>().WithMinMaxStep(-0.5f, 0.5f, 0.025f)
@@ -913,8 +913,10 @@ class SaberEditorComponent : UIComponent
             .WithLabel("Disable Depth Prepass").SetComponent<ToggleComponent>().WithValue(sourcePart.DisableDepthPrepass)
             .OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.DisableDepthPrepass = val);
+
+        #endregion
+        #region Geometry panel
         
-        // Geometry panel
         var typeDropdown = m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Geometry Type").SetComponent<DropdownComponent>();
         typeDropdown.SetEnumOptions(sourcePart.GeometryHandling);
