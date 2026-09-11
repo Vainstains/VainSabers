@@ -27,8 +27,8 @@ public class GradientInputComponent : UIComponent
     private const float TrackHeight = 4f;
     private const float FieldHeight = 4f;
     private const float ButtonSpacing = 0.5f;
-    private const float DiamondBaseSize = 2.8f;
-    private const float DiamondSelectedBonus = 0.5f;
+    private const float DiamondBaseSize = 2.0f;
+    private const float DiamondSelectedBonus = 0.8f;
 
     private static readonly Color HeaderBaseColor = new Color(0.15f, 0.15f, 0.15f, 1f);
     private static readonly Color PopupBaseColor = new Color(0.07f, 0.07f, 0.07f, 1f);

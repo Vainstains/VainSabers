@@ -7,6 +7,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 using VainSabers.Config;
+using VainSabers.Data;
 using VainSabers.Helpers;
 using VainSabers.Sabers;
 using VainSabers.UI;
@@ -820,10 +821,23 @@ class SaberEditorComponent : UIComponent
             .WithLabel("Strength").SetComponent<NumberInputComponent>().WithMinMaxStep(-3f, 3f, 0.1f).WithSensitivityCoef(0.3f)
             .WithValue(sourcePart.RimFactor).OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.RimFactor = val);
+        // Rim power is now a float gradient (baked from old power factor for legacy presets)
+        var rimGradient = sourcePart.RimPowerGradient;
+        if (rimGradient == null)
+        {
+            rimGradient = BlurSaberPart.CreateBakedPowerGradient(sourcePart.RimPower);
+            sourcePart.RimPowerGradient = rimGradient;
+        }
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Falloff Power").SetComponent<NumberInputComponent>().WithMinMaxStep(0.25f, 6f, 0.25f)
-            .WithValue(sourcePart.RimPower).OnValueChanged += val =>
-            ApplyToBothResolvedParts(part => part.RimPower = val);
+            .WithLabel("Falloff Power").SetComponent<GradientInputComponent>().WithMode(VainSabers.UI.GradientMode.Float).WithGradient(rimGradient)
+            .OnGradientChanged += () =>
+            {
+                ApplyToBothResolvedParts(part =>
+                {
+                    if (part.RimPowerGradient == rimGradient) return;
+                    part.RimPowerGradient.SetFloatKeys(rimGradient.GetFloatKeys());
+                });
+            };
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Perpendicular Filter").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.1f).WithSensitivityCoef(0.3f)
             .WithValue(sourcePart.RimPerpendicular).OnValueChanged += val =>
@@ -2083,4 +2097,5 @@ class SaberEditorComponent : UIComponent
             data.SetBladeTrail(m_selectedBladeTrailIndex, t);
         };
     }
+    #endregion
 }

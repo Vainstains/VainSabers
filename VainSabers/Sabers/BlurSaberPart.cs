@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using VainSabers.Config;
+using VainSabers.Data;
 using VainSabers.Helpers;
 
 namespace VainSabers.Sabers
@@ -103,8 +104,23 @@ public enum GeometryType
         public int MinimumRings = 4;
 
         public float RimFactor = 0;
-        public float RimPower = 3;
+        public float RimPower = 3; // legacy, kept for baking old presets
+        public ColorGradient RimPowerGradient = CreateBakedPowerGradient(3f);
         public float RimPerpendicular = 0;
+
+        public static ColorGradient CreateBakedPowerGradient(float power, int keyCount = 8)
+        {
+            var g = new ColorGradient();
+            power = Mathf.Max(power, 0.0001f);
+            for (int i = 0; i < keyCount; i++)
+            {
+                float t = i / (float)(keyCount - 1);
+                float v = Mathf.Pow(Mathf.Clamp01(t), power);
+                g.Keys.Add(new ColorGradientKey(t, new Color(v, v, v, 1f)) { Easing = Easing.Linear });
+            }
+            g.SetDirty();
+            return g;
+        }
 
         public float SpecularStrength = 0.41f;
         public float SpecularPower = 48f;
@@ -371,6 +387,9 @@ public enum GeometryType
             EnableRoundedNormals = source.EnableRoundedNormals;
             RimFactor = source.RimFactor;
             RimPower = source.RimPower;
+            // deep copy gradient into existing instance to preserve references held by UI
+            if (RimPowerGradient == null) RimPowerGradient = new ColorGradient();
+            RimPowerGradient.SetFloatKeys(source.RimPowerGradient.GetFloatKeys());
             RimPerpendicular = source.RimPerpendicular;
             SpecularStrength = source.SpecularStrength;
             SpecularPower = source.SpecularPower;
@@ -420,7 +439,7 @@ public enum GeometryType
                 m_propertyBlock.SetFloat("_DepthOffset", DepthOffset + (Inverted ? 0f : 0.001f));
 
                 m_propertyBlock.SetFloat("_RimFactor", RimFactor);
-                m_propertyBlock.SetFloat("_RimPower", RimPower);
+                m_propertyBlock.SetTexture("_RimPowerGradient", RimPowerGradient.GetGradientTexture());
                 m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
 
                 // _BlurPartIsBlade: 1 for blade geometry (Simple/Advanced tubes), 0 for images/obj (Sprite/Obj)

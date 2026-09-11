@@ -425,6 +425,16 @@ public class BlurSaberData : MonoBehaviour
 
                 part.RimFactor = partData.RimFactor;
                 part.RimPower = partData.RimPower;
+                if (partData.RimPowerGradient != null && partData.RimPowerGradient.Count > 0)
+                {
+                    part.RimPowerGradient.SetFloatKeys(partData.RimPowerGradient);
+                }
+                else
+                {
+                    // Bake 8-key gradient from old RimPower for older presets (v2 or missing gradient)
+                    var baked = BlurSaberPart.CreateBakedPowerGradient(partData.RimPower);
+                    part.RimPowerGradient.SetFloatKeys(baked.GetFloatKeys());
+                }
                 part.RimPerpendicular = partData.RimPerpendicular;
                 part.SpecularStrength = partData.SpecularStrength;
                 part.SpecularPower = partData.SpecularPower;
@@ -674,6 +684,7 @@ public class BlurSaberData : MonoBehaviour
 
                 RimFactor = part.RimFactor,
                 RimPower = part.RimPower,
+                RimPowerGradient = part.RimPowerGradient != null ? part.RimPowerGradient.GetFloatKeys() : null,
                 RimPerpendicular = part.RimPerpendicular,
 
                 SpecularStrength = part.SpecularStrength,
@@ -967,6 +978,10 @@ public class BlurSaberData : MonoBehaviour
                     break;
                 case "rimPower":
                     currentPart.RimPower = vals[0];
+                    {
+                        var baked = BlurSaberPart.CreateBakedPowerGradient(vals[0]);
+                        currentPart.RimPowerGradient.SetFloatKeys(baked.GetFloatKeys());
+                    }
                     break;
                 case "rimPerpendicular":
                     currentPart.RimPerpendicular = vals[0];
@@ -1116,6 +1131,7 @@ public class BlurSaberData : MonoBehaviour
 
         public float RimFactor { get; set; }
         public float RimPower { get; set; } = 3f;
+        public List<VainSabers.Data.FloatGradientKey>? RimPowerGradient { get; set; }
         public float RimPerpendicular { get; set; }
 
         public float SpecularStrength { get; set; } = 0.41f;

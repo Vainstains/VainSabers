@@ -87,7 +87,7 @@ static const float _OppositeSideFade = 1.0;
 static const float _OppositeSideSharpness = 1.5;
 
 float _RimFactor;
-float _RimPower;
+sampler2D _RimPowerGradient;
 float _RimPerpendicular;
 
 // blur goes from 0 to 1
@@ -206,8 +206,8 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float fresnelFull = 1.0 - saturate(abs(dot(N, V)));
     float fresnelPerp = 1.0 - saturate(dot(Nperp, Vperp));
 
-    float fresnelTerm = lerp(fresnelFull, fresnelPerp, saturate(_RimPerpendicular));
-    fresnelTerm = pow(saturate(fresnelTerm), max(_RimPower, 0.0001));
+    float fresnelRaw = lerp(fresnelFull, fresnelPerp, saturate(_RimPerpendicular));
+    float fresnelTerm = tex2D(_RimPowerGradient, float2(saturate(fresnelRaw), 0.5)).r;
 
     commonVars.rimFactor = 1.0 + _RimFactor * fresnelTerm;
     
