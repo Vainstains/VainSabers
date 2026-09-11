@@ -224,7 +224,7 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     if (_GlowTexEnabled > 0.5)
     {
         float4 texGlow = tex2Dbias(_GlowTex, float4(texUv, 0, lodBias));
-        commonVars.glowStrength *= texGlow.r;
+        commonVars.glowStrength *= texGlow.r * texGlow.a;
     }
 
     return commonVars;

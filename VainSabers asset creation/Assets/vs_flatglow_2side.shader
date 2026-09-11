@@ -176,7 +176,11 @@ Shader "Unlit/vs_flatglow_2side"
                     // Write only alpha (glow), RGB is discarded by ColorMask.
                     float glow = saturate(i.alpha * _GlowBoost);
                     if (_GlowTexEnabled > 0.5)
-                        glow *= tex2D(_GlowTex, i.uv).r;
+                    {
+                        float4 glowTex = tex2D(_GlowTex, i.uv);
+                        glow *= glowTex.r * glowTex.a;
+                    }
+                        
                     return fixed4(0, 0, 0, glow);
                 }
                 ENDCG

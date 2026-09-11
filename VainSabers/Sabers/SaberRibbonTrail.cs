@@ -6,6 +6,8 @@ public class SaberRibbonTrail : MonoBehaviour
 {
     public int SegmentCount => _segmentCount;
     private int _segmentCount = 30;
+    private const int VerticalSubdivisions = 8;
+    private const int VerticalVertexCount = VerticalSubdivisions + 1;
 
     private void UpdateSegmentCount(int lengthMs)
     {
@@ -122,8 +124,8 @@ public class SaberRibbonTrail : MonoBehaviour
 
     private void InitializeMeshData()
     {
-        int vertexCount = (SegmentCount + 1) * 2;
-        int triangleCount = SegmentCount * 2 * 3;
+        int vertexCount = (SegmentCount + 1) * VerticalVertexCount;
+        int triangleCount = SegmentCount * VerticalSubdivisions * 2 * 3;
         
         _vertices = new Vector3[vertexCount];
         _colors = new Color[vertexCount];
@@ -132,16 +134,23 @@ public class SaberRibbonTrail : MonoBehaviour
         
         for (int i = 0; i < SegmentCount; i++)
         {
-            int triIndex = i * 6;
-            int vertIndex = i * 2;
-            
-            _triangles[triIndex] = vertIndex;
-            _triangles[triIndex + 1] = vertIndex + 2;
-            _triangles[triIndex + 2] = vertIndex + 1;
-            
-            _triangles[triIndex + 3] = vertIndex + 1;
-            _triangles[triIndex + 4] = vertIndex + 2;
-            _triangles[triIndex + 5] = vertIndex + 3;
+            for (int v = 0; v < VerticalSubdivisions; v++)
+            {
+                int quadIndex = i * VerticalSubdivisions + v;
+                int triIndex = quadIndex * 6;
+                int vert00 = i * VerticalVertexCount + v;
+                int vert01 = vert00 + 1;
+                int vert10 = (i + 1) * VerticalVertexCount + v;
+                int vert11 = vert10 + 1;
+                
+                _triangles[triIndex] = vert00;
+                _triangles[triIndex + 1] = vert10;
+                _triangles[triIndex + 2] = vert01;
+                
+                _triangles[triIndex + 3] = vert01;
+                _triangles[triIndex + 4] = vert10;
+                _triangles[triIndex + 5] = vert11;
+            }
         }
     }
 
@@ -200,20 +209,18 @@ public class SaberRibbonTrail : MonoBehaviour
             Vector3 basePos = transform.InverseTransformPoint(basePosWorld);
             Vector3 tipPos = transform.InverseTransformPoint(tipPosWorld);
             
-            _vertices[vertexIndex] = basePos;
-            _vertices[vertexIndex + 1] = tipPos;
-
-            _uvs[vertexIndex] = new Vector2(t, 0f);
-            _uvs[vertexIndex + 1] = new Vector2(t, 1f);
-            
             float segmentOpacity = CalculateSegmentOpacity(t);
+            Color tipColorFull = new Color(m_trailColor.r, m_trailColor.g, m_trailColor.b, segmentOpacity * _opacity * m_trailData.Opacity);
             Color baseColor = new Color(m_trailColor.r, m_trailColor.g, m_trailColor.b, 0f);
-            Color tipColor = new Color(m_trailColor.r, m_trailColor.g, m_trailColor.b, segmentOpacity * _opacity * m_trailData.Opacity);
-            
-            _colors[vertexIndex] = baseColor;
-            _colors[vertexIndex + 1] = tipColor;
-            
-            vertexIndex += 2;
+
+            for (int v = 0; v < VerticalVertexCount; v++)
+            {
+                float vFrac = (float)v / VerticalSubdivisions;
+                _vertices[vertexIndex] = Vector3.Lerp(basePos, tipPos, vFrac);
+                _uvs[vertexIndex] = new Vector2(t, vFrac);
+                _colors[vertexIndex] = Color.Lerp(baseColor, tipColorFull, vFrac);
+                vertexIndex++;
+            }
         }
 
         _mesh.Clear();
