@@ -119,9 +119,10 @@ public class ColorGradient
 
         if (m_gradientTexture == null)
         {
-            m_gradientTexture = new Texture2D(TextureSize, 1, TextureFormat.RGBAFloat, false);
-            m_gradientTexture.filterMode = FilterMode.Bilinear;
+            m_gradientTexture = new Texture2D(TextureSize, 1, TextureFormat.RGBAFloat, true);
+            m_gradientTexture.filterMode = FilterMode.Trilinear;
             m_gradientTexture.wrapMode = TextureWrapMode.Clamp;
+            m_gradientTexture.mipMapBias = 0f;
         }
 
         var pixels = m_gradientTexture.GetRawTextureData<Color>();
@@ -131,7 +132,7 @@ public class ColorGradient
             pixels[i] = Evaluate(t);
         }
 
-        m_gradientTexture.Apply(false, false);
+        m_gradientTexture.Apply(true, false);
     }
 
     public Texture2D GetGradientTexture()

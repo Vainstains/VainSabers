@@ -105,7 +105,7 @@ public enum GeometryType
 
         public float RimFactor = 0;
         public float RimPower = 3; // legacy, kept for baking old presets
-        public ColorGradient RimPowerGradient = CreateBakedPowerGradient(3f);
+        public ColorGradient RimPowerGradient = CreateBakedRimGradient(0f, 3f);
         public float RimPerpendicular = 0;
 
         public static ColorGradient CreateBakedPowerGradient(float power, int keyCount = 8)
@@ -116,6 +116,20 @@ public enum GeometryType
             {
                 float t = i / (float)(keyCount - 1);
                 float v = Mathf.Pow(Mathf.Clamp01(t), power);
+                g.Keys.Add(new ColorGradientKey(t, new Color(v, v, v, 1f)) { Easing = Easing.Linear });
+            }
+            g.SetDirty();
+            return g;
+        }
+
+        public static ColorGradient CreateBakedRimGradient(float rimFactor, float rimPower, int keyCount = 8)
+        {
+            var g = new ColorGradient();
+            rimPower = Mathf.Max(rimPower, 0.0001f);
+            for (int i = 0; i < keyCount; i++)
+            {
+                float t = i / (float)(keyCount - 1);
+                float v = rimFactor * Mathf.Pow(Mathf.Clamp01(t), rimPower);
                 g.Keys.Add(new ColorGradientKey(t, new Color(v, v, v, 1f)) { Easing = Easing.Linear });
             }
             g.SetDirty();
@@ -438,7 +452,7 @@ public enum GeometryType
                 m_propertyBlock ??= new MaterialPropertyBlock();
                 m_propertyBlock.SetFloat("_DepthOffset", DepthOffset + (Inverted ? 0f : 0.001f));
 
-                m_propertyBlock.SetFloat("_RimFactor", RimFactor);
+                // RimFactor is now baked into RimPowerGradient (-3..3), direct sample is used in shader
                 m_propertyBlock.SetTexture("_RimPowerGradient", RimPowerGradient.GetGradientTexture());
                 m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
 
@@ -1187,6 +1201,10 @@ public enum GeometryType
         public float[] Position;
         public float[] Color;
         public float CustomBlend;
+        // New: gradient over length (rgb). If null/empty, fallback to solid Color.
+        public List<VainSabers.Data.ColorGradientKey>? ColorGradientKeys;
+        // New: custom blend float gradient over length (0-1). If null/empty, fallback to solid CustomBlend.
+        public List<VainSabers.Data.FloatGradientKey>? CustomBlendGradientKeys;
         public float Glow;
         public float Opacity;
         public float Width;
@@ -1230,7 +1248,9 @@ public enum GeometryType
             float noiseIntensity = 0.02f,
             float noiseScale = 2f,
             float noiseSpeed = 1f,
-            float motionFadePower = 0f)
+            float motionFadePower = 0f,
+            List<VainSabers.Data.ColorGradientKey>? colorGradientKeys = null,
+            List<VainSabers.Data.FloatGradientKey>? customBlendGradientKeys = null)
         {
             Position = position;
             Color = color;
@@ -1253,6 +1273,28 @@ public enum GeometryType
             NoiseScale = noiseScale;
             NoiseSpeed = noiseSpeed;
             MotionFadePower = motionFadePower;
+            if (colorGradientKeys != null)
+                ColorGradientKeys = colorGradientKeys;
+            else
+            {
+                // Default solid gradient from color
+                var c = new Color(color[0], color[1], color[2], 1f);
+                ColorGradientKeys = new List<VainSabers.Data.ColorGradientKey>
+                {
+                    new VainSabers.Data.ColorGradientKey(0f, c),
+                    new VainSabers.Data.ColorGradientKey(1f, c)
+                };
+            }
+            if (customBlendGradientKeys != null)
+                CustomBlendGradientKeys = customBlendGradientKeys;
+            else
+            {
+                CustomBlendGradientKeys = new List<VainSabers.Data.FloatGradientKey>
+                {
+                    new VainSabers.Data.FloatGradientKey(0f, customBlend),
+                    new VainSabers.Data.FloatGradientKey(1f, customBlend)
+                };
+            }
         }
     }
 }

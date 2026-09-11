@@ -69,6 +69,10 @@ public class GradientInputComponent : UIComponent
     private bool m_updatingControls;
     private bool m_suppressDropdownEvent;
 
+    private float m_floatMin = 0f;
+    private float m_floatMax = 1f;
+    private float m_floatStep = 0.01f;
+
     public event Action? OnGradientChanged;
 
     public ColorGradient Gradient => m_gradient;
@@ -82,6 +86,17 @@ public class GradientInputComponent : UIComponent
         if (m_valueFieldsContainer != null)
             RebuildValueControls();
         RefreshPreviews();
+        return this;
+    }
+
+    public GradientInputComponent WithFloatRange(float min, float max, float step)
+    {
+        m_floatMin = min;
+        m_floatMax = max;
+        m_floatStep = Mathf.Max(0.0001f, step);
+        if (m_floatValueInput != null)
+            m_floatValueInput.SetMinMaxStep(m_floatMin, m_floatMax, m_floatStep);
+        // Rebuild to apply to new controls if needed
         return this;
     }
 
@@ -273,7 +288,7 @@ public class GradientInputComponent : UIComponent
 
         // Time field
         var timeField = m_popupLayout.AddChild<FieldComponent>().WithPreferredHeight(FieldHeight);
-        timeField.WithLabel("Time");
+        timeField.WithLabel("T");
         m_timeInput = timeField.SetComponent<NumberInputComponent>();
         m_timeInput.SetMinMaxStep(0f, 1f, 0.01f);
         m_timeInput.OnValueChanged += OnTimeInputChanged;
@@ -356,7 +371,12 @@ public class GradientInputComponent : UIComponent
         if (m_gradient.Keys.Count > 0)
             return;
         if (m_mode == GradientMode.Float)
-            m_gradient.Keys.Add(new ColorGradientKey(0f, new Color(0.5f, 0.5f, 0.5f, 1f)));
+        {
+            float mid = (m_floatMin + m_floatMax) * 0.5f;
+            float v = Mathf.Clamp(mid, m_floatMin, m_floatMax);
+            // Store as grayscale; preview will handle remapping
+            m_gradient.Keys.Add(new ColorGradientKey(0f, new Color(v, v, v, 1f)));
+        }
         else
             m_gradient.Keys.Add(new ColorGradientKey(0f, Color.white));
         m_gradient.SetDirty();
@@ -381,7 +401,7 @@ public class GradientInputComponent : UIComponent
             var field = m_valueFieldsContainer.AddChild<FieldComponent>().WithPreferredHeight(FieldHeight);
             field.WithLabel("Value");
             m_floatValueInput = field.SetComponent<NumberInputComponent>();
-            m_floatValueInput.SetMinMaxStep(0f, 1f, 0.01f);
+            m_floatValueInput.SetMinMaxStep(m_floatMin, m_floatMax, m_floatStep);
             m_floatValueInput.OnValueChanged += OnFloatValueChanged;
         }
         else
@@ -390,19 +410,19 @@ public class GradientInputComponent : UIComponent
             var rField = m_valueFieldsContainer.AddChild<FieldComponent>().WithPreferredHeight(FieldHeight);
             rField.WithLabel("R");
             m_rInput = rField.SetComponent<NumberInputComponent>();
-            m_rInput.SetMinMaxStep(0f, 1f, 0.01f);
+            m_rInput.SetMinMaxStep(-1f, 1f, 0.005f);
             m_rInput.OnValueChanged += OnRChanged;
 
             var gField = m_valueFieldsContainer.AddChild<FieldComponent>().WithPreferredHeight(FieldHeight);
             gField.WithLabel("G");
             m_gInput = gField.SetComponent<NumberInputComponent>();
-            m_gInput.SetMinMaxStep(0f, 1f, 0.01f);
+            m_gInput.SetMinMaxStep(-1f, 1f, 0.005f);
             m_gInput.OnValueChanged += OnGChanged;
 
             var bField = m_valueFieldsContainer.AddChild<FieldComponent>().WithPreferredHeight(FieldHeight);
             bField.WithLabel("B");
             m_bInput = bField.SetComponent<NumberInputComponent>();
-            m_bInput.SetMinMaxStep(0f, 1f, 0.01f);
+            m_bInput.SetMinMaxStep(-1f, 1f, 0.005f);
             m_bInput.OnValueChanged += OnBChanged;
         }
         // refresh controls if popup open
@@ -550,7 +570,7 @@ public class GradientInputComponent : UIComponent
     {
         if (m_updatingControls || m_selectedKey == null)
             return;
-        float clamped = Mathf.Clamp01(value);
+        float clamped = Mathf.Clamp(value, m_floatMin, m_floatMax);
         m_selectedKey.Color = new Color(clamped, clamped, clamped, 1f);
         m_gradient.SetDirty();
         RefreshPreviews();
@@ -562,7 +582,7 @@ public class GradientInputComponent : UIComponent
         if (m_updatingControls || m_selectedKey == null)
             return;
         var c = m_selectedKey.Color;
-        c.r = Mathf.Clamp01(value);
+        c.r = Mathf.Clamp(value, -1f, 1f);
         m_selectedKey.Color = c;
         m_gradient.SetDirty();
         RefreshPreviews();
@@ -574,7 +594,7 @@ public class GradientInputComponent : UIComponent
         if (m_updatingControls || m_selectedKey == null)
             return;
         var c = m_selectedKey.Color;
-        c.g = Mathf.Clamp01(value);
+        c.g = Mathf.Clamp(value, -1f, 1f);
         m_selectedKey.Color = c;
         m_gradient.SetDirty();
         RefreshPreviews();
@@ -586,7 +606,7 @@ public class GradientInputComponent : UIComponent
         if (m_updatingControls || m_selectedKey == null)
             return;
         var c = m_selectedKey.Color;
-        c.b = Mathf.Clamp01(value);
+        c.b = Mathf.Clamp(value, -1f, 1f);
         m_selectedKey.Color = c;
         m_gradient.SetDirty();
         RefreshPreviews();

@@ -5,6 +5,7 @@ Shader "Unlit/vs_flatglow_2side"
             _ColorBoost ("RGB Multiplier", Range(0,4)) = 1
             _GlowBoost  ("Glow (Alpha) Multiplier", Range(0,4)) = 1
             _DepthOffset ("Depth Offset", Float) = 0
+            _CustomColor ("Custom Color", Color) = (1,1,1,1)
             _ColorTex ("Albedo + Alpha", 2D) = "white" {}
             _GlowTex ("Glow", 2D) = "white" {}
             _ColorTexEnabled ("Color Texture Enabled", Float) = 0
@@ -40,6 +41,7 @@ Shader "Unlit/vs_flatglow_2side"
     
                 float _ColorBoost;
                 float _DepthOffset;
+                float4 _CustomColor;
                 sampler2D _ColorTex;
                 float _ColorTexEnabled;
                 sampler3D _NoiseTex;
@@ -92,7 +94,9 @@ Shader "Unlit/vs_flatglow_2side"
     
                 fixed4 frag (v2f i) : SV_Target
                 {
-                    fixed4 col = fixed4(saturate(i.color.rgb * _ColorBoost), i.color.a);
+                    float3 baseRgb = i.color.rgb;
+                    float3 blended = lerp(baseRgb, _CustomColor.rgb, saturate(_CustomBlend));
+                    fixed4 col = fixed4(saturate(blended * _ColorBoost), i.color.a);
                     if (_ColorTexEnabled > 0.5)
                     {
                         fixed4 texCol = tex2D(_ColorTex, i.uv);

@@ -86,7 +86,7 @@ static const float _PlanarCoplanarThreshold = 0.8;
 static const float _OppositeSideFade = 1.0;
 static const float _OppositeSideSharpness = 1.5;
 
-float _RimFactor;
+float _RimFactor; // legacy, now baked into gradient
 sampler2D _RimPowerGradient;
 float _RimPerpendicular;
 
@@ -207,9 +207,11 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float fresnelPerp = 1.0 - saturate(dot(Nperp, Vperp));
 
     float fresnelRaw = lerp(fresnelFull, fresnelPerp, saturate(_RimPerpendicular));
-    float fresnelTerm = tex2D(_RimPowerGradient, float2(saturate(fresnelRaw), 0.5)).r;
+    // Sample gradient at lower LOD when blurring (more blurred)
+    float gradientLodBias = blurFac * 4.0;
+    float fresnelTerm = tex2Dbias(_RimPowerGradient, float4(saturate(fresnelRaw), 0.5, 0, gradientLodBias)).r;
 
-    commonVars.rimFactor = 1.0 + _RimFactor * fresnelTerm;
+    commonVars.rimFactor = 1.0 + fresnelTerm;
     
     float lodBias = blurFac * 8.0 - 1.0;
     float2 texUv = vertStage.uv;

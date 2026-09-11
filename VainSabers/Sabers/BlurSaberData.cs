@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using UnityEngine;
 using VainSabers.Config;
@@ -16,7 +17,8 @@ public class BlurSaberData : MonoBehaviour
     private static readonly JsonSerializerSettings PresetJsonSettings = new()
     {
         Formatting = Formatting.Indented,
-        TypeNameHandling = TypeNameHandling.Auto
+        TypeNameHandling = TypeNameHandling.Auto,
+        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
     };
 
     private PluginConfig? m_config = null;
@@ -431,8 +433,7 @@ public class BlurSaberData : MonoBehaviour
                 }
                 else
                 {
-                    // Bake 8-key gradient from old RimPower for older presets (v2 or missing gradient)
-                    var baked = BlurSaberPart.CreateBakedPowerGradient(partData.RimPower);
+                    var baked = BlurSaberPart.CreateBakedRimGradient(partData.RimFactor, partData.RimPower);
                     part.RimPowerGradient.SetFloatKeys(baked.GetFloatKeys());
                 }
                 part.RimPerpendicular = partData.RimPerpendicular;
@@ -485,6 +486,34 @@ public class BlurSaberData : MonoBehaviour
             {
                 foreach (var td in preset.TipTrails)
                 {
+                    // Migrate old solid color to gradient if needed
+                    List<VainSabers.Data.ColorGradientKey>? gradKeys = null;
+                    if (td.ColorGradient != null && td.ColorGradient.Count > 0)
+                    {
+                        gradKeys = td.ColorGradient.Select(k => new VainSabers.Data.ColorGradientKey(k.Time, new Color(k.Color[0], k.Color[1], k.Color[2], 1f)) { Easing = k.Easing }).ToList();
+                    }
+                    else
+                    {
+                        var c = ArrToColor(td.Color ?? new float[] { 1, 1, 1 });
+                        gradKeys = new List<VainSabers.Data.ColorGradientKey>
+                        {
+                            new VainSabers.Data.ColorGradientKey(0f, c),
+                            new VainSabers.Data.ColorGradientKey(1f, c)
+                        };
+                    }
+                    List<VainSabers.Data.FloatGradientKey>? blendKeys = null;
+                    if (td.CustomBlendGradient != null && td.CustomBlendGradient.Count > 0)
+                    {
+                        blendKeys = new List<VainSabers.Data.FloatGradientKey>(td.CustomBlendGradient);
+                    }
+                    else
+                    {
+                        blendKeys = new List<VainSabers.Data.FloatGradientKey>
+                        {
+                            new VainSabers.Data.FloatGradientKey(0f, td.CustomBlend),
+                            new VainSabers.Data.FloatGradientKey(1f, td.CustomBlend)
+                        };
+                    }
                     TipTrails.Add(new SaberTrailData(
                         position: td.Position ?? new float[] { 0, 0, 1 },
                         color: td.Color ?? new float[] { 1, 1, 1 },
@@ -506,7 +535,9 @@ public class BlurSaberData : MonoBehaviour
                         noiseIntensity: td.NoiseIntensity,
                         noiseScale: td.NoiseScale > 0.01f ? td.NoiseScale : 2f,
                         noiseSpeed: td.NoiseSpeed,
-                        motionFadePower: td.MotionFadePower
+                        motionFadePower: td.MotionFadePower,
+                        colorGradientKeys: gradKeys,
+                        customBlendGradientKeys: blendKeys
                     ));
                 }
             }
@@ -517,6 +548,29 @@ public class BlurSaberData : MonoBehaviour
                 // v2: arbitrary number
                 foreach (var bt in preset.BladeTrails)
                 {
+                    List<VainSabers.Data.ColorGradientKey>? gradKeys = null;
+                    if (bt.ColorGradient != null && bt.ColorGradient.Count > 0)
+                    {
+                        gradKeys = bt.ColorGradient.Select(k => new VainSabers.Data.ColorGradientKey(k.Time, new Color(k.Color[0], k.Color[1], k.Color[2], 1f)) { Easing = k.Easing }).ToList();
+                    }
+                    else
+                    {
+                        var c = ArrToColor(bt.Color ?? new float[] { 1, 1, 1 });
+                        gradKeys = new List<VainSabers.Data.ColorGradientKey>
+                        {
+                            new VainSabers.Data.ColorGradientKey(0f, c),
+                            new VainSabers.Data.ColorGradientKey(1f, c)
+                        };
+                    }
+                    List<VainSabers.Data.FloatGradientKey>? blendKeys = null;
+                    if (bt.CustomBlendGradient != null && bt.CustomBlendGradient.Count > 0)
+                        blendKeys = new List<VainSabers.Data.FloatGradientKey>(bt.CustomBlendGradient);
+                    else
+                        blendKeys = new List<VainSabers.Data.FloatGradientKey>
+                        {
+                            new VainSabers.Data.FloatGradientKey(0f, bt.CustomBlend),
+                            new VainSabers.Data.FloatGradientKey(1f, bt.CustomBlend)
+                        };
                     BladeTrails.Add(new SaberTrailData(
                         position: bt.Position ?? new float[] { 0, 0, 1 },
                         color: bt.Color ?? new float[] { 1, 1, 1 },
@@ -538,7 +592,9 @@ public class BlurSaberData : MonoBehaviour
                         noiseIntensity: bt.NoiseIntensity,
                         noiseScale: bt.NoiseScale > 0.01f ? bt.NoiseScale : 2f,
                         noiseSpeed: bt.NoiseSpeed,
-                        motionFadePower: bt.MotionFadePower
+                        motionFadePower: bt.MotionFadePower,
+                        colorGradientKeys: gradKeys,
+                        customBlendGradientKeys: blendKeys
                     ));
                 }
             }
@@ -546,6 +602,29 @@ public class BlurSaberData : MonoBehaviour
             {
                 // v1 compat: single blade trail
                 var bt = preset.BladeTrail;
+                List<VainSabers.Data.ColorGradientKey>? gradKeys = null;
+                if (bt.ColorGradient != null && bt.ColorGradient.Count > 0)
+                {
+                    gradKeys = bt.ColorGradient.Select(k => new VainSabers.Data.ColorGradientKey(k.Time, new Color(k.Color[0], k.Color[1], k.Color[2], 1f)) { Easing = k.Easing }).ToList();
+                }
+                else
+                {
+                    var c = ArrToColor(bt.Color ?? new float[] { 1, 1, 1 });
+                    gradKeys = new List<VainSabers.Data.ColorGradientKey>
+                    {
+                        new VainSabers.Data.ColorGradientKey(0f, c),
+                        new VainSabers.Data.ColorGradientKey(1f, c)
+                    };
+                }
+                List<VainSabers.Data.FloatGradientKey>? blendKeys = null;
+                if (bt.CustomBlendGradient != null && bt.CustomBlendGradient.Count > 0)
+                    blendKeys = new List<VainSabers.Data.FloatGradientKey>(bt.CustomBlendGradient);
+                else
+                    blendKeys = new List<VainSabers.Data.FloatGradientKey>
+                    {
+                        new VainSabers.Data.FloatGradientKey(0f, bt.CustomBlend),
+                        new VainSabers.Data.FloatGradientKey(1f, bt.CustomBlend)
+                    };
                 BladeTrails.Add(new SaberTrailData(
                     position: bt.Position ?? new float[] { 0, 0, 1 },
                     color: bt.Color ?? new float[] { 1, 1, 1 },
@@ -567,7 +646,8 @@ public class BlurSaberData : MonoBehaviour
                     noiseIntensity: bt.NoiseIntensity,
                     noiseScale: bt.NoiseScale > 0.01f ? bt.NoiseScale : 2f,
                     noiseSpeed: bt.NoiseSpeed,
-                    motionFadePower: bt.MotionFadePower
+                    motionFadePower: bt.MotionFadePower,
+                    colorGradientKeys: gradKeys
                 ));
             }
 
@@ -744,6 +824,8 @@ public class BlurSaberData : MonoBehaviour
                     Position = td.Position,
                     Color = td.Color,
                     CustomBlend = td.CustomBlend,
+                    ColorGradient = td.ColorGradientKeys != null ? td.ColorGradientKeys.Select(k => new TrailGradientKey { Time = k.Time, Color = new float[] { k.Color.r, k.Color.g, k.Color.b }, Easing = k.Easing }).ToList() : null,
+                    CustomBlendGradient = td.CustomBlendGradientKeys != null ? new List<VainSabers.Data.FloatGradientKey>(td.CustomBlendGradientKeys) : null,
                     Glow = td.Glow,
                     Opacity = td.Opacity,
                     Width = td.Width,
@@ -776,6 +858,8 @@ public class BlurSaberData : MonoBehaviour
                     Position = td.Position,
                     Color = td.Color,
                     CustomBlend = td.CustomBlend,
+                    ColorGradient = td.ColorGradientKeys != null ? td.ColorGradientKeys.Select(k => new TrailGradientKey { Time = k.Time, Color = new float[] { k.Color.r, k.Color.g, k.Color.b }, Easing = k.Easing }).ToList() : null,
+                    CustomBlendGradient = td.CustomBlendGradientKeys != null ? new List<VainSabers.Data.FloatGradientKey>(td.CustomBlendGradientKeys) : null,
                     Glow = td.Glow,
                     Opacity = td.Opacity,
                     Width = td.Width,
@@ -975,11 +1059,15 @@ public class BlurSaberData : MonoBehaviour
                     break;
                 case "rimFactor":
                     currentPart.RimFactor = vals[0];
+                    {
+                        var baked = BlurSaberPart.CreateBakedRimGradient(vals[0], currentPart.RimPower);
+                        currentPart.RimPowerGradient.SetFloatKeys(baked.GetFloatKeys());
+                    }
                     break;
                 case "rimPower":
                     currentPart.RimPower = vals[0];
                     {
-                        var baked = BlurSaberPart.CreateBakedPowerGradient(vals[0]);
+                        var baked = BlurSaberPart.CreateBakedRimGradient(currentPart.RimFactor, vals[0]);
                         currentPart.RimPowerGradient.SetFloatKeys(baked.GetFloatKeys());
                     }
                     break;
@@ -1174,11 +1262,20 @@ public class BlurSaberData : MonoBehaviour
         public float UvOffset { get; set; }
     }
 
+    private class TrailGradientKey
+    {
+        public float Time { get; set; }
+        public float[] Color { get; set; } = new float[3];
+        public VainSabers.Data.Easing Easing { get; set; }
+    }
+
     private class TrailData
     {
         public float[] Position { get; set; } = new float[] { 0, 0, 1 };
         public float[] Color { get; set; } = new float[] { 1, 1, 1 };
         public float CustomBlend { get; set; } = 1f;
+        public List<TrailGradientKey>? ColorGradient { get; set; }
+        public List<VainSabers.Data.FloatGradientKey>? CustomBlendGradient { get; set; }
         public float Glow { get; set; } = 1f;
         public float Opacity { get; set; } = 1f;
         public float Width { get; set; } = 0.008f;

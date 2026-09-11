@@ -1,5 +1,7 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using VainSabers.Config;
+using VainSabers.Data;
 
 namespace VainSabers.Sabers;
 
@@ -71,6 +73,7 @@ internal class SaberTipTrail : MonoBehaviour
         _lineRenderer.material.renderQueue = 3600 + trailData.QueueOffset;
         _lineRenderer.material.SetFloat("_GlowBoost", trailData.Glow);
         _lineRenderer.material.SetFloat("_DepthOffset", trailData.DepthOffset);
+        // Gradient base color – keep legacy Color for fallback but gradient is primary
         m_baseColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
         UpdateFinalColor();
     }
@@ -85,7 +88,68 @@ internal class SaberTipTrail : MonoBehaviour
     {
         Color tonemappedGame = SquarePreserveLuminance(m_gameColor * 0.8f);
         tonemappedGame.a = m_gameColor.a;
-        m_trailColor = Color.Lerp(m_baseColor, tonemappedGame, m_trailData.CustomBlend);
+        if (_lineRenderer != null && _lineRenderer.material != null)
+        {
+            _lineRenderer.material.SetColor("_CustomColor", tonemappedGame);
+        }
+        // Keep m_trailColor as fallback solid for when gradient missing
+        m_trailColor = m_baseColor;
+        // Store tonemapped for per-vertex evaluation
+        m_tonemappedGame = tonemappedGame;
+    }
+
+    private Color m_tonemappedGame = Color.white;
+
+    private float EvaluateCustomBlend(float t)
+    {
+        var keys = m_trailData.CustomBlendGradientKeys;
+        if (keys == null || keys.Count == 0)
+            return Mathf.Clamp01(m_trailData.CustomBlend);
+        if (keys.Count == 1)
+            return Mathf.Clamp01(keys[0].Value);
+        keys.Sort((a, b) => a.Time.CompareTo(b.Time));
+        t = Mathf.Clamp01(t);
+        if (t <= keys[0].Time) return Mathf.Clamp01(keys[0].Value);
+        if (t >= keys[keys.Count - 1].Time) return Mathf.Clamp01(keys[keys.Count - 1].Value);
+        for (int i = 1; i < keys.Count; i++)
+        {
+            var prev = keys[i - 1];
+            var next = keys[i];
+            if (t < next.Time)
+            {
+                float t0 = t - prev.Time;
+                float interval = next.Time - prev.Time;
+                float t1 = interval > 0.0001f ? t0 / interval : 0f;
+                return Mathf.Clamp01(Mathf.Lerp(prev.Value, next.Value, prev.Easing.Evaluate(t1)));
+            }
+        }
+        return Mathf.Clamp01(keys[keys.Count - 1].Value);
+    }
+
+    private Color EvaluateTrailGradient(float t)
+    {
+        var keys = m_trailData.ColorGradientKeys;
+        if (keys == null || keys.Count == 0)
+            return m_baseColor;
+        if (keys.Count == 1)
+            return keys[0].Color;
+        keys.Sort((a, b) => a.Time.CompareTo(b.Time));
+        t = Mathf.Clamp01(t);
+        if (t <= keys[0].Time) return keys[0].Color;
+        if (t >= keys[keys.Count - 1].Time) return keys[keys.Count - 1].Color;
+        for (int i = 1; i < keys.Count; i++)
+        {
+            var prev = keys[i - 1];
+            var next = keys[i];
+            if (t < next.Time)
+            {
+                float t0 = t - prev.Time;
+                float interval = next.Time - prev.Time;
+                float t1 = interval > 0.0001f ? t0 / interval : 0f;
+                return Color.Lerp(prev.Color, next.Color, prev.Easing.Evaluate(t1));
+            }
+        }
+        return keys[keys.Count - 1].Color;
     }
 
     private static Color SquarePreserveLuminance(Color c)
@@ -168,16 +232,35 @@ internal class SaberTipTrail : MonoBehaviour
     }
     
     private readonly Gradient _cachedGradient = new Gradient();
-    private readonly GradientColorKey[] _colorKeys = new GradientColorKey[2];
     private readonly GradientAlphaKey[] _alphaKeys = new GradientAlphaKey[2];
 
     private void UpdateGradient(float opacity)
     {
-        _colorKeys[0] = new GradientColorKey(m_trailColor, 0f);
-        _colorKeys[1] = new GradientColorKey(m_trailColor, 1f);
+        // Build color keys from trail gradient (rgb over length) – sample 8 points to preserve easing, and blend with custom color per t
+        var trailKeys = m_trailData.ColorGradientKeys;
+        GradientColorKey[] colorKeys;
+        if (trailKeys != null && trailKeys.Count > 0)
+        {
+            const int sampleCount = 8;
+            colorKeys = new GradientColorKey[sampleCount];
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = i / (float)(sampleCount - 1);
+                Color baseCol = EvaluateTrailGradient(t);
+                float blend = EvaluateCustomBlend(t);
+                Color blended = Color.Lerp(baseCol, m_tonemappedGame, blend);
+                colorKeys[i] = new GradientColorKey(blended, t);
+            }
+        }
+        else
+        {
+            colorKeys = new GradientColorKey[2];
+            colorKeys[0] = new GradientColorKey(m_trailColor, 0f);
+            colorKeys[1] = new GradientColorKey(m_trailColor, 1f);
+        }
         _alphaKeys[0] = new GradientAlphaKey(0.9f * opacity, 0f);
         _alphaKeys[1] = new GradientAlphaKey(0.9f * opacity * (1f - m_trailData.Fade), 1f);
-        _cachedGradient.SetKeys(_colorKeys, _alphaKeys);
+        _cachedGradient.SetKeys(colorKeys, _alphaKeys);
         _lineRenderer.colorGradient = _cachedGradient;
     }
 }

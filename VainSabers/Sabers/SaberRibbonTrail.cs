@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using VainSabers.Data;
 
 namespace VainSabers.Sabers;
 
@@ -6,12 +8,12 @@ public class SaberRibbonTrail : MonoBehaviour
 {
     public int SegmentCount => _segmentCount;
     private int _segmentCount = 30;
-    private const int VerticalSubdivisions = 8;
+    private const int VerticalSubdivisions = 6;
     private const int VerticalVertexCount = VerticalSubdivisions + 1;
 
     private void UpdateSegmentCount(int lengthMs)
     {
-        int target = Mathf.Clamp(lengthMs / 4, 4, 512);
+        int target = Mathf.Clamp(lengthMs / 6, 4, 512);
         if (target == _segmentCount) return;
         _segmentCount = target;
         InitializeMeshData();
@@ -124,7 +126,68 @@ public class SaberRibbonTrail : MonoBehaviour
     {
         Color tonemappedGame = SquarePreserveLuminance(m_gameColor * 0.8f);
         tonemappedGame.a = m_gameColor.a;
-        m_trailColor = Color.Lerp(m_baseColor, tonemappedGame, m_trailData.CustomBlend);
+        if (_meshRenderer != null && _meshRenderer.material != null)
+        {
+            _meshRenderer.material.SetColor("_CustomColor", tonemappedGame);
+        }
+        m_trailColor = m_baseColor;
+        m_tonemappedGame = tonemappedGame;
+    }
+
+    private Color m_tonemappedGame = Color.white;
+
+    private float EvaluateCustomBlend(float t)
+    {
+        var keys = m_trailData.CustomBlendGradientKeys;
+        if (keys == null || keys.Count == 0)
+            return Mathf.Clamp01(m_trailData.CustomBlend);
+        if (keys.Count == 1)
+            return Mathf.Clamp01(keys[0].Value);
+        keys.Sort((a, b) => a.Time.CompareTo(b.Time));
+        t = Mathf.Clamp01(t);
+        if (t <= keys[0].Time) return Mathf.Clamp01(keys[0].Value);
+        if (t >= keys[keys.Count - 1].Time) return Mathf.Clamp01(keys[keys.Count - 1].Value);
+        for (int i = 1; i < keys.Count; i++)
+        {
+            var prev = keys[i - 1];
+            var next = keys[i];
+            if (t < next.Time)
+            {
+                float t0 = t - prev.Time;
+                float interval = next.Time - prev.Time;
+                float t1 = interval > 0.0001f ? t0 / interval : 0f;
+                return Mathf.Clamp01(Mathf.Lerp(prev.Value, next.Value, prev.Easing.Evaluate(t1)));
+            }
+        }
+        return Mathf.Clamp01(keys[keys.Count - 1].Value);
+    }
+
+    private Color EvaluateTrailGradient(float t)
+    {
+        var keys = m_trailData.ColorGradientKeys;
+        if (keys == null || keys.Count == 0)
+            return m_baseColor;
+        if (keys.Count == 1)
+            return keys[0].Color;
+        // Sort copy to avoid mutating original
+        var sorted = new List<ColorGradientKey>(keys);
+        sorted.Sort((a, b) => a.Time.CompareTo(b.Time));
+        t = Mathf.Clamp01(t);
+        if (t <= sorted[0].Time) return sorted[0].Color;
+        if (t >= sorted[sorted.Count - 1].Time) return sorted[sorted.Count - 1].Color;
+        for (int i = 1; i < sorted.Count; i++)
+        {
+            var prev = sorted[i - 1];
+            var next = sorted[i];
+            if (t < next.Time)
+            {
+                float t0 = t - prev.Time;
+                float interval = next.Time - prev.Time;
+                float t1 = interval > 0.0001f ? t0 / interval : 0f;
+                return Color.Lerp(prev.Color, next.Color, prev.Easing.Evaluate(t1));
+            }
+        }
+        return sorted[sorted.Count - 1].Color;
     }
 
     private static Color SquarePreserveLuminance(Color c)
@@ -262,8 +325,11 @@ public class SaberRibbonTrail : MonoBehaviour
             
             float segmentOpacity = CalculateSegmentOpacity(t);
             float finalOpacity = segmentOpacity * _opacity * m_trailData.Opacity * motionFade;
-            Color tipColorFull = new Color(m_trailColor.r, m_trailColor.g, m_trailColor.b, finalOpacity);
-            Color baseColor = new Color(m_trailColor.r, m_trailColor.g, m_trailColor.b, 0f);
+            Color gradColor = EvaluateTrailGradient(t);
+            float blend = EvaluateCustomBlend(t);
+            Color blended = Color.Lerp(gradColor, m_tonemappedGame, blend);
+            Color tipColorFull = new Color(blended.r, blended.g, blended.b, finalOpacity);
+            Color baseColor = new Color(blended.r, blended.g, blended.b, 0f);
 
             for (int v = 0; v < VerticalVertexCount; v++)
             {

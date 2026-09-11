@@ -5,6 +5,7 @@ Shader "Unlit/vs_flatglow"
             _ColorBoost ("RGB Multiplier", Range(0,4)) = 1
             _GlowBoost  ("Glow (Alpha) Multiplier", Range(0,4)) = 1
             _DepthOffset ("Depth Offset", Float) = 0
+            _CustomColor ("Custom Color", Color) = (1,1,1,1)
         }
     
         SubShader
@@ -31,6 +32,7 @@ Shader "Unlit/vs_flatglow"
     
                 float _ColorBoost;
                 float _DepthOffset;
+                float4 _CustomColor;
     
                 struct appdata
                 {
@@ -60,8 +62,10 @@ Shader "Unlit/vs_flatglow"
 
                 fixed4 frag (v2f i) : SV_Target
                 {
-                    // Flat color: just vertex color RGB (scaled), alpha ignored here.
-                    return fixed4(saturate(i.color.rgb * _ColorBoost), i.color.a);
+                    // Gradient base color from vertex, then custom blend in shader
+                    float3 baseRgb = i.color.rgb;
+                    float3 blended = lerp(baseRgb, _CustomColor.rgb, saturate(_CustomBlend));
+                    return fixed4(saturate(blended * _ColorBoost), i.color.a);
                 }
                 ENDCG
             }
