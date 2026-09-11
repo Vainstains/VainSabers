@@ -115,6 +115,7 @@ public enum GeometryType
         public float FresnelStrength = 0.6f;
         public float FresnelPower = 2.89f;
         public Color RimColor = new Color(0.47f, 0.51f, 0.57f, 1f);
+        public float FresnelCustomBlend = 0f;
 
         public string? ColorTextureName;
         public string? GlowTextureName;
@@ -380,6 +381,7 @@ public enum GeometryType
             FresnelStrength = source.FresnelStrength;
             FresnelPower = source.FresnelPower;
             RimColor = source.RimColor;
+            FresnelCustomBlend = source.FresnelCustomBlend;
             ColorTextureName = source.ColorTextureName;
             GlowTextureName = source.GlowTextureName;
             ColorTextureBase64 = source.ColorTextureBase64;
@@ -433,7 +435,8 @@ public enum GeometryType
                 m_propertyBlock.SetFloat("_CubemapRotation", CubemapRotation);
                 m_propertyBlock.SetFloat("_FresnelStrength", FresnelStrength);
                 m_propertyBlock.SetFloat("_FresnelPower", FresnelPower);
-                m_propertyBlock.SetColor("_RimColor", RimColor);
+                var fresnelColor = Color.Lerp(RimColor, m_saberData.CustomColor, Mathf.Clamp01(FresnelCustomBlend));
+                m_propertyBlock.SetColor("_RimColor", fresnelColor);
 
                 var colorTex = LoadTexture(ColorTextureName, TextureWrap, ColorTextureBase64, ref m_colorTexKey);
                 var glowTex = LoadTexture(GlowTextureName, TextureWrap, GlowTextureBase64, ref m_glowTexKey);
@@ -1185,6 +1188,8 @@ public enum GeometryType
         public float NoiseScale;
         public float NoiseSpeed;
 
+        public float MotionFadePower;
+
         public SaberTrailData(
             float[] position,
             float[] color,
@@ -1205,7 +1210,8 @@ public enum GeometryType
             bool noiseEnabled = false,
             float noiseIntensity = 0.02f,
             float noiseScale = 2f,
-            float noiseSpeed = 1f)
+            float noiseSpeed = 1f,
+            float motionFadePower = 0f)
         {
             Position = position;
             Color = color;
@@ -1227,6 +1233,7 @@ public enum GeometryType
             NoiseIntensity = noiseIntensity;
             NoiseScale = noiseScale;
             NoiseSpeed = noiseSpeed;
+            MotionFadePower = motionFadePower;
         }
     }
 }

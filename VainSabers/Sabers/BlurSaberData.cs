@@ -435,6 +435,7 @@ public class BlurSaberData : MonoBehaviour
                 part.FresnelStrength = partData.FresnelStrength;
                 part.FresnelPower = partData.FresnelPower;
                 part.RimColor = ArrToColor(partData.RimColor);
+                part.FresnelCustomBlend = partData.FresnelCustomBlend;
                 part.ColorTextureName = partData.ColorTexture;
                 part.GlowTextureName = partData.GlowTexture;
                 part.ColorTextureBase64 = partData.ColorTextureBase64;
@@ -494,7 +495,8 @@ public class BlurSaberData : MonoBehaviour
                         noiseEnabled: td.NoiseEnabled,
                         noiseIntensity: td.NoiseIntensity,
                         noiseScale: td.NoiseScale > 0.01f ? td.NoiseScale : 2f,
-                        noiseSpeed: td.NoiseSpeed
+                        noiseSpeed: td.NoiseSpeed,
+                        motionFadePower: td.MotionFadePower
                     ));
                 }
             }
@@ -525,7 +527,8 @@ public class BlurSaberData : MonoBehaviour
                         noiseEnabled: bt.NoiseEnabled,
                         noiseIntensity: bt.NoiseIntensity,
                         noiseScale: bt.NoiseScale > 0.01f ? bt.NoiseScale : 2f,
-                        noiseSpeed: bt.NoiseSpeed
+                        noiseSpeed: bt.NoiseSpeed,
+                        motionFadePower: bt.MotionFadePower
                     ));
                 }
             }
@@ -553,7 +556,8 @@ public class BlurSaberData : MonoBehaviour
                     noiseEnabled: bt.NoiseEnabled,
                     noiseIntensity: bt.NoiseIntensity,
                     noiseScale: bt.NoiseScale > 0.01f ? bt.NoiseScale : 2f,
-                    noiseSpeed: bt.NoiseSpeed
+                    noiseSpeed: bt.NoiseSpeed,
+                    motionFadePower: bt.MotionFadePower
                 ));
             }
 
@@ -681,6 +685,7 @@ public class BlurSaberData : MonoBehaviour
                 FresnelStrength = part.FresnelStrength,
                 FresnelPower = part.FresnelPower,
                 RimColor = new float[] { part.RimColor.r, part.RimColor.g, part.RimColor.b },
+                FresnelCustomBlend = part.FresnelCustomBlend,
 
                 ColorTexture = part.ColorTextureName,
                 GlowTexture = part.GlowTextureName,
@@ -744,7 +749,8 @@ public class BlurSaberData : MonoBehaviour
                     NoiseEnabled = td.NoiseEnabled,
                     NoiseIntensity = td.NoiseIntensity,
                     NoiseScale = td.NoiseScale,
-                    NoiseSpeed = td.NoiseSpeed
+                    NoiseSpeed = td.NoiseSpeed,
+                    MotionFadePower = td.MotionFadePower
                 });
             }
         }
@@ -775,7 +781,8 @@ public class BlurSaberData : MonoBehaviour
                     NoiseEnabled = td.NoiseEnabled,
                     NoiseIntensity = td.NoiseIntensity,
                     NoiseScale = td.NoiseScale,
-                    NoiseSpeed = td.NoiseSpeed
+                    NoiseSpeed = td.NoiseSpeed,
+                    MotionFadePower = td.MotionFadePower
                 });
             }
             // keep v1 field null for v2 presets to avoid duplication
@@ -988,6 +995,9 @@ public class BlurSaberData : MonoBehaviour
                 case "fresnelPower":
                     currentPart.FresnelPower = vals[0];
                     break;
+                case "fresnelCustomBlend":
+                    currentPart.FresnelCustomBlend = vals[0];
+                    break;
                 case "rimColor":
                     if (vals.Length >= 3)
                         currentPart.RimColor = new Color(vals[0], vals[1], vals[2], 1f);
@@ -1116,6 +1126,7 @@ public class BlurSaberData : MonoBehaviour
         public float CubemapRotation { get; set; }
         public float FresnelStrength { get; set; } = 0.6f;
         public float FresnelPower { get; set; } = 2.89f;
+        public float FresnelCustomBlend { get; set; } = 0f;
         public float[] RimColor { get; set; } = new float[3];
 
         public string? ColorTexture { get; set; }
@@ -1169,6 +1180,7 @@ public class BlurSaberData : MonoBehaviour
         public float NoiseIntensity { get; set; } = 0.02f;
         public float NoiseScale { get; set; } = 2f;
         public float NoiseSpeed { get; set; } = 1f;
+        public float MotionFadePower { get; set; } = 0f;
     }
 
     private static Vector3 ArrToVec3(float[] arr) =>

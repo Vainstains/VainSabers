@@ -174,6 +174,7 @@
             fixed4 frag(v2f i) : SV_Target
             {
 #if defined(_DISABLE_GLOW_PASS)
+                discard;
                 return fixed4(0.0, 0.0, 0.0, 0.0);
 #else
                 return fixed4(0.0, 0.0, 0.0, 0.0);

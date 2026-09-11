@@ -31,6 +31,7 @@ public class SaberRibbonTrail : MonoBehaviour
     
     private float _opacity = 0.0f;
     private Color m_trailColor = Color.white;
+    private Color m_baseColor = Color.white;
     private Color m_gameColor = Color.white;
     private SaberTrailData m_trailData;
     
@@ -107,7 +108,9 @@ public class SaberRibbonTrail : MonoBehaviour
         mat.SetFloat("_NoiseScale", trailData.NoiseScale);
         mat.SetFloat("_NoiseSpeed", trailData.NoiseSpeed);
 
-        m_trailColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
+        mat.SetFloat("_TrailDuration", trailData.Length * 0.001f);
+
+        m_baseColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
         UpdateFinalColor();
     }
 
@@ -119,7 +122,25 @@ public class SaberRibbonTrail : MonoBehaviour
 
     private void UpdateFinalColor()
     {
-        m_trailColor = Color.Lerp(m_trailColor, m_gameColor, m_trailData.CustomBlend);
+        Color tonemappedGame = SquarePreserveLuminance(m_gameColor * 0.8f);
+        tonemappedGame.a = m_gameColor.a;
+        m_trailColor = Color.Lerp(m_baseColor, tonemappedGame, m_trailData.CustomBlend);
+    }
+
+    private static Color SquarePreserveLuminance(Color c)
+    {
+        float lum = 0.299f * c.r + 0.587f * c.g + 0.114f * c.b;
+        float r2 = c.r * c.r;
+        float g2 = c.g * c.g;
+        float b2 = c.b * c.b;
+        float lum2 = 0.299f * r2 + 0.587f * g2 + 0.114f * b2;
+        float scale = (lum2 > 0.00001f) ? (lum / lum2) : 0f;
+        return new Color(
+            Mathf.Clamp01(r2 * scale),
+            Mathf.Clamp01(g2 * scale),
+            Mathf.Clamp01(b2 * scale),
+            c.a
+        );
     }
 
     private void InitializeMeshData()
@@ -194,6 +215,36 @@ public class SaberRibbonTrail : MonoBehaviour
         Vector3 localOffset = new Vector3(m_trailData.Position[0], m_trailData.Position[1], m_trailData.Position[2]);
         float baseFraction = Mathf.Clamp01(m_trailData.Width);
 
+        // Compute average total distance of top and bottom edges for MotionFadePower
+        float motionFade = 1f;
+        if (m_trailData.MotionFadePower > 0.001f)
+        {
+            float tipTotal = 0f;
+            float baseTotal = 0f;
+            Vector3 prevTip = Vector3.zero;
+            Vector3 prevBase = Vector3.zero;
+            bool first = true;
+            for (int i = 0; i <= SegmentCount; i++)
+            {
+                float t = (float)i / SegmentCount;
+                float timeAgo = t * m_trailData.Length * 0.001f;
+                Pose pose = _movementHistory.GetPoseAgo(timeAgo);
+                Vector3 tipWorld = pose.position + pose.rotation * localOffset;
+                Vector3 baseWorld = pose.position + pose.rotation * (localOffset * baseFraction);
+                if (!first)
+                {
+                    tipTotal += Vector3.Distance(tipWorld, prevTip);
+                    baseTotal += Vector3.Distance(baseWorld, prevBase);
+                }
+                prevTip = tipWorld;
+                prevBase = baseWorld;
+                first = false;
+            }
+            float avgDist = (tipTotal + baseTotal) * 0.5f;
+            float avgSpeed = avgDist;
+            motionFade = Mathf.Exp(-avgSpeed * m_trailData.MotionFadePower);
+        }
+
         int vertexIndex = 0;
         
         for (int i = 0; i <= SegmentCount; i++)
@@ -210,7 +261,8 @@ public class SaberRibbonTrail : MonoBehaviour
             Vector3 tipPos = transform.InverseTransformPoint(tipPosWorld);
             
             float segmentOpacity = CalculateSegmentOpacity(t);
-            Color tipColorFull = new Color(m_trailColor.r, m_trailColor.g, m_trailColor.b, segmentOpacity * _opacity * m_trailData.Opacity);
+            float finalOpacity = segmentOpacity * _opacity * m_trailData.Opacity * motionFade;
+            Color tipColorFull = new Color(m_trailColor.r, m_trailColor.g, m_trailColor.b, finalOpacity);
             Color baseColor = new Color(m_trailColor.r, m_trailColor.g, m_trailColor.b, 0f);
 
             for (int v = 0; v < VerticalVertexCount; v++)

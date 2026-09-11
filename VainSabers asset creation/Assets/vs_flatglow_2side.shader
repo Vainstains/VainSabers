@@ -46,6 +46,8 @@ Shader "Unlit/vs_flatglow_2side"
                 float _NoiseIntensity;
                 float _NoiseScale;
                 float _NoiseSpeed;
+
+                float _TrailDuration;
     
                 struct appdata
                 {
@@ -74,7 +76,7 @@ Shader "Unlit/vs_flatglow_2side"
                     if (noiseFactor > 0.0001)
                     {
                         float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
-                        float scroll = _Time.y * _NoiseSpeed;
+                        float scroll = _Time.y * _NoiseSpeed - t * 0.1 * _TrailDuration;
                         float3 noiseCoord = worldPos * _NoiseScale * 0.03125 + float3(scroll, scroll, scroll) * 0.2;
                         float4 n = tex3Dlod(_NoiseTex, float4(noiseCoord, 0));
                         float3 dispWorld = (n.rgb * 2.0 - 1.0) * noiseFactor;
@@ -129,6 +131,8 @@ Shader "Unlit/vs_flatglow_2side"
                 float _NoiseIntensity;
                 float _NoiseScale;
                 float _NoiseSpeed;
+
+                float _TrailDuration;
     
                 struct appdata
                 {
@@ -157,7 +161,7 @@ Shader "Unlit/vs_flatglow_2side"
                     if (noiseFactor > 0.0001)
                     {
                         float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
-                        float scroll = _Time.y * _NoiseSpeed;
+                        float scroll = _Time.y * _NoiseSpeed - t * 0.1 * _TrailDuration;
                         float3 noiseCoord = worldPos * _NoiseScale * 0.03125 + float3(scroll, scroll, scroll) * 0.2;
                         float4 n = tex3Dlod(_NoiseTex, float4(noiseCoord, 0));
                         float3 dispWorld = (n.rgb * 2.0 - 1.0) * noiseFactor;

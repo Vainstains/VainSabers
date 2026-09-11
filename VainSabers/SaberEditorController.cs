@@ -880,6 +880,10 @@ class SaberEditorComponent : UIComponent
                 .WithTint(BlueColor)
                 .WithValue(sourcePart.RimColor.b).OnValueChanged += val =>
                 ApplyToBothResolvedParts(part => part.RimColor = new Color(part.RimColor.r, part.RimColor.g, val, part.RimColor.a));
+            m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+                .WithLabel("Custom Blend").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.01f)
+                .WithValue(sourcePart.FresnelCustomBlend).OnValueChanged += val =>
+                ApplyToBothResolvedParts(part => part.FresnelCustomBlend = val);
         }
         
         m_materialPanel.Content.AddSubHeader("Blur");
@@ -1992,6 +1996,14 @@ class SaberEditorComponent : UIComponent
             {
                 var t = data.BladeTrails[m_selectedBladeTrailIndex];
                 t.MotionActivation = val;
+                ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+            };
+        m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Motion Fade Power").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 10f, 0.05f)
+            .WithValue(trail.MotionFadePower).OnValueChanged += val =>
+            {
+                var t = data.BladeTrails[m_selectedBladeTrailIndex];
+                t.MotionFadePower = val;
                 ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
             };
 

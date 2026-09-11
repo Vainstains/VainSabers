@@ -35,6 +35,7 @@ internal class SaberTipTrail : MonoBehaviour
 
     private float m_opacity = 0.0f;
     private Color m_trailColor = Color.white;
+    private Color m_baseColor = Color.white;
     private Color m_gameColor = Color.white;
     private SaberTrailData m_trailData;
 
@@ -70,7 +71,7 @@ internal class SaberTipTrail : MonoBehaviour
         _lineRenderer.material.renderQueue = 3600 + trailData.QueueOffset;
         _lineRenderer.material.SetFloat("_GlowBoost", trailData.Glow);
         _lineRenderer.material.SetFloat("_DepthOffset", trailData.DepthOffset);
-        m_trailColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
+        m_baseColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
         UpdateFinalColor();
     }
 
@@ -82,7 +83,25 @@ internal class SaberTipTrail : MonoBehaviour
 
     private void UpdateFinalColor()
     {
-        m_trailColor = Color.Lerp(m_trailColor, m_gameColor, m_trailData.CustomBlend);
+        Color tonemappedGame = SquarePreserveLuminance(m_gameColor * 0.8f);
+        tonemappedGame.a = m_gameColor.a;
+        m_trailColor = Color.Lerp(m_baseColor, tonemappedGame, m_trailData.CustomBlend);
+    }
+
+    private static Color SquarePreserveLuminance(Color c)
+    {
+        float lum = 0.299f * c.r + 0.587f * c.g + 0.114f * c.b;
+        float r2 = c.r * c.r;
+        float g2 = c.g * c.g;
+        float b2 = c.b * c.b;
+        float lum2 = 0.299f * r2 + 0.587f * g2 + 0.114f * b2;
+        float scale = (lum2 > 0.00001f) ? (lum / lum2) : 0f;
+        return new Color(
+            Mathf.Clamp01(r2 * scale),
+            Mathf.Clamp01(g2 * scale),
+            Mathf.Clamp01(b2 * scale),
+            c.a
+        );
     }
 
     private void LateUpdate()
