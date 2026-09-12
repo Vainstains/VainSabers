@@ -11,6 +11,10 @@
         _DepthOffset("Depth Offset", Float) = 0.0
         _ColorTex ("Color", 2D) = "white" {}
         _GlowTex ("Glow Texture", 2D) = "white" {}
+        _ColorTexAtlasCount ("Color Atlas Count", Vector) = (1,1,0,0)
+        _ColorTexAtlasSpeedFlip ("Color Atlas Speed+Flips", Vector) = (1,0,0,0)
+        _GlowTexAtlasCount ("Glow Atlas Count", Vector) = (1,1,0,0)
+        _GlowTexAtlasSpeedFlip ("Glow Atlas Speed+Flips", Vector) = (1,0,0,0)
 
         _FresnelCubemap ("Fresnel Cubemap", Cube) = "" {}
         _CubemapStrength ("Cubemap Strength", Range(0, 2)) = 1.0

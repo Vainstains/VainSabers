@@ -101,6 +101,26 @@ public class SaberRibbonTrail : MonoBehaviour
         mat.SetTexture("_GlowTex", glowTex ?? Texture2D.whiteTexture);
         mat.SetFloat("_ColorTexEnabled", colorTex != null ? 1f : 0f);
         mat.SetFloat("_GlowTexEnabled", glowTex != null ? 1f : 0f);
+        // compact atlas: float2 count, float3 speedFlip
+        var cCount = new Vector4(Mathf.Max(1, trailData.ColorAtlasCount.x), Mathf.Max(1, trailData.ColorAtlasCount.y), 0, 0);
+        var cAnim = new Vector4(Mathf.Clamp(trailData.ColorAtlasSpeedFlip.x, 0f, 120f), trailData.ColorAtlasSpeedFlip.y > 0.5f ? 1f : 0f, trailData.ColorAtlasSpeedFlip.z > 0.5f ? 1f : 0f, 0);
+        var gCount = new Vector4(Mathf.Max(1, trailData.GlowAtlasCount.x), Mathf.Max(1, trailData.GlowAtlasCount.y), 0, 0);
+        var gAnim = new Vector4(Mathf.Clamp(trailData.GlowAtlasSpeedFlip.x, 0f, 120f), trailData.GlowAtlasSpeedFlip.y > 0.5f ? 1f : 0f, trailData.GlowAtlasSpeedFlip.z > 0.5f ? 1f : 0f, 0);
+        mat.SetVector("_ColorTexAtlasCount", cCount);
+        mat.SetVector("_ColorTexAtlasSpeedFlip", cAnim);
+        mat.SetVector("_GlowTexAtlasCount", gCount);
+        mat.SetVector("_GlowTexAtlasSpeedFlip", gAnim);
+        // legacy fallback (for old bundles)
+        mat.SetFloat("_ColorTexAtlasX", cCount.x);
+        mat.SetFloat("_ColorTexAtlasY", cCount.y);
+        mat.SetFloat("_ColorTexAtlasSpeed", cAnim.x);
+        mat.SetFloat("_ColorTexAtlasFlipX", cAnim.y);
+        mat.SetFloat("_ColorTexAtlasFlipY", cAnim.z);
+        mat.SetFloat("_GlowTexAtlasX", gCount.x);
+        mat.SetFloat("_GlowTexAtlasY", gCount.y);
+        mat.SetFloat("_GlowTexAtlasSpeed", gAnim.x);
+        mat.SetFloat("_GlowTexAtlasFlipX", gAnim.y);
+        mat.SetFloat("_GlowTexAtlasFlipY", gAnim.z);
 
         // Noise: world-space 3D scrolling noise. If NoiseEnabled is false, intensity is forced to 0.
         var noiseTex = GetOrCreateNoiseTexture();
@@ -335,7 +355,7 @@ public class SaberRibbonTrail : MonoBehaviour
             {
                 float vFrac = (float)v / VerticalSubdivisions;
                 _vertices[vertexIndex] = Vector3.Lerp(basePos, tipPos, vFrac);
-                _uvs[vertexIndex] = new Vector2(t, vFrac);
+                _uvs[vertexIndex] = ApplyTrailAtlasUV(new Vector2(t, vFrac));
                 _colors[vertexIndex] = Color.Lerp(baseColor, tipColorFull, vFrac);
                 vertexIndex++;
             }
@@ -347,6 +367,39 @@ public class SaberRibbonTrail : MonoBehaviour
         _mesh.uv = _uvs;
         _mesh.triangles = _triangles;
         _mesh.RecalculateBounds();
+    }
+
+    private Vector2 ApplyTrailAtlasUV(Vector2 uv)
+    {
+        if (_meshRenderer != null && _meshRenderer.material != null && (_meshRenderer.material.HasProperty("_ColorTexAtlasCount") || _meshRenderer.material.HasProperty("_ColorTexAtlasX")))
+            return uv; // GPU will handle after asset bundle rebuild
+        bool hasColor = m_trailData.ColorAtlasCount.x > 1.5f || m_trailData.ColorAtlasCount.y > 1.5f;
+        bool hasGlow = m_trailData.GlowAtlasCount.x > 1.5f || m_trailData.GlowAtlasCount.y > 1.5f;
+        if (!hasColor && !hasGlow) return uv;
+        int ax, ay; float spd;
+        bool useColor = hasColor;
+        if (!hasColor && hasGlow) useColor = false;
+        else if (hasColor && hasGlow)
+        {
+            bool hasColorTex = !string.IsNullOrEmpty(m_trailData.ColorTextureName);
+            bool hasGlowTex = !string.IsNullOrEmpty(m_trailData.GlowTextureName);
+            if (hasColorTex && !hasGlowTex) useColor = true;
+            else if (!hasColorTex && hasGlowTex) useColor = false;
+            else useColor = true;
+        }
+        bool flipX = false, flipY = false;
+        if (useColor) { ax = Mathf.Clamp(Mathf.RoundToInt(m_trailData.ColorAtlasCount.x), 1, 16); ay = Mathf.Clamp(Mathf.RoundToInt(m_trailData.ColorAtlasCount.y), 1, 16); spd = Mathf.Clamp(m_trailData.ColorAtlasSpeedFlip.x, 0f, 120f); flipX = m_trailData.ColorAtlasSpeedFlip.y > 0.5f; flipY = m_trailData.ColorAtlasSpeedFlip.z > 0.5f; }
+        else { ax = Mathf.Clamp(Mathf.RoundToInt(m_trailData.GlowAtlasCount.x), 1, 16); ay = Mathf.Clamp(Mathf.RoundToInt(m_trailData.GlowAtlasCount.y), 1, 16); spd = Mathf.Clamp(m_trailData.GlowAtlasSpeedFlip.x, 0f, 120f); flipX = m_trailData.GlowAtlasSpeedFlip.y > 0.5f; flipY = m_trailData.GlowAtlasSpeedFlip.z > 0.5f; }
+        if (ax <= 1 && ay <= 1) return uv;
+        float count = ax * ay;
+        if (count < 1.5f) return uv;
+        float time = Time.unscaledTime;
+        float frame = Mathf.Floor(Mathf.Repeat(time * spd, count));
+        float tileX = Mathf.Repeat(frame, ax);
+        float tileY = Mathf.Floor(frame / ax);
+        if (flipX) tileX = ax - 1 - tileX;
+        if (flipY) tileY = ay - 1 - tileY;
+        return new Vector2((uv.x + tileX) / ax, (uv.y + tileY) / ay);
     }
 
     private float CalculateSegmentOpacity(float t)

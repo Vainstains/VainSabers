@@ -35,6 +35,30 @@ sampler2D _GlowTex;
 float4 _GlowTex_ST;
 float _ColorTexEnabled;
 float _GlowTexEnabled;
+float2 _ColorTexAtlasCount;
+float3 _ColorTexAtlasSpeedFlip;
+float2 _GlowTexAtlasCount;
+float3 _GlowTexAtlasSpeedFlip;
+
+float2 ApplyAtlas(float2 uv, float2 atlasCount, float3 atlasSpeedFlip)
+{
+    float atlasX = atlasCount.x;
+    float atlasY = atlasCount.y;
+    float speed = atlasSpeedFlip.x;
+    float flipX = atlasSpeedFlip.y;
+    float flipY = atlasSpeedFlip.z;
+    if (atlasX < 1.5 && atlasY < 1.5) return uv;
+    atlasX = max(1, atlasX);
+    atlasY = max(1, atlasY);
+    float count = atlasX * atlasY;
+    float frame = floor(fmod(_Time.y * speed, count) + 0.0001);
+    float tileX = fmod(frame, atlasX);
+    float tileY = floor(frame / atlasX);
+    if (flipX > 0.5) tileX = atlasX - 1 - tileX;
+    if (flipY > 0.5) tileY = atlasY - 1 - tileY;
+    float2 uvAtlas = (uv + float2(tileX, tileY)) / float2(atlasX, atlasY);
+    return uvAtlas;
+}
 
 v2f vert (appdata_t v)
 {
@@ -218,14 +242,16 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
 
     if (_ColorTexEnabled > 0.5)
     {
-        float4 texCol = tex2Dbias(_ColorTex, float4(texUv, 0, lodBias));
+        float2 uvAtlas = ApplyAtlas(texUv, _ColorTexAtlasCount, _ColorTexAtlasSpeedFlip);
+        float4 texCol = tex2Dbias(_ColorTex, float4(uvAtlas, 0, lodBias));
         commonVars.color *= texCol.rgb;
         commonVars.alpha *= texCol.a;
     }
 
     if (_GlowTexEnabled > 0.5)
     {
-        float4 texGlow = tex2Dbias(_GlowTex, float4(texUv, 0, lodBias));
+        float2 uvAtlasGlow = ApplyAtlas(texUv, _GlowTexAtlasCount, _GlowTexAtlasSpeedFlip);
+        float4 texGlow = tex2Dbias(_GlowTex, float4(uvAtlasGlow, 0, lodBias));
         commonVars.glowStrength *= texGlow.r * texGlow.a;
     }
 

@@ -153,6 +153,12 @@ public enum GeometryType
         public string? GlowTextureBase64;
         public TextureWrapMode TextureWrap = TextureWrapMode.Clamp;
 
+        // compact: dimensions as float2, speed+flips as float3 (x=speed, y=flipX, z=flipY)
+        public Vector2 ColorAtlasCount = new Vector2(1, 1);
+        public Vector3 ColorAtlasSpeedFlip = new Vector3(1, 0, 0);
+        public Vector2 GlowAtlasCount = new Vector2(1, 1);
+        public Vector3 GlowAtlasSpeedFlip = new Vector3(1, 0, 0);
+
         public string? ObjFileName;
         public string? ObjBase64;
         public float ObjScale = 1f;
@@ -420,6 +426,10 @@ public enum GeometryType
             ColorTextureBase64 = source.ColorTextureBase64;
             GlowTextureBase64 = source.GlowTextureBase64;
             TextureWrap = source.TextureWrap;
+            ColorAtlasCount = source.ColorAtlasCount;
+            ColorAtlasSpeedFlip = source.ColorAtlasSpeedFlip;
+            GlowAtlasCount = source.GlowAtlasCount;
+            GlowAtlasSpeedFlip = source.GlowAtlasSpeedFlip;
             ObjFileName = source.ObjFileName;
             ObjBase64 = source.ObjBase64;
             ObjScale = source.ObjScale;
@@ -480,6 +490,27 @@ public enum GeometryType
 
                 m_propertyBlock.SetFloat("_ColorTexEnabled", colorTex != null ? 1f : 0f);
                 m_propertyBlock.SetFloat("_GlowTexEnabled", glowTex != null ? 1f : 0f);
+
+                // compact atlas: float2 count, float3 speed+flips
+                var cCount = new Vector4(Mathf.Max(1, ColorAtlasCount.x), Mathf.Max(1, ColorAtlasCount.y), 0, 0);
+                var cAnim = new Vector4(Mathf.Clamp(ColorAtlasSpeedFlip.x, 0f, 120f), ColorAtlasSpeedFlip.y > 0.5f ? 1f : 0f, ColorAtlasSpeedFlip.z > 0.5f ? 1f : 0f, 0);
+                var gCount = new Vector4(Mathf.Max(1, GlowAtlasCount.x), Mathf.Max(1, GlowAtlasCount.y), 0, 0);
+                var gAnim = new Vector4(Mathf.Clamp(GlowAtlasSpeedFlip.x, 0f, 120f), GlowAtlasSpeedFlip.y > 0.5f ? 1f : 0f, GlowAtlasSpeedFlip.z > 0.5f ? 1f : 0f, 0);
+                m_propertyBlock.SetVector("_ColorTexAtlasCount", cCount);
+                m_propertyBlock.SetVector("_ColorTexAtlasSpeedFlip", cAnim);
+                m_propertyBlock.SetVector("_GlowTexAtlasCount", gCount);
+                m_propertyBlock.SetVector("_GlowTexAtlasSpeedFlip", gAnim);
+                // keep legacy floats for fallback (optional, not needed after bundle rebuild)
+                m_propertyBlock.SetFloat("_ColorTexAtlasX", cCount.x);
+                m_propertyBlock.SetFloat("_ColorTexAtlasY", cCount.y);
+                m_propertyBlock.SetFloat("_ColorTexAtlasSpeed", cAnim.x);
+                m_propertyBlock.SetFloat("_ColorTexAtlasFlipX", cAnim.y);
+                m_propertyBlock.SetFloat("_ColorTexAtlasFlipY", cAnim.z);
+                m_propertyBlock.SetFloat("_GlowTexAtlasX", gCount.x);
+                m_propertyBlock.SetFloat("_GlowTexAtlasY", gCount.y);
+                m_propertyBlock.SetFloat("_GlowTexAtlasSpeed", gAnim.x);
+                m_propertyBlock.SetFloat("_GlowTexAtlasFlipX", gAnim.y);
+                m_propertyBlock.SetFloat("_GlowTexAtlasFlipY", gAnim.z);
 
                 m_meshRenderer.SetPropertyBlock(m_propertyBlock);
             }
@@ -939,6 +970,9 @@ public enum GeometryType
 
                 var u = sign * (float)i / ringVerts + 0.5f * (1.0f - sign);
                 var v = ringT + uvOffset;
+                var atlasUv = ApplyAtlasUV(new Vector2(u, v));
+                u = atlasUv.x;
+                v = atlasUv.y;
 
                 m_blurTube!.SetVertex(
                     idx + i,
@@ -1046,9 +1080,10 @@ public enum GeometryType
                     Vector3 pos = interpSample.position + offset;
 
                     int idx = iy * vertsX + ix;
+                    var atlasUvSprite = ApplyAtlasUV(new Vector2(u, v));
                     m_blurSprite.SetVertex(
                         idx, pos, Vector3.forward,
-                        u, v, col, planeNormal, interpSample.forward,
+                        atlasUvSprite.x, atlasUvSprite.y, col, planeNormal, interpSample.forward,
                         tSample, sweepRatio, opacity
                     );
                 }
@@ -1114,9 +1149,11 @@ public enum GeometryType
                 Vector3 pos = interpSample.position + offset;
                 Vector3 normal = interpSample.rotation * normals[i];
 
+                var baseUv = uvs[i];
+                var atlasUvObj = ApplyAtlasUV(baseUv);
                 m_blurObj.SetVertex(
                     i, pos, normal,
-                    uvs[i].x, uvs[i].y, col, normal, interpSample.forward,
+                    atlasUvObj.x, atlasUvObj.y, col, normal, interpSample.forward,
                     tSample, sweepRatio, opacity
                 );
             }
@@ -1149,6 +1186,68 @@ public enum GeometryType
 
             return m_poseSamples;
         }
+
+        private Vector2 ApplyAtlasUV(Vector2 uv)
+        {
+            // If shader supports GPU atlas (after asset bundle rebuild), let GPU handle it to support separate color/glow atlases
+            var activeMat = GetActiveMaterial();
+            if (activeMat != null && (activeMat.HasProperty("_ColorTexAtlasCount") || activeMat.HasProperty("_ColorTexAtlasX")))
+                return uv;
+            // also check global asset – if bundle was rebuilt, all saber materials will have the property
+            if (VainSabersAssets.NormalSaberMaterial != null && (VainSabersAssets.NormalSaberMaterial.HasProperty("_ColorTexAtlasCount") || VainSabersAssets.NormalSaberMaterial.HasProperty("_ColorTexAtlasX")))
+                return uv;
+
+            bool hasColorAtlas = ColorAtlasCount.x > 1.5f || ColorAtlasCount.y > 1.5f;
+            bool hasGlowAtlas = GlowAtlasCount.x > 1.5f || GlowAtlasCount.y > 1.5f;
+            if (!hasColorAtlas && !hasGlowAtlas)
+                return uv;
+
+            int ax = 1, ay = 1;
+            float spd = 0f;
+            // pick atlas based on which texture is assigned; prefer color if both present
+            bool useColor = hasColorAtlas;
+            if (!hasColorAtlas && hasGlowAtlas)
+                useColor = false;
+            else if (hasColorAtlas && hasGlowAtlas)
+            {
+                bool hasColorTex = !string.IsNullOrEmpty(ColorTextureName);
+                bool hasGlowTex = !string.IsNullOrEmpty(GlowTextureName);
+                if (hasColorTex && !hasGlowTex) useColor = true;
+                else if (!hasColorTex && hasGlowTex) useColor = false;
+                else useColor = true; // both present -> color primary (shader handles separate glow)
+            }
+
+            bool flipX = false, flipY = false;
+            if (useColor)
+            {
+                ax = Mathf.Clamp(Mathf.RoundToInt(ColorAtlasCount.x), 1, 16);
+                ay = Mathf.Clamp(Mathf.RoundToInt(ColorAtlasCount.y), 1, 16);
+                spd = Mathf.Clamp(ColorAtlasSpeedFlip.x, 0f, 120f);
+                flipX = ColorAtlasSpeedFlip.y > 0.5f;
+                flipY = ColorAtlasSpeedFlip.z > 0.5f;
+            }
+            else
+            {
+                ax = Mathf.Clamp(Mathf.RoundToInt(GlowAtlasCount.x), 1, 16);
+                ay = Mathf.Clamp(Mathf.RoundToInt(GlowAtlasCount.y), 1, 16);
+                spd = Mathf.Clamp(GlowAtlasSpeedFlip.x, 0f, 120f);
+                flipX = GlowAtlasSpeedFlip.y > 0.5f;
+                flipY = GlowAtlasSpeedFlip.z > 0.5f;
+            }
+
+            if (ax <= 1 && ay <= 1)
+                return uv;
+            float time = m_saberData != null ? m_saberData.SaberTimeAlive : Time.unscaledTime;
+            float count = ax * ay;
+            if (count < 1.5f) return uv;
+            float frame = Mathf.Floor(Mathf.Repeat(time * spd, count));
+            float tileX = Mathf.Repeat(frame, ax);
+            float tileY = Mathf.Floor(frame / ax);
+            if (flipX) tileX = ax - 1 - tileX;
+            if (flipY) tileY = ay - 1 - tileY;
+            return new Vector2((uv.x + tileX) / ax, (uv.y + tileY) / ay);
+        }
+
         private Color ShiftHue(Color color, float hueShift)
         {
             Color.RGBToHSV(color, out var h, out var s, out var v);
@@ -1217,6 +1316,10 @@ public enum GeometryType
         public string? ColorTextureBase64;
         public string? GlowTextureBase64;
         public TextureWrapMode TextureWrap;
+        public Vector2 ColorAtlasCount = new Vector2(1, 1);
+        public Vector3 ColorAtlasSpeedFlip = new Vector3(1, 0, 0);
+        public Vector2 GlowAtlasCount = new Vector2(1, 1);
+        public Vector3 GlowAtlasSpeedFlip = new Vector3(1, 0, 0);
         public float MotionActivation; // 0=always visible, 1=gated by movement, exponential toward 0
 
         // Blade trail vertex noise (world-space 3D noise, blade trails only via vs_flatglow_2side)
@@ -1250,7 +1353,11 @@ public enum GeometryType
             float noiseSpeed = 1f,
             float motionFadePower = 0f,
             List<VainSabers.Data.ColorGradientKey>? colorGradientKeys = null,
-            List<VainSabers.Data.FloatGradientKey>? customBlendGradientKeys = null)
+            List<VainSabers.Data.FloatGradientKey>? customBlendGradientKeys = null,
+            Vector2 colorAtlasCount = default,
+            Vector3 colorAtlasSpeedFlip = default,
+            Vector2 glowAtlasCount = default,
+            Vector3 glowAtlasSpeedFlip = default)
         {
             Position = position;
             Color = color;
@@ -1273,6 +1380,10 @@ public enum GeometryType
             NoiseScale = noiseScale;
             NoiseSpeed = noiseSpeed;
             MotionFadePower = motionFadePower;
+            ColorAtlasCount = colorAtlasCount == default ? new Vector2(1,1) : new Vector2(Mathf.Clamp(colorAtlasCount.x,1,16), Mathf.Clamp(colorAtlasCount.y,1,16));
+            ColorAtlasSpeedFlip = colorAtlasSpeedFlip == default ? new Vector3(1,0,0) : new Vector3(Mathf.Clamp(colorAtlasSpeedFlip.x,0f,120f), colorAtlasSpeedFlip.y > 0.5f ? 1f : 0f, colorAtlasSpeedFlip.z > 0.5f ? 1f : 0f);
+            GlowAtlasCount = glowAtlasCount == default ? new Vector2(1,1) : new Vector2(Mathf.Clamp(glowAtlasCount.x,1,16), Mathf.Clamp(glowAtlasCount.y,1,16));
+            GlowAtlasSpeedFlip = glowAtlasSpeedFlip == default ? new Vector3(1,0,0) : new Vector3(Mathf.Clamp(glowAtlasSpeedFlip.x,0f,120f), glowAtlasSpeedFlip.y > 0.5f ? 1f : 0f, glowAtlasSpeedFlip.z > 0.5f ? 1f : 0f);
             if (colorGradientKeys != null)
                 ColorGradientKeys = colorGradientKeys;
             else

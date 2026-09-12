@@ -452,6 +452,10 @@ public class BlurSaberData : MonoBehaviour
                 part.ColorTextureBase64 = partData.ColorTextureBase64;
                 part.GlowTextureBase64 = partData.GlowTextureBase64;
                 part.TextureWrap = (TextureWrapMode)Mathf.Clamp(partData.TextureWrap, 0, 3);
+                part.ColorAtlasCount = new Vector2(Mathf.Clamp(partData.ColorAtlasCount.x, 1, 16), Mathf.Clamp(partData.ColorAtlasCount.y, 1, 16));
+                part.ColorAtlasSpeedFlip = new Vector3(Mathf.Clamp(partData.ColorAtlasSpeedFlip.x, 0f, 120f), partData.ColorAtlasSpeedFlip.y > 0.5f ? 1f : 0f, partData.ColorAtlasSpeedFlip.z > 0.5f ? 1f : 0f);
+                part.GlowAtlasCount = new Vector2(Mathf.Clamp(partData.GlowAtlasCount.x, 1, 16), Mathf.Clamp(partData.GlowAtlasCount.y, 1, 16));
+                part.GlowAtlasSpeedFlip = new Vector3(Mathf.Clamp(partData.GlowAtlasSpeedFlip.x, 0f, 120f), partData.GlowAtlasSpeedFlip.y > 0.5f ? 1f : 0f, partData.GlowAtlasSpeedFlip.z > 0.5f ? 1f : 0f);
                 part.ObjFileName = partData.ObjFile;
                 part.ObjBase64 = partData.ObjBase64;
                 part.ObjScale = partData.ObjScale;
@@ -537,7 +541,11 @@ public class BlurSaberData : MonoBehaviour
                         noiseSpeed: td.NoiseSpeed,
                         motionFadePower: td.MotionFadePower,
                         colorGradientKeys: gradKeys,
-                        customBlendGradientKeys: blendKeys
+                        customBlendGradientKeys: blendKeys,
+                        colorAtlasCount: td.ColorAtlasCount,
+                        colorAtlasSpeedFlip: td.ColorAtlasSpeedFlip,
+                        glowAtlasCount: td.GlowAtlasCount,
+                        glowAtlasSpeedFlip: td.GlowAtlasSpeedFlip
                     ));
                 }
             }
@@ -594,7 +602,11 @@ public class BlurSaberData : MonoBehaviour
                         noiseSpeed: bt.NoiseSpeed,
                         motionFadePower: bt.MotionFadePower,
                         colorGradientKeys: gradKeys,
-                        customBlendGradientKeys: blendKeys
+                        customBlendGradientKeys: blendKeys,
+                        colorAtlasCount: bt.ColorAtlasCount,
+                        colorAtlasSpeedFlip: bt.ColorAtlasSpeedFlip,
+                        glowAtlasCount: bt.GlowAtlasCount,
+                        glowAtlasSpeedFlip: bt.GlowAtlasSpeedFlip
                     ));
                 }
             }
@@ -647,7 +659,11 @@ public class BlurSaberData : MonoBehaviour
                     noiseScale: bt.NoiseScale > 0.01f ? bt.NoiseScale : 2f,
                     noiseSpeed: bt.NoiseSpeed,
                     motionFadePower: bt.MotionFadePower,
-                    colorGradientKeys: gradKeys
+                    colorGradientKeys: gradKeys,
+                    colorAtlasCount: bt.ColorAtlasCount,
+                    colorAtlasSpeedFlip: bt.ColorAtlasSpeedFlip,
+                    glowAtlasCount: bt.GlowAtlasCount,
+                    glowAtlasSpeedFlip: bt.GlowAtlasSpeedFlip
                 ));
             }
 
@@ -783,6 +799,10 @@ public class BlurSaberData : MonoBehaviour
                 ColorTextureBase64 = embedAssets ? LoadAssetBase64(part.ColorTextureName, part.ColorTextureBase64) : null,
                 GlowTextureBase64 = embedAssets ? LoadAssetBase64(part.GlowTextureName, part.GlowTextureBase64) : null,
                 TextureWrap = (int)part.TextureWrap,
+                ColorAtlasCount = part.ColorAtlasCount,
+                ColorAtlasSpeedFlip = part.ColorAtlasSpeedFlip,
+                GlowAtlasCount = part.GlowAtlasCount,
+                GlowAtlasSpeedFlip = part.GlowAtlasSpeedFlip,
                 ObjFile = part.ObjFileName,
                 ObjBase64 = embedAssets ? LoadAssetBase64(part.ObjFileName, part.ObjBase64) : null,
                 ObjScale = part.ObjScale,
@@ -838,6 +858,10 @@ public class BlurSaberData : MonoBehaviour
                     ColorTextureBase64 = embedAssets ? LoadAssetBase64(td.ColorTextureName, td.ColorTextureBase64) : null,
                     GlowTextureBase64 = embedAssets ? LoadAssetBase64(td.GlowTextureName, td.GlowTextureBase64) : null,
                     TextureWrap = (int)td.TextureWrap,
+                    ColorAtlasCount = td.ColorAtlasCount,
+                    ColorAtlasSpeedFlip = td.ColorAtlasSpeedFlip,
+                    GlowAtlasCount = td.GlowAtlasCount,
+                    GlowAtlasSpeedFlip = td.GlowAtlasSpeedFlip,
                     MotionActivation = td.MotionActivation,
                     NoiseEnabled = td.NoiseEnabled,
                     NoiseIntensity = td.NoiseIntensity,
@@ -872,6 +896,10 @@ public class BlurSaberData : MonoBehaviour
                     ColorTextureBase64 = embedAssets ? LoadAssetBase64(td.ColorTextureName, td.ColorTextureBase64) : null,
                     GlowTextureBase64 = embedAssets ? LoadAssetBase64(td.GlowTextureName, td.GlowTextureBase64) : null,
                     TextureWrap = (int)td.TextureWrap,
+                    ColorAtlasCount = td.ColorAtlasCount,
+                    ColorAtlasSpeedFlip = td.ColorAtlasSpeedFlip,
+                    GlowAtlasCount = td.GlowAtlasCount,
+                    GlowAtlasSpeedFlip = td.GlowAtlasSpeedFlip,
                     MotionActivation = td.MotionActivation,
                     NoiseEnabled = td.NoiseEnabled,
                     NoiseIntensity = td.NoiseIntensity,
@@ -1238,6 +1266,11 @@ public class BlurSaberData : MonoBehaviour
         public string? ColorTextureBase64 { get; set; }
         public string? GlowTextureBase64 { get; set; }
         public int TextureWrap { get; set; }
+        // compact: float2 count, float3 speed+flips (y=flipX, z=flipY)
+        public Vector2 ColorAtlasCount { get; set; } = new Vector2(1, 1);
+        public Vector3 ColorAtlasSpeedFlip { get; set; } = new Vector3(1, 0, 0);
+        public Vector2 GlowAtlasCount { get; set; } = new Vector2(1, 1);
+        public Vector3 GlowAtlasSpeedFlip { get; set; } = new Vector3(1, 0, 0);
 
         public string? ObjFile { get; set; }
         public string? ObjBase64 { get; set; }
@@ -1294,6 +1327,10 @@ public class BlurSaberData : MonoBehaviour
         public float NoiseScale { get; set; } = 2f;
         public float NoiseSpeed { get; set; } = 1f;
         public float MotionFadePower { get; set; } = 0f;
+        public Vector2 ColorAtlasCount { get; set; } = new Vector2(1, 1);
+        public Vector3 ColorAtlasSpeedFlip { get; set; } = new Vector3(1, 0, 0);
+        public Vector2 GlowAtlasCount { get; set; } = new Vector2(1, 1);
+        public Vector3 GlowAtlasSpeedFlip { get; set; } = new Vector3(1, 0, 0);
     }
 
     private static Vector3 ArrToVec3(float[] arr) =>

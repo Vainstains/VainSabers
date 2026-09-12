@@ -10,6 +10,10 @@ Shader "Unlit/vs_flatglow_2side"
             _GlowTex ("Glow", 2D) = "white" {}
             _ColorTexEnabled ("Color Texture Enabled", Float) = 0
             _GlowTexEnabled ("Glow Texture Enabled", Float) = 0
+            _ColorTexAtlasCount ("Color Atlas Count", Vector) = (1,1,0,0)
+            _ColorTexAtlasSpeedFlip ("Color Atlas Speed+Flips", Vector) = (1,0,0,0)
+            _GlowTexAtlasCount ("Glow Atlas Count", Vector) = (1,1,0,0)
+            _GlowTexAtlasSpeedFlip ("Glow Atlas Speed+Flips", Vector) = (1,0,0,0)
             _NoiseTex ("Noise 3D", 3D) = "white" {}
             _NoiseIntensity ("Noise Intensity", Float) = 0
             _NoiseScale ("Noise Scale", Float) = 1
@@ -45,13 +49,34 @@ Shader "Unlit/vs_flatglow_2side"
                 float _CustomBlend;
                 sampler2D _ColorTex;
                 float _ColorTexEnabled;
+                float2 _ColorTexAtlasCount;
+                float3 _ColorTexAtlasSpeedFlip;
                 sampler3D _NoiseTex;
                 float _NoiseIntensity;
                 float _NoiseScale;
                 float _NoiseSpeed;
 
                 float _TrailDuration;
-    
+     
+                float2 ApplyAtlas(float2 uv, float2 atlasCount, float3 atlasSpeedFlip)
+                {
+                    float atlasX = atlasCount.x;
+                    float atlasY = atlasCount.y;
+                    float speed = atlasSpeedFlip.x;
+                    float flipX = atlasSpeedFlip.y;
+                    float flipY = atlasSpeedFlip.z;
+                    if (atlasX < 1.5 && atlasY < 1.5) return uv;
+                    atlasX = max(1, atlasX);
+                    atlasY = max(1, atlasY);
+                    float count = atlasX * atlasY;
+                    float frame = floor(fmod(_Time.y * speed, count) + 0.0001);
+                    float tileX = fmod(frame, atlasX);
+                    float tileY = floor(frame / atlasX);
+                    if (flipX > 0.5) tileX = atlasX - 1 - tileX;
+                    if (flipY > 0.5) tileY = atlasY - 1 - tileY;
+                    return (uv + float2(tileX, tileY)) / float2(atlasX, atlasY);
+                }
+
                 struct appdata
                 {
                     float4 vertex : POSITION;
@@ -59,7 +84,7 @@ Shader "Unlit/vs_flatglow_2side"
                     float4 color  : COLOR;
                     UNITY_VERTEX_INPUT_INSTANCE_ID
                 };
-    
+     
                 struct v2f
                 {
                     float4 pos   : SV_POSITION;
@@ -67,7 +92,7 @@ Shader "Unlit/vs_flatglow_2side"
                     fixed4 color : COLOR0;
                     UNITY_VERTEX_OUTPUT_STEREO
                 };
-    
+     
                 v2f vert (appdata v)
                 {
                     v2f o;
@@ -92,7 +117,7 @@ Shader "Unlit/vs_flatglow_2side"
                     o.color = v.color;
                     return o;
                 }
-    
+     
                 fixed4 frag (v2f i) : SV_Target
                 {
                     float3 baseRgb = i.color.rgb;
@@ -100,7 +125,8 @@ Shader "Unlit/vs_flatglow_2side"
                     fixed4 col = fixed4(saturate(blended * _ColorBoost), i.color.a);
                     if (_ColorTexEnabled > 0.5)
                     {
-                        fixed4 texCol = tex2D(_ColorTex, i.uv);
+                        float2 uvAtlas = ApplyAtlas(i.uv, _ColorTexAtlasCount, _ColorTexAtlasSpeedFlip);
+                        fixed4 texCol = tex2D(_ColorTex, uvAtlas);
                         col.rgb *= texCol.rgb;
                         col.a *= texCol.a;
                     }
@@ -132,13 +158,34 @@ Shader "Unlit/vs_flatglow_2side"
                 float _DepthOffset;
                 sampler2D _GlowTex;
                 float _GlowTexEnabled;
+                float2 _GlowTexAtlasCount;
+                float3 _GlowTexAtlasSpeedFlip;
                 sampler3D _NoiseTex;
                 float _NoiseIntensity;
                 float _NoiseScale;
                 float _NoiseSpeed;
 
                 float _TrailDuration;
-    
+
+                float2 ApplyAtlasGlow(float2 uv, float2 atlasCount, float3 atlasSpeedFlip)
+                {
+                    float atlasX = atlasCount.x;
+                    float atlasY = atlasCount.y;
+                    float speed = atlasSpeedFlip.x;
+                    float flipX = atlasSpeedFlip.y;
+                    float flipY = atlasSpeedFlip.z;
+                    if (atlasX < 1.5 && atlasY < 1.5) return uv;
+                    atlasX = max(1, atlasX);
+                    atlasY = max(1, atlasY);
+                    float count = atlasX * atlasY;
+                    float frame = floor(fmod(_Time.y * speed, count) + 0.0001);
+                    float tileX = fmod(frame, atlasX);
+                    float tileY = floor(frame / atlasX);
+                    if (flipX > 0.5) tileX = atlasX - 1 - tileX;
+                    if (flipY > 0.5) tileY = atlasY - 1 - tileY;
+                    return (uv + float2(tileX, tileY)) / float2(atlasX, atlasY);
+                }
+     
                 struct appdata
                 {
                     float4 vertex : POSITION;
@@ -146,7 +193,7 @@ Shader "Unlit/vs_flatglow_2side"
                     float4 color  : COLOR;
                     UNITY_VERTEX_INPUT_INSTANCE_ID
                 };
-    
+     
                 struct v2f
                 {
                     float4 pos   : SV_POSITION;
@@ -154,7 +201,7 @@ Shader "Unlit/vs_flatglow_2side"
                     fixed  alpha : TEXCOORD1;
                     UNITY_VERTEX_OUTPUT_STEREO
                 };
-    
+     
                 v2f vert (appdata v)
                 {
                     v2f o;
@@ -179,14 +226,15 @@ Shader "Unlit/vs_flatglow_2side"
                     o.alpha = v.color.a;
                     return o;
                 }
-    
+     
                 fixed4 frag (v2f i) : SV_Target
                 {
                     // Write only alpha (glow), RGB is discarded by ColorMask.
                     float glow = saturate(i.alpha * _GlowBoost);
                     if (_GlowTexEnabled > 0.5)
                     {
-                        float4 glowTex = tex2D(_GlowTex, i.uv);
+                        float2 uvAtlas = ApplyAtlasGlow(i.uv, _GlowTexAtlasCount, _GlowTexAtlasSpeedFlip);
+                        float4 glowTex = tex2D(_GlowTex, uvAtlas);
                         glow *= glowTex.r * glowTex.a;
                     }
                         

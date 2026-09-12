@@ -786,26 +786,39 @@ class SaberEditorComponent : UIComponent
 
         m_materialPanel.Content.AddSubHeader("Textures");
         var textureFiles = GetTextureFileNames();
-        var colorTexDropdown = m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Color / Opacity").SetComponent<DropdownComponent>();
+        var colorTextureField = m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Color / Opacity").SetComponent<TextureFieldComponent>();
         var colorTexIdx = textureFiles.IndexOf(sourcePart.ColorTextureName ?? "");
         if (colorTexIdx < 0) colorTexIdx = 0;
-        colorTexDropdown.SetOptions(textureFiles, colorTexIdx);
-        colorTexDropdown.OnSelectionChanged += idx =>
+        colorTextureField.SetOptions(textureFiles, colorTexIdx);
+        colorTextureField.SetAtlasValues(sourcePart.ColorAtlasCount, sourcePart.ColorAtlasSpeedFlip);
+        colorTextureField.OnSelectionChanged += idx =>
         {
             var name = idx > 0 ? textureFiles[idx] : null;
             ApplyToBothResolvedParts(part => part.ColorTextureName = name);
         };
-        var glowTexDropdown = m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Glow").SetComponent<DropdownComponent>();
+        colorTextureField.OnAtlasXChanged += v => ApplyToBothResolvedParts(part => { var c = part.ColorAtlasCount; c.x = v; part.ColorAtlasCount = c; });
+        colorTextureField.OnAtlasYChanged += v => ApplyToBothResolvedParts(part => { var c = part.ColorAtlasCount; c.y = v; part.ColorAtlasCount = c; });
+        colorTextureField.OnAtlasSpeedChanged += v => ApplyToBothResolvedParts(part => { var a = part.ColorAtlasSpeedFlip; a.x = v; part.ColorAtlasSpeedFlip = a; });
+        colorTextureField.OnAtlasFlipXChanged += v => ApplyToBothResolvedParts(part => { var a = part.ColorAtlasSpeedFlip; a.y = v ? 1f : 0f; part.ColorAtlasSpeedFlip = a; });
+        colorTextureField.OnAtlasFlipYChanged += v => ApplyToBothResolvedParts(part => { var a = part.ColorAtlasSpeedFlip; a.z = v ? 1f : 0f; part.ColorAtlasSpeedFlip = a; });
+
+        var glowTextureField = m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Glow").SetComponent<TextureFieldComponent>();
         var glowTexIdx = textureFiles.IndexOf(sourcePart.GlowTextureName ?? "");
         if (glowTexIdx < 0) glowTexIdx = 0;
-        glowTexDropdown.SetOptions(textureFiles, glowTexIdx);
-        glowTexDropdown.OnSelectionChanged += idx =>
+        glowTextureField.SetOptions(textureFiles, glowTexIdx);
+        glowTextureField.SetAtlasValues(sourcePart.GlowAtlasCount, sourcePart.GlowAtlasSpeedFlip);
+        glowTextureField.OnSelectionChanged += idx =>
         {
             var name = idx > 0 ? textureFiles[idx] : null;
             ApplyToBothResolvedParts(part => part.GlowTextureName = name);
         };
+        glowTextureField.OnAtlasXChanged += v => ApplyToBothResolvedParts(part => { var c = part.GlowAtlasCount; c.x = v; part.GlowAtlasCount = c; });
+        glowTextureField.OnAtlasYChanged += v => ApplyToBothResolvedParts(part => { var c = part.GlowAtlasCount; c.y = v; part.GlowAtlasCount = c; });
+        glowTextureField.OnAtlasSpeedChanged += v => ApplyToBothResolvedParts(part => { var a = part.GlowAtlasSpeedFlip; a.x = v; part.GlowAtlasSpeedFlip = a; });
+        glowTextureField.OnAtlasFlipXChanged += v => ApplyToBothResolvedParts(part => { var a = part.GlowAtlasSpeedFlip; a.y = v ? 1f : 0f; part.GlowAtlasSpeedFlip = a; });
+        glowTextureField.OnAtlasFlipYChanged += v => ApplyToBothResolvedParts(part => { var a = part.GlowAtlasSpeedFlip; a.z = v ? 1f : 0f; part.GlowAtlasSpeedFlip = a; });
 
         var wrapModeNames = new[] { "Clamp", "Repeat", "Mirror", "MirrorOnce" };
         var wrapModeDropdown = m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
@@ -2082,27 +2095,90 @@ class SaberEditorComponent : UIComponent
 
         m_trailPanel.Content.AddSubHeader("Textures");
         var trailTextureFiles = GetTextureFileNames();
-        var trailColorTexDropdown = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Color / Opacity").SetComponent<DropdownComponent>();
+        var trailColorTextureField = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Color / Opacity").SetComponent<TextureFieldComponent>();
         var trailColorTexIdx = trailTextureFiles.IndexOf(trail.ColorTextureName ?? "");
         if (trailColorTexIdx < 0) trailColorTexIdx = 0;
-        trailColorTexDropdown.SetOptions(trailTextureFiles, trailColorTexIdx);
-        trailColorTexDropdown.OnSelectionChanged += idx =>
+        trailColorTextureField.SetOptions(trailTextureFiles, trailColorTexIdx);
+        trailColorTextureField.SetAtlasValues(trail.ColorAtlasCount, trail.ColorAtlasSpeedFlip);
+        trailColorTextureField.OnSelectionChanged += idx =>
         {
             var t = data.BladeTrails[m_selectedBladeTrailIndex];
             t.ColorTextureName = idx > 0 ? trailTextureFiles[idx] : null;
-            data.SetBladeTrail(m_selectedBladeTrailIndex, t);
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
         };
-        var trailGlowTexDropdown = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Glow").SetComponent<DropdownComponent>();
+        trailColorTextureField.OnAtlasXChanged += v =>
+        {
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
+            var c = t.ColorAtlasCount; c.x = v; t.ColorAtlasCount = c;
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+        };
+        trailColorTextureField.OnAtlasYChanged += v =>
+        {
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
+            var c = t.ColorAtlasCount; c.y = v; t.ColorAtlasCount = c;
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+        };
+        trailColorTextureField.OnAtlasSpeedChanged += v =>
+        {
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
+            var a = t.ColorAtlasSpeedFlip; a.x = v; t.ColorAtlasSpeedFlip = a;
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+        };
+        trailColorTextureField.OnAtlasFlipXChanged += v =>
+        {
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
+            var a = t.ColorAtlasSpeedFlip; a.y = v ? 1f : 0f; t.ColorAtlasSpeedFlip = a;
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+        };
+        trailColorTextureField.OnAtlasFlipYChanged += v =>
+        {
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
+            var a = t.ColorAtlasSpeedFlip; a.z = v ? 1f : 0f; t.ColorAtlasSpeedFlip = a;
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+        };
+
+        var trailGlowTextureField = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Glow").SetComponent<TextureFieldComponent>();
         var trailGlowTexIdx = trailTextureFiles.IndexOf(trail.GlowTextureName ?? "");
         if (trailGlowTexIdx < 0) trailGlowTexIdx = 0;
-        trailGlowTexDropdown.SetOptions(trailTextureFiles, trailGlowTexIdx);
-        trailGlowTexDropdown.OnSelectionChanged += idx =>
+        trailGlowTextureField.SetOptions(trailTextureFiles, trailGlowTexIdx);
+        trailGlowTextureField.SetAtlasValues(trail.GlowAtlasCount, trail.GlowAtlasSpeedFlip);
+        trailGlowTextureField.OnSelectionChanged += idx =>
         {
             var t = data.BladeTrails[m_selectedBladeTrailIndex];
             t.GlowTextureName = idx > 0 ? trailTextureFiles[idx] : null;
-            data.SetBladeTrail(m_selectedBladeTrailIndex, t);
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+        };
+        trailGlowTextureField.OnAtlasXChanged += v =>
+        {
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
+            var c = t.GlowAtlasCount; c.x = v; t.GlowAtlasCount = c;
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+        };
+        trailGlowTextureField.OnAtlasYChanged += v =>
+        {
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
+            var c = t.GlowAtlasCount; c.y = v; t.GlowAtlasCount = c;
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+        };
+        trailGlowTextureField.OnAtlasSpeedChanged += v =>
+        {
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
+            var a = t.GlowAtlasSpeedFlip; a.x = v; t.GlowAtlasSpeedFlip = a;
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+        };
+        trailGlowTextureField.OnAtlasFlipXChanged += v =>
+        {
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
+            var a = t.GlowAtlasSpeedFlip; a.y = v ? 1f : 0f; t.GlowAtlasSpeedFlip = a;
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
+        };
+        trailGlowTextureField.OnAtlasFlipYChanged += v =>
+        {
+            var t = data.BladeTrails[m_selectedBladeTrailIndex];
+            var a = t.GlowAtlasSpeedFlip; a.z = v ? 1f : 0f; t.GlowAtlasSpeedFlip = a;
+            ApplyToBothSabers(s => s.Data.SetBladeTrail(m_selectedBladeTrailIndex, t));
         };
 
         var trailWrapModeNames = new[] { "Clamp", "Repeat", "Mirror", "MirrorOnce" };
