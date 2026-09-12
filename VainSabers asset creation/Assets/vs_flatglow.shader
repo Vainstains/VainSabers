@@ -33,6 +33,7 @@ Shader "Unlit/vs_flatglow"
                 float _ColorBoost;
                 float _DepthOffset;
                 float4 _CustomColor;
+                float _CustomBlend;
     
                 struct appdata
                 {

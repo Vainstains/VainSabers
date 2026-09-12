@@ -42,6 +42,7 @@ Shader "Unlit/vs_flatglow_2side"
                 float _ColorBoost;
                 float _DepthOffset;
                 float4 _CustomColor;
+                float _CustomBlend;
                 sampler2D _ColorTex;
                 float _ColorTexEnabled;
                 sampler3D _NoiseTex;
