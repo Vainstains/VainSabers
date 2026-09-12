@@ -24,6 +24,7 @@ public class PlayerInstaller : Installer
         Plugin.Print("VainSabers is enabled, installing...");
         
         const int priority = 69; // hehe
-        Container.BindInstance(SaberModelRegistration.Create<BlurSaberModelController>(priority)).AsSingle();
+        // smh it was this simple all along??
+        Container.Bind<SaberModelRegistration>().FromInstance(SaberModelRegistration.Create<BlurSaberModelController>(priority)).AsCached();
     }
 }
