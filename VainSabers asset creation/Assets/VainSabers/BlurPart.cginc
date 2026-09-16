@@ -1,16 +1,34 @@
 #pragma vertex vert
-#pragma target 2.0
-
+#pragma target 3.5
 #include "UnityCG.cginc"
 
+#define GPU_HIST_COUNT 32
+float4 _HistPos[GPU_HIST_COUNT];
+float4 _HistFwd[GPU_HIST_COUNT];
+float4 _HistUp[GPU_HIST_COUNT];
+int _HistCount; // 32
+float _VertexBlurFade;
+float _VertexHueShift;
+float3 _VertexCustomColor;
+float _VertexGlowMul;
+float _VertexOpacityMul;
+float _VertexEnableRoundedNormals;
+float _VertexLength;
+float _VertexEnabled;
+float _VertexGeometry;
+float _VertexManualIsZero;
+
+float _VainSaberBlurSoftness;
+
+// god this is messy
 struct appdata_t {
-    float4 vertex : POSITION;
-    float3 trueNormal : NORMAL;
-    float4 planeNormal : TANGENT;  // tangent xyz vector in model space, w is sweepFactor
-    float2 uv : TEXCOORD0;
+    float4 vertex : POSITION;    // tube: x=zPos y=offX z=offY w=1   obj: xyz=localPos   sprite: x=localX y=localY
+    float3 polar : NORMAL;       // tube: x=cosTheta y=sinTheta z=sign  obj: xyz=localNormal
+    float4 meta : TANGENT;       // tube: x=radiusSlope y=isZeroFlag z=ringT w=radius
     float4 color  : COLOR;
-    float4 bladeDir : TEXCOORD1;
-    float2 uv2 : TEXCOORD2;
+    float2 uv : TEXCOORD0;
+    float4 dataC : TEXCOORD1;    // tube: x=customWeight y=opacity  sprite/obj: w=opacity etc
+    float2 dataD : TEXCOORD2;    // spare: x=uvOffset or sprite half info
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
@@ -60,6 +78,49 @@ float2 ApplyAtlas(float2 uv, float2 atlasCount, float3 atlasSpeedFlip)
     return uvAtlas;
 }
 
+float3 RGBToHSV_Unity(float3 c)
+{
+    float r=c.r, g=c.g, b=c.b;
+    float maxC = max(r, max(g,b));
+    float minC = min(r, min(g,b));
+    float delta = maxC - minC;
+    float h=0, s=0, v=maxC;
+    if (delta > 0.00001)
+    {
+        s = delta / maxC;
+        if (abs(r - maxC) < 0.00001) h = (g - b) / delta;
+        else if (abs(g - maxC) < 0.00001) h = 2.0 + (b - r) / delta;
+        else h = 4.0 + (r - g) / delta;
+        h /= 6.0;
+        if (h < 0) h += 1.0;
+    }
+    return float3(h,s,v);
+}
+float3 HSVToRGB_Unity(float3 hsv)
+{
+    float h=hsv.x*6.0, s=hsv.y, v=hsv.z;
+    if (s < 0.00001) return float3(v,v,v);
+    float f = frac(h);
+    int i = (int)floor(h);
+    float p = v*(1.0 - s);
+    float q = v*(1.0 - s*f);
+    float t = v*(1.0 - s*(1.0 - f));
+    i = i % 6;
+    if (i==0) return float3(v,t,p);
+    else if (i==1) return float3(q,v,p);
+    else if (i==2) return float3(p,v,t);
+    else if (i==3) return float3(p,q,v);
+    else if (i==4) return float3(t,p,v);
+    else return float3(v,p,q);
+}
+float3 ShiftHue(float3 c, float hShift)
+{
+    if (abs(hShift) < 0.0001) return c;
+    float3 hsv = RGBToHSV_Unity(c);
+    hsv.x = frac(hsv.x + hShift);
+    return HSVToRGB_Unity(hsv);
+}
+
 v2f vert (appdata_t v)
 {
     v2f o;
@@ -67,21 +128,145 @@ v2f vert (appdata_t v)
     UNITY_INITIALIZE_OUTPUT(v2f, o);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-    o.vertex = UnityObjectToClipPos(v.vertex);
-    o.vertex.z += _DepthOffset;
-    o.uv = v.uv;
+    if (_VertexEnabled < 0.5)
+    {
+        // treat vertex as actual object space pos for compatibility
+        float3 pos = v.vertex.xyz;
+        o.vertex = UnityObjectToClipPos(float4(pos,1));
+        o.vertex.z += _DepthOffset;
+        o.uv = v.uv;
 
-    o.planeNormal = float4(UnityObjectToWorldNormal(v.planeNormal), v.planeNormal.w);
-    o.normal = UnityObjectToWorldNormal(v.trueNormal);
+        o.planeNormal = float4(0,0,1,0);
+        o.normal = float3(0,0,1);
+        o.color = v.color;
+        o.worldPos = mul(unity_ObjectToWorld, float4(pos,1)).xyz;
+        o.bladeDir = float4(0,1,0,1);
+        o.uv2 = float2(0.5,0);
+        return o;
+    }
+
+    float zPos = v.vertex.x;
+    float offX = v.vertex.y;
+    float offY = v.vertex.z;
+    float cosTheta = v.polar.x;
+    float sinTheta = v.polar.y;
+    float signVal = v.polar.z;
+    float radiusSlope = v.meta.x;
+    float isZeroFlag = v.meta.y;
+    float ringT = v.meta.z;
+    float radiusAbs = v.meta.w; // abs radius
+    float customWeight = v.dataC.x;
+    float baseOpacity = v.dataC.y;
+    float2 baseUv = v.uv;
+    float4 baseColor = v.color; // rgb = base, a = base glow
+
+    float3 colRgb = lerp(baseColor.rgb, _VertexCustomColor, saturate(customWeight));
+    colRgb = ShiftHue(colRgb, _VertexHueShift);
+    float glow = baseColor.a * _VertexGlowMul;
+    float opacity = baseOpacity * _VertexOpacityMul;
+    float4 outColor = float4(colRgb, glow);
     
-    o.color = v.color;
+    float3 fPos0 = _HistPos[0].xyz;
+    float3 fFwd0 = _HistFwd[0].xyz; fFwd0 = length(fFwd0) > 1e-6 ? normalize(fFwd0) : float3(0,0,1);
+    float3 fUp0 = _HistUp[0].xyz; fUp0 = length(fUp0) > 1e-6 ? normalize(fUp0) : float3(0,1,0);
+    float3 fRight0 = cross(fUp0, fFwd0); fRight0 = length(fRight0) > 1e-6 ? normalize(fRight0) : float3(1,0,0);
+    
+    float3 lPos0 = _HistPos[_HistCount-1].xyz;
+    float3 lFwd0 = _HistFwd[_HistCount-1].xyz; lFwd0 = length(lFwd0) > 1e-6 ? normalize(lFwd0) : float3(0,0,1);
+    float3 lUp0 = _HistUp[_HistCount-1].xyz; lUp0 = length(lUp0) > 1e-6 ? normalize(lUp0) : float3(0,1,0);
+    float3 lRight0 = cross(lUp0, lFwd0); lRight0 = length(lRight0) > 1e-6 ? normalize(lRight0) : float3(1,0,0);
+    
+    float3 firstCenter = fPos0 + fFwd0 * zPos + fRight0 * offX + fUp0 * offY;
+    float3 lastCenter = lPos0 + lFwd0 * zPos + lRight0 * offX + lUp0 * offY;
 
-    float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
+    float3 motionVec = lastCenter - firstCenter;
+    float dst = length(motionVec);
+
+    float3 sumFwd = fFwd0 + lFwd0;
+    float3 sumUp = fUp0 + lUp0;
+    float3 sumRight = fRight0 + lRight0;
+    float3 avgFwd = length(sumFwd) > 1e-6 ? normalize(sumFwd) : fFwd0;
+    float3 avgUp = length(sumUp) > 1e-6 ? normalize(sumUp) : fUp0;
+    float3 avgRight = length(sumRight) > 1e-6 ? normalize(sumRight) : fRight0;
+
+    float3 motionDir = motionVec;
+    if (dst > 1e-4) motionDir /= dst;
+    else motionDir = float3(0,0,1);
+    motionDir = motionDir - avgFwd * dot(motionDir, avgFwd);
+    float mdLen = length(motionDir);
+
+    if (mdLen > 1e-6) motionDir /= mdLen;
+    else motionDir = avgRight;
+
+    float3 plane = cross(motionDir, avgFwd);
+    float planeLen = length(plane);
+    if (planeLen > 1e-6) plane /= planeLen;
+    else plane = float3(0,0,1);
+
+    float sweepRatio = 0;
+    {
+        sweepRatio = _VainSaberBlurSoftness * 1.5 * dst / (0.035 * sqrt(radiusAbs + 0.04));
+    }
+    float sweepRatioClamped = clamp((sweepRatio * _VertexBlurFade - 0.7) * 0.01, 0.0, 5.0);
+
+    // per-vertex offset direction in avg plane
+    float3 offsetDir = signVal * cosTheta * avgUp + sinTheta * avgRight;
+    float d = dot(offsetDir, motionDir);
+
+    d *= abs(d);
+    float tSample = (d + 1.0) * 0.5;
+    tSample = saturate(tSample);
+
+    int idx = (int)floor(tSample * (_HistCount - 1) + 0.001);
+    idx = clamp(idx, 0, max(_HistCount-1,0));
+    float3 sPos = _HistPos[idx].xyz;
+    float3 sFwdRaw = _HistFwd[idx].xyz;
+    float3 sUpRaw = _HistUp[idx].xyz;
+
+    float3 sFwd = length(sFwdRaw) > 1e-6 ? normalize(sFwdRaw) : float3(0,0,1);
+    float3 sUp = length(sUpRaw) > 1e-6 ? normalize(sUpRaw) : float3(0,1,0);
+    float3 sRightTmp = cross(sUp, sFwd);
+    float3 sRight = length(sRightTmp) > 1e-6 ? normalize(sRightTmp) : float3(1,0,0);
+
+    float3 ringCenter = sPos + sFwd * zPos + sRight * offX + sUp * offY;
+    float3 vertexPos = ringCenter + offsetDir * (isZeroFlag > 0.5 ? 0 : radiusAbs);
+
+    float3 normal = signVal * offsetDir;
+
+    if (_VertexEnableRoundedNormals > 0.5)
+    {
+        float3 adj = 0;
+        if (isZeroFlag > 0.5)
+        {
+            float len = max(_VertexLength, 1e-4);
+            float t = 2*(zPos/len)-1;
+
+            float v1 = 0.12 * sign(t) * pow(abs(t), 9);
+            float t2 = t*0.99;
+            float v2 = sign(t2) * pow(abs(t2), 171);
+            adj = avgFwd * (2*(v1+v2));
+        }
+        else
+        {
+            adj = avgFwd * (-radiusSlope);
+        }
+        normal += adj;
+    }
+
+    float3 worldNormal = UnityObjectToWorldNormal(normal);
+    float3 worldPlane = UnityObjectToWorldNormal(plane);
+    float3 worldBlade = UnityObjectToWorldNormal(sFwd);
+
+    o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
+    o.vertex.z += _DepthOffset;
+    o.uv = baseUv;
+    o.planeNormal = float4(worldPlane, 0);
+    o.normal = worldNormal;
+    o.color = outColor;
+    float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
     o.worldPos = worldPos;
-    o.bladeDir = float4(UnityObjectToWorldNormal(v.bladeDir.xyz), v.bladeDir.w);
-
-    o.uv2 = v.uv2;
-
+    o.bladeDir = float4(worldBlade, opacity);
+    o.uv2 = float2(tSample, sweepRatioClamped);
     return o;
 }
 
@@ -98,29 +283,20 @@ struct SaberFragVariables {
 
 #define MINIMUM_EDGE_SOFTNESS 0.05
 
-float _VainSaberBlurSoftness;
 static const float _BlurTunableConstant = 3.0;
 float _BlurPartIsBlade;
 static const float _MotionViewBoost = 1.0;
-static const float _MotionViewPower = 2.0;
-static const float _MotionViewThreshold = 0.30;
+static const float _MotionViewPower = 4.0;
+static const float _MotionViewThreshold = 0.60;
 static const float _PlanarCoplanarBoost = 1.0;
 static const float _PlanarCoplanarPower = 14.0;
 static const float _PlanarCoplanarThreshold = 0.8;
 static const float _OppositeSideFade = 1.0;
 static const float _OppositeSideSharpness = 1.5;
 
-float _RimFactor; // legacy, now baked into gradient
+float _RimFactor;
 sampler2D _RimPowerGradient;
 float _RimPerpendicular;
-
-// blur goes from 0 to 1
-float getFresnelBlurFadeFactor(float x, float blur)
-{
-    float p = 100.0 / (blur * blur + 0.005);
-    float base = max(1.0, 1.0 - 1.1 * pow(x, p));
-    return base * base * base;
-}
 
 SaberFragVariables GetCommonSaberVars(v2f vertStage)
 {
@@ -136,8 +312,8 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float blurFac = b;
 
     SaberFragVariables commonVars;
-    commonVars.color = vertStage.color;
-    commonVars.glowStrength = _Glow * vertStage.color.w;
+    commonVars.color = vertStage.color.rgb;
+    commonVars.glowStrength = _Glow * vertStage.color.a;
 
     commonVars.sweepRatio = 1 - saturate(b);
 
@@ -164,16 +340,13 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float3 Vfinal = normalize(lerp(V, Vperp, isBlade));
 
     float x = sqrt(saturate(dot(Nperp, Vfinal))) * 4 * (sweepCoord - sweepCoord * sweepCoord);
-    // that is super janky but uhh... i think it works
 
-    // Opacity = (1 - saturate(10a) * saturate(1-x)^(2/a) )^2 * 1/((0.5b)^2+1)
     float safeA = max(a, 0.001);
     float powTerm = pow(saturate(1.0 - x), 2.0 / safeA);
     float term = saturate(10.0 * a) * powTerm;
     float opacity = pow(saturate(1.0 - term), 2.0) / ((0.5 * b)*(0.5 * b) + 1.0);
     opacity = saturate(opacity);
-
-    // fix blur when saber moves toward/away from eye
+    float rawOpacity = opacity;
     {
         float3 planeN = vertStage.planeNormal.xyz;
         float lenSq = dot(planeN, planeN);
@@ -207,7 +380,6 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
         float planarP = pow(planarBiased, _PlanarCoplanarPower);
         opacity = lerp(opacity, 1.0, planarP * _PlanarCoplanarBoost);
     }
-    // fade opposite side of sweep plane when in motion
     {
         float3 planeN3 = vertStage.planeNormal.xyz;
         float lenSq3 = dot(planeN3, planeN3);
@@ -224,6 +396,14 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
         }
     }
 
+    // the above fixes look good in most cases at *low speeds*, but
+    // it seems at high speeds it works against the blur's interest.
+    // genius solution: remove correction when faster so it only fixes
+    // cases where it's needed. (magic numbers go brrr)
+    opacity = lerp(opacity, rawOpacity, saturate(sweepRatio * 0.8 - 0.3));
+
+
+
     opacity *= pow(saturate(vertStage.bladeDir.w), 1.5);
     commonVars.alpha = saturate(opacity);
     
@@ -231,7 +411,6 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float fresnelPerp = 1.0 - saturate(dot(Nperp, Vperp));
 
     float fresnelRaw = lerp(fresnelFull, fresnelPerp, saturate(_RimPerpendicular));
-    // Sample gradient at lower LOD when blurring (more blurred)
     float gradientLodBias = blurFac * 4.0;
     float fresnelTerm = tex2Dbias(_RimPowerGradient, float4(saturate(fresnelRaw), 0.5, 0, gradientLodBias)).r;
 

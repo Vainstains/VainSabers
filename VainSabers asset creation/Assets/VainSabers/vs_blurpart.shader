@@ -33,6 +33,7 @@ Shader "VainSabers/Blur Part"
             {
 #if defined(_DISABLE_DEPTH_PREPASS)
                 discard;
+                return 0;
 #else
                 // UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 SaberFragVariables vars = GetCommonSaberVars(i);

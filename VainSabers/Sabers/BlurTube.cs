@@ -24,54 +24,82 @@ namespace VainSabers.Sabers
         public static readonly Bounds Giant = new Bounds(Vector3.zero, Vector3.one * 5);
     }
 
-    internal class BlurTube
+    internal static class GpuBlurMeshBuilder
     {
-        public Mesh TubeMesh { get; private set; }
-        public int RingVerts { get; private set; }
-        public int VertsPerRing => RingVerts + 1;
-        public int RingCount { get; private set; }
-
-        private BlurVertex[] _vertices;
-        private int[] _indices;
-
-        public BlurTube(int ringVerts, int ringCount)
+        // this is terrible lmao
+        public static Mesh BuildGpuTube(int ringVerts, int ringCount,
+            System.Func<int, float> getZPos, System.Func<int, float> getOffX, System.Func<int, float> getOffY,
+            System.Func<int, float> getRadius, System.Func<int, float> getRadiusSlope, System.Func<int, bool> getIsZero,
+            System.Func<int, float> getRingT, System.Func<int, Color> getColor, System.Func<int, float> getGlow,
+            System.Func<int, float> getCustomWeight, System.Func<int, float> getOpacity, System.Func<int, float> getUvOffset)
         {
-            RingVerts = ringVerts;
-            RingCount = ringCount;
-
             int vertsPerRing = ringVerts + 1;
             int vertCount = vertsPerRing * ringCount;
-            int stripCount = Math.Max(ringCount - 1, 0);
+            int stripCount = System.Math.Max(ringCount - 1, 0);
             int indexCount = ringVerts * stripCount * 6;
 
-            TubeMesh = new Mesh
+            var mesh = new Mesh
             {
                 indexFormat = vertCount > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16
             };
-            TubeMesh.MarkDynamic();
 
-            _vertices = new BlurVertex[vertCount];
-            _indices = new int[indexCount];
-
+            var vertices = new BlurVertex[vertCount];
+            var indices = new int[indexCount];
             int t = 0;
             for (int ring = 0; ring < stripCount; ring++)
             {
                 int ringStart = ring * vertsPerRing;
                 int nextRingStart = (ring + 1) * vertsPerRing;
-
                 for (int i = 0; i < ringVerts; i++)
                 {
                     int a = ringStart + i;
                     int b = ringStart + i + 1;
                     int c = nextRingStart + i;
                     int d = nextRingStart + i + 1;
-
-                    _indices[t++] = a; _indices[t++] = c; _indices[t++] = b;
-                    _indices[t++] = b; _indices[t++] = c; _indices[t++] = d;
+                    indices[t++] = a; indices[t++] = c; indices[t++] = b;
+                    indices[t++] = b; indices[t++] = c; indices[t++] = d;
                 }
             }
 
-            TubeMesh.SetVertexBufferParams(vertCount,
+            int vIdx = 0;
+            for (int r = 0; r < ringCount; r++)
+            {
+                float zPos = getZPos(r);
+                float offX = getOffX(r);
+                float offY = getOffY(r);
+                float radius = getRadius(r);
+                float radiusSlope = getRadiusSlope(r);
+                bool isZero = getIsZero(r);
+                float ringT = getRingT(r);
+                Color col = getColor(r);
+                float glow = getGlow(r);
+                float cw = getCustomWeight(r);
+                float op = getOpacity(r);
+                float uvOff = getUvOffset(r);
+                float sign = System.Math.Sign(radius) >= 0 ? 1f : -1f;
+                // for isZero raw radius, sign still from raw
+                float absRadius = UnityEngine.Mathf.Abs(radius);
+                // color a = glow
+                Color vertCol = new Color(col.r, col.g, col.b, glow);
+                for (int i = 0; i <= ringVerts; i++)
+                {
+                    float theta = 2.0f * UnityEngine.Mathf.PI * i / ringVerts;
+                    float cosT = UnityEngine.Mathf.Cos(theta);
+                    float sinT = UnityEngine.Mathf.Sin(theta);
+                    float u = sign * (float)i / ringVerts + 0.5f * (1.0f - sign);
+                    float v_ = ringT + uvOff;
+                    ref var vert = ref vertices[vIdx++];
+                    vert.position = new Vector3(zPos, offX, offY);
+                    vert.normal = new Vector3(cosT, sinT, sign);
+                    vert.tangent = new Vector4(radiusSlope, isZero ? 1f : 0f, ringT, absRadius);
+                    vert.color = vertCol;
+                    vert.uv = new Vector2(u, v_);
+                    vert.bladeDir = new Vector4(cw, op, 0f, 0f);
+                    vert.uv2 = new Vector2(0f, 0f);
+                }
+            }
+
+            mesh.SetVertexBufferParams(vertCount,
                 new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
                 new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),
                 new VertexAttributeDescriptor(VertexAttribute.Tangent, VertexAttributeFormat.Float32, 4),
@@ -80,40 +108,10 @@ namespace VainSabers.Sabers
                 new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4),
                 new VertexAttributeDescriptor(VertexAttribute.TexCoord2, VertexAttributeFormat.Float32, 2)
             );
-            TubeMesh.SetVertexBufferData(_vertices, 0, 0, vertCount, 0, MeshUpdateFlags.DontRecalculateBounds);
-            TubeMesh.SetTriangles(_indices, 0, false);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetVertex(int idx, in Vector3 pos, in Vector3 normal, float u, float v, in Color color, in Vector3 planeNormal, in Vector3 bladeDir, float sweepCoord, float sweepRatio, float opacity)
-        {
-            ref var vert = ref _vertices[idx];
-            vert.position = pos;
-            vert.normal = normal;
-            vert.tangent.x = planeNormal.x;
-            vert.tangent.y = planeNormal.y;
-            vert.tangent.z = planeNormal.z;
-            vert.tangent.w = 0f;
-            vert.uv.x = u;
-            vert.uv.y = v;
-            vert.uv2.x = sweepCoord;
-            vert.uv2.y = sweepRatio;
-            vert.bladeDir.x = bladeDir.x;
-            vert.bladeDir.y = bladeDir.y;
-            vert.bladeDir.z = bladeDir.z;
-            vert.bladeDir.w = opacity;
-            vert.color = color;
-        }
-
-        public void RefreshMesh()
-        {
-            TubeMesh.SetVertexBufferData(_vertices, 0, 0, _vertices.Length, 0, MeshUpdateFlags.DontRecalculateBounds);
-            TubeMesh.bounds = BlurBounds.Giant;
-        }
-
-        public void Destroy()
-        {
-            Object.DestroyImmediate(TubeMesh);
+            mesh.SetVertexBufferData(vertices, 0, 0, vertCount, 0, MeshUpdateFlags.DontRecalculateBounds);
+            mesh.SetTriangles(indices, 0, false);
+            mesh.bounds = BlurBounds.Giant;
+            return mesh;
         }
     }
 

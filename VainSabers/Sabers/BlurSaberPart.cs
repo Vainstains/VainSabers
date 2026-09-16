@@ -17,7 +17,7 @@ public enum GeometryType
         {
             [Label("Simple")]
             Simple,
-            [Label("Advanced (Per-Ring)")]
+            [Label("Advanced")]
             Advanced,
             [Label("Sprite")]
             Sprite,
@@ -38,8 +38,6 @@ public enum GeometryType
             GeometryHandling == GeometryType.Advanced
                 ? RingParams.Count
                 : Math.Max((int)(Length * 8), MinimumRings) + (EnableEndCaps ? 2 : 0);
-        private int ringVerts = 0;
-        
         public float RotX, RotY, RotZ;
         public Vector3 Position;
         
@@ -153,7 +151,6 @@ public enum GeometryType
         public string? GlowTextureBase64;
         public TextureWrapMode TextureWrap = TextureWrapMode.Clamp;
 
-        // compact: dimensions as float2, speed+flips as float3 (x=speed, y=flipX, z=flipY)
         public Vector2 ColorAtlasCount = new Vector2(1, 1);
         public Vector3 ColorAtlasSpeedFlip = new Vector3(1, 0, 0);
         public Vector2 GlowAtlasCount = new Vector2(1, 1);
@@ -188,10 +185,19 @@ public enum GeometryType
         private MeshFilter m_meshFilter = null!;
         
         private bool m_injected = false;
-        private BlurTube? m_blurTube;
         private BlurSprite? m_blurSprite;
         private BlurObj? m_blurObj;
         private Vector3[] m_objWorldOffsets = new Vector3[0];
+
+        private Mesh? m_vertexTubeMesh;
+        private bool m_vertexTubeDirty = true;
+        private int m_vertexLastRingVerts = -1;
+        private int m_vertexLastRingCount = -1;
+        private Vector4[] m_vertexHistPos = new Vector4[SampleCount];
+        private Vector4[] m_vertexHistFwd = new Vector4[SampleCount];
+        private Vector4[] m_vertexHistUp = new Vector4[SampleCount];
+        private int m_lastVertexStaticHash = 0;
+        private bool m_firstVertexHash = true;
         
         private Material? m_runtimeMaterial;
         private Material? m_runtimeInvertedMaterial;
@@ -321,6 +327,11 @@ public enum GeometryType
         {
             m_injected = false;
         }
+
+        private void OnValidate()
+        {
+            m_vertexTubeDirty = true;
+        }
         
         int ComputeRingVerts(float radius)
         {
@@ -355,6 +366,262 @@ public enum GeometryType
             for (var i = 0; i < RingParams.Count; i++)
                 max = Mathf.Max(max, Mathf.Abs(RingParams[i].Radius));
             return max;
+        }
+
+        private bool ShouldUseVertexBlur()
+        {
+            return GeometryHandling == GeometryType.Simple || GeometryHandling == GeometryType.Advanced;
+        }
+
+        private int ComputeVertexStaticHash()
+        {
+            var h = new HashCode();
+            h.Add((int)GeometryHandling);
+            h.Add(Length);
+            h.Add(StartRadius);
+            h.Add(EndRadius);
+            h.Add(StartColor.r); h.Add(StartColor.g); h.Add(StartColor.b);
+            h.Add(EndColor.r); h.Add(EndColor.g); h.Add(EndColor.b);
+            h.Add(StartCustomColorWeight);
+            h.Add(EndCustomColorWeight);
+            h.Add(StartGlow);
+            h.Add(EndGlow);
+            h.Add(StartOpacity);
+            h.Add(EndOpacity);
+            h.Add(BulgeAmount);
+            h.Add(EnableEndCaps);
+            h.Add(EndCapExtension);
+            h.Add(Inverted);
+            h.Add(MinimumRings);
+            h.Add(ManualRingVerts);
+            h.Add(RingVertsManual);
+            h.Add(Config != null ? Config.SaberQuality : 1f);
+            h.Add(GetProfileRadiusForRingVerts());
+            if (GeometryHandling == GeometryType.Advanced)
+            {
+                h.Add(RingParams.Count);
+                for (int i = 0; i < RingParams.Count; i++)
+                {
+                    var r = RingParams[i];
+                    h.Add(r.PosAlongPart01);
+                    h.Add(r.Radius);
+                    h.Add(r.Color.r); h.Add(r.Color.g); h.Add(r.Color.b);
+                    h.Add(r.CustomWeight);
+                    h.Add(r.Glow);
+                    h.Add(r.Opacity);
+                    h.Add(r.Inverted);
+                    h.Add(r.Offset.x); h.Add(r.Offset.y);
+                    h.Add(r.UvOffset);
+                }
+            }
+            return h.ToHashCode();
+        }
+
+        private bool CheckVertexStaticDirty()
+        {
+            int cur = ComputeVertexStaticHash();
+            if (m_firstVertexHash || cur != m_lastVertexStaticHash)
+            {
+                m_firstVertexHash = false;
+                m_lastVertexStaticHash = cur;
+                return true;
+            }
+            return false;
+        }
+
+        private void EnsureVertexTubeMesh()
+        {
+            if (!ShouldUseVertexBlur()) return;
+            if (CheckVertexStaticDirty())
+                m_vertexTubeDirty = true;
+            int ringCount = RingCount;
+            if (ringCount < 2) return;
+            int ringVerts = ComputeRingVerts(GetProfileRadiusForRingVerts());
+            if (m_vertexTubeMesh != null && !m_vertexTubeDirty && m_vertexLastRingVerts == ringVerts && m_vertexLastRingCount == ringCount)
+                return;
+
+            if (m_vertexTubeMesh != null)
+            {
+                DestroyImmediate(m_vertexTubeMesh);
+                m_vertexTubeMesh = null;
+            }
+
+            if (GeometryHandling == GeometryType.Advanced)
+            {
+                m_vertexTubeMesh = GpuBlurMeshBuilder.BuildGpuTube(ringVerts, ringCount,
+                    r => RingParams[r].PosAlongPart01 * Length,
+                    r => RingParams[r].Offset.x,
+                    r => RingParams[r].Offset.y,
+                    r => RingParams[r].Inverted ? -RingParams[r].Radius : RingParams[r].Radius,
+                    r => {
+                        var isZero = Mathf.Abs(RingParams[r].Radius) < 0.0002f;
+                        if (isZero || RingParams.Count <= 1 || Length < 0.0001f) return 0f;
+                        var prev = RingParams[(r - 1 + RingParams.Count) % RingParams.Count];
+                        var next = RingParams[(r + 1) % RingParams.Count];
+                        float prevRad = prev.Inverted ? -prev.Radius : prev.Radius;
+                        float nextRad = next.Inverted ? -next.Radius : next.Radius;
+                        float curT = RingParams[r].PosAlongPart01;
+                        float dtPrev = curT - prev.PosAlongPart01; if (dtPrev <= 0f) dtPrev += 1f;
+                        float dtNext = next.PosAlongPart01 - curT; if (dtNext <= 0f) dtNext += 1f;
+                        float dt = dtPrev + dtNext;
+                        return dt > 0.0001f ? (nextRad - prevRad) / (dt * Length) : 0f;
+                    },
+                    r => Mathf.Abs(RingParams[r].Radius) < 0.0002f,
+                    r => RingParams[r].PosAlongPart01,
+                    r => RingParams[r].Color,
+                    r => RingParams[r].Glow,
+                    r => RingParams[r].CustomWeight,
+                    r => RingParams[r].Opacity,
+                    r => RingParams[r].UvOffset);
+            }
+            else
+            {
+                int mainCount = EnableEndCaps ? ringCount - 2 : ringCount;
+                float startRad = Inverted ? -StartRadius : StartRadius;
+                float endRad = Inverted ? -EndRadius : EndRadius;
+                m_vertexTubeMesh = GpuBlurMeshBuilder.BuildGpuTube(ringVerts, ringCount,
+                    r => {
+                        if (EnableEndCaps)
+                        {
+                            if (r == 0) return 0 - StartRadius * 0.25f * EndCapExtension;
+                            if (r == ringCount - 1) return Length + EndRadius * 0.25f * EndCapExtension;
+                            int mi = r - 1;
+                            float t = mainCount > 1 ? (float)mi / (mainCount - 1f) : 0f;
+                            return t * Length;
+                        }
+                        float tt = ringCount > 1 ? (float)r / (ringCount - 1f) : 0f;
+                        return tt * Length;
+                    },
+                    r => 0f, r => 0f,
+                    r => {
+                        if (EnableEndCaps)
+                        {
+                            if (r == 0) return startRad;
+                            if (r == ringCount - 1) return endRad;
+                            int mi = r - 1;
+                            float t = mainCount > 1 ? (float)mi / (mainCount - 1f) : 0f;
+                            float lin = Mathf.Lerp(startRad, endRad, t);
+                            float bulge = 1 + 4 * (t - t * t) * BulgeAmount;
+                            return lin * bulge;
+                        }
+                        float tt = ringCount > 1 ? (float)r / (ringCount - 1f) : 0f;
+                        float lin2 = Mathf.Lerp(startRad, endRad, tt);
+                        float bulge2 = 1 + 4 * (tt - tt * tt) * BulgeAmount;
+                        return lin2 * bulge2;
+                    },
+                    r => {
+                        if (EnableEndCaps && (r == 0 || r == ringCount - 1)) return 0f;
+                        int mi = EnableEndCaps ? r - 1 : r;
+                        int cnt = EnableEndCaps ? mainCount : ringCount;
+                        float t = cnt > 1 ? (float)mi / (cnt - 1f) : 0f;
+                        float dLin = endRad - startRad;
+                        float dBulge_dt = 4 * (1 - 2 * t) * BulgeAmount;
+                        float lin = Mathf.Lerp(startRad, endRad, t);
+                        float bulge = 1 + 4 * (t - t * t) * BulgeAmount;
+                        float dRad_dt = dLin * bulge + lin * dBulge_dt;
+                        return Length > 0.0001f ? dRad_dt / Length : 0f;
+                    },
+                    r => {
+                        if (EnableEndCaps && (r == 0 || r == ringCount - 1)) return true;
+                        float rad;
+                        if (EnableEndCaps)
+                        {
+                            int mi = r - 1;
+                            float t = mainCount > 1 ? (float)mi / (mainCount - 1f) : 0f;
+                            float lin = Mathf.Lerp(startRad, endRad, t);
+                            float bulge = 1 + 4 * (t - t * t) * BulgeAmount;
+                            rad = lin * bulge;
+                        }
+                        else
+                        {
+                            float tt = ringCount > 1 ? (float)r / (ringCount - 1f) : 0f;
+                            float lin = Mathf.Lerp(startRad, endRad, tt);
+                            float bulge = 1 + 4 * (tt - tt * tt) * BulgeAmount;
+                            rad = lin * bulge;
+                        }
+                        return Mathf.Abs(rad) < 0.0002f;
+                    },
+                    r => {
+                        if (EnableEndCaps)
+                        {
+                            if (r == 0) return 0f;
+                            if (r == ringCount - 1) return 1f;
+                            int mi = r - 1;
+                            return mainCount > 1 ? (float)mi / (mainCount - 1f) : 0f;
+                        }
+                        return ringCount > 1 ? (float)r / (ringCount - 1f) : 0f;
+                    },
+                    r => {
+                        float t;
+                        if (EnableEndCaps)
+                        {
+                            if (r == 0) return StartColor;
+                            if (r == ringCount - 1) return EndColor;
+                            int mi = r - 1;
+                            t = mainCount > 1 ? (float)mi / (mainCount - 1f) : 0f;
+                        }
+                        else t = ringCount > 1 ? (float)r / (ringCount - 1f) : 0f;
+                        return Color.Lerp(StartColor, EndColor, t);
+                    },
+                    r => {
+                        float t;
+                        if (EnableEndCaps)
+                        {
+                            if (r == 0) return StartGlow;
+                            if (r == ringCount - 1) return EndGlow;
+                            int mi = r - 1;
+                            t = mainCount > 1 ? (float)mi / (mainCount - 1f) : 0f;
+                        }
+                        else t = ringCount > 1 ? (float)r / (ringCount - 1f) : 0f;
+                        return Mathf.Lerp(StartGlow, EndGlow, t);
+                    },
+                    r => {
+                        float t;
+                        if (EnableEndCaps)
+                        {
+                            if (r == 0) return StartCustomColorWeight;
+                            if (r == ringCount - 1) return EndCustomColorWeight;
+                            int mi = r - 1;
+                            t = mainCount > 1 ? (float)mi / (mainCount - 1f) : 0f;
+                        }
+                        else t = ringCount > 1 ? (float)r / (ringCount - 1f) : 0f;
+                        return Mathf.Lerp(StartCustomColorWeight, EndCustomColorWeight, t);
+                    },
+                    r => {
+                        float t;
+                        if (EnableEndCaps)
+                        {
+                            if (r == 0) return StartOpacity;
+                            if (r == ringCount - 1) return EndOpacity;
+                            int mi = r - 1;
+                            t = mainCount > 1 ? (float)mi / (mainCount - 1f) : 0f;
+                        }
+                        else t = ringCount > 1 ? (float)r / (ringCount - 1f) : 0f;
+                        return Mathf.Lerp(StartOpacity, EndOpacity, t);
+                    },
+                    r => 0f);
+            }
+
+            m_vertexLastRingVerts = ringVerts;
+            m_vertexLastRingCount = ringCount;
+            m_vertexTubeDirty = false;
+        }
+
+        private void SampleGpuHistory()
+        {
+            if (m_movementHistoryProvider == null || m_saberData == null) return;
+            var localPose = transform.GetPose().TransformPose(m_movementHistoryProvider.transform.worldToLocalMatrix);
+            var samples = InterpolateData(BlurTime);
+            var localPoseMat = localPose.AsMatrix();
+            var wtl = transform.worldToLocalMatrix;
+            for (int i = 0; i < samples.Length; i++)
+            {
+                var combined = wtl * samples[i].AsMatrix() * localPoseMat;
+                samples[i] = PoseHelpers.TransformPoseFromMatrix(combined);
+                m_vertexHistPos[i] = new Vector4(samples[i].position.x, samples[i].position.y, samples[i].position.z, 1f);
+                m_vertexHistFwd[i] = new Vector4(samples[i].forward.x, samples[i].forward.y, samples[i].forward.z, 0f);
+                m_vertexHistUp[i] = new Vector4(samples[i].up.x, samples[i].up.y, samples[i].up.z, 0f);
+            }
         }
 
         private void Start()
@@ -440,6 +707,7 @@ public enum GeometryType
             LitMaterial = source.LitMaterial;
             LitInvertedMaterial = source.LitInvertedMaterial;
             RenderQueueOffset = source.RenderQueueOffset;
+            m_vertexTubeDirty = true;
         }
         
         private void ApplyMaterialProps()
@@ -512,6 +780,26 @@ public enum GeometryType
                 m_propertyBlock.SetFloat("_GlowTexAtlasFlipX", gAnim.y);
                 m_propertyBlock.SetFloat("_GlowTexAtlasFlipY", gAnim.z);
 
+                bool useGpu = ShouldUseVertexBlur();
+                m_propertyBlock.SetFloat("_VertexEnabled", useGpu ? 1f : 0f);
+                if (useGpu)
+                {
+                    SampleGpuHistory();
+                    m_propertyBlock.SetVectorArray("_HistPos", m_vertexHistPos);
+                    m_propertyBlock.SetVectorArray("_HistFwd", m_vertexHistFwd);
+                    m_propertyBlock.SetVectorArray("_HistUp", m_vertexHistUp);
+                    m_propertyBlock.SetInt("_HistCount", SampleCount);
+                    m_propertyBlock.SetFloat("_VertexBlurFade", BlurFadeFactor);
+                    m_propertyBlock.SetFloat("_VertexHueShift", m_modulatableParams.HueShift);
+                    var cc = m_saberData != null ? m_saberData.CustomColor : Color.white;
+                    m_propertyBlock.SetVector("_VertexCustomColor", new Vector4(cc.r, cc.g, cc.b, 1f));
+                    m_propertyBlock.SetFloat("_VertexGlowMul", m_modulatableParams.GlowMultiplier);
+                    m_propertyBlock.SetFloat("_VertexOpacityMul", m_modulatableParams.OpacityMultiplier);
+                    m_propertyBlock.SetFloat("_VertexEnableRoundedNormals", EnableRoundedNormals ? 1f : 0f);
+                    m_propertyBlock.SetFloat("_VertexLength", Length);
+                    m_propertyBlock.SetFloat("_VertexGeometry", 0f);
+                }
+
                 m_meshRenderer.SetPropertyBlock(m_propertyBlock);
             }
             m_meshRenderer.sharedMaterial = activeMat;
@@ -522,23 +810,23 @@ public enum GeometryType
         {
             if (!this.Inject(ref m_injected))
             {
-                m_blurTube?.Destroy();
                 m_blurSprite?.Destroy();
                 m_blurObj?.Destroy();
-                m_blurTube = null;
+                if (m_vertexTubeMesh != null) { DestroyImmediate(m_vertexTubeMesh); m_vertexTubeMesh = null; }
                 m_blurSprite = null;
                 m_blurObj = null;
+                m_vertexTubeDirty = true;
                 return;
             }
 
             if (!ShouldRenderOnCurrentSaber())
             {
-                m_blurTube?.Destroy();
                 m_blurSprite?.Destroy();
                 m_blurObj?.Destroy();
-                m_blurTube = null;
+                if (m_vertexTubeMesh != null) { DestroyImmediate(m_vertexTubeMesh); m_vertexTubeMesh = null; }
                 m_blurSprite = null;
                 m_blurObj = null;
+                m_vertexTubeDirty = true;
                 m_meshFilter.mesh = null;
                 return;
             }
@@ -552,11 +840,6 @@ public enum GeometryType
 
             if (GeometryHandling == GeometryType.Obj)
             {
-                if (m_blurTube != null)
-                {
-                    m_blurTube.Destroy();
-                    m_blurTube = null;
-                }
                 if (m_blurSprite != null)
                 {
                     m_blurSprite.Destroy();
@@ -589,12 +872,6 @@ public enum GeometryType
 
             if (GeometryHandling == GeometryType.Sprite)
             {
-                // Destroy tube mesh if we had one
-                if (m_blurTube != null)
-                {
-                    m_blurTube.Destroy();
-                    m_blurTube = null;
-                }
                 m_blurObj?.Destroy();
                 m_blurObj = null;
 
@@ -624,30 +901,18 @@ public enum GeometryType
             m_blurObj?.Destroy();
             m_blurObj = null;
 
-            var ringCount = RingCount;
-            if (ringCount < 2)
+            var ringCountVertex = RingCount;
+            if (ringCountVertex < 2)
             {
-                m_blurTube?.Destroy();
-                m_blurTube = null;
+                if (m_vertexTubeMesh != null) { DestroyImmediate(m_vertexTubeMesh); m_vertexTubeMesh = null; }
                 m_meshFilter.mesh = null;
                 return;
             }
 
-            ringVerts = ComputeRingVerts(GetProfileRadiusForRingVerts());
-            m_blurTube ??= new BlurTube(ringVerts, ringCount);
-
-            if (m_blurTube.RingVerts != ringVerts || m_blurTube.RingCount != ringCount)
-            {
-                m_blurTube.Destroy();
-                m_blurTube = new BlurTube(ringVerts, ringCount);
-            }
-
+            EnsureVertexTubeMesh();
             ApplyMaterialProps();
-
-            m_meshFilter.mesh = m_blurTube.TubeMesh;
-
-            RebuildVerts();
-            m_blurTube.RefreshMesh();
+            m_meshFilter.mesh = m_vertexTubeMesh;
+            return;
         }
 
         private BlurPartAnimationModulatableParams m_modulatableParams = new();
@@ -746,12 +1011,12 @@ public enum GeometryType
 
         private void OnDestroy()
         {
-            m_blurTube?.Destroy();
             m_blurSprite?.Destroy();
             m_blurObj?.Destroy();
-            m_blurTube = null;
             m_blurSprite = null;
             m_blurObj = null;
+            if (m_vertexTubeMesh != null) { DestroyImmediate(m_vertexTubeMesh); m_vertexTubeMesh = null; }
+            m_vertexTubeDirty = true;
 
             if (m_runtimeMaterial != null) DestroyImmediate(m_runtimeMaterial);
             if (m_runtimeInvertedMaterial != null) DestroyImmediate(m_runtimeInvertedMaterial);
@@ -793,98 +1058,7 @@ public enum GeometryType
                 return;
             }
 
-            var idx = 0;
-
-            if (GeometryHandling == GeometryType.Advanced)
-            {
-                BuildAdvancedRings(samples, ref idx);
-                return;
-            }
-            
-            var startCol = Color.Lerp(StartColor, m_saberData.CustomColor, StartCustomColorWeight);
-            var endCol = Color.Lerp(EndColor, m_saberData.CustomColor, EndCustomColorWeight);
-
-            var hueShift = m_modulatableParams.HueShift;
-            if (Mathf.Abs(hueShift) > 0.001f)
-            {
-                startCol = ShiftHue(startCol, hueShift);
-                endCol = ShiftHue(endCol, hueShift);
-            }
-            
-            startCol.a = StartGlow * m_modulatableParams.GlowMultiplier;
-            endCol.a = EndGlow * m_modulatableParams.GlowMultiplier;
-            
-            var startRad = Inverted ? -StartRadius : StartRadius;
-            var endRad = Inverted ? -EndRadius : EndRadius;
-            if (EnableEndCaps)
-                BuildRing(samples, 0 - StartRadius * 0.25f * EndCapExtension, startRad, true, 0f, startCol, StartOpacity, ref idx);
-            var mainRingCount = EnableEndCaps ? RingCount - 2 : RingCount;
-
-            for (var i = 0; i < mainRingCount; i++)
-            {
-                var t = (float)i / (mainRingCount - 1f);
-
-                var linearRad = Mathf.Lerp(startRad, endRad, t);
-                var bulgeFactor = 1 + 4 * (t - t * t) * BulgeAmount;
-                var radius = linearRad * bulgeFactor;
-                
-                var dLinearRad_dt = endRad - startRad;
-                var dBulgeFactor_dt = 4 * (1 - 2 * t) * BulgeAmount;
-                var dRadius_dt = dLinearRad_dt * bulgeFactor + linearRad * dBulgeFactor_dt;
-                var radiusSlope = Length > 0.0001f ? dRadius_dt / Length : 0f;
-
-                BuildRing(samples, t * Length, radius,
-                    false, t,
-                    Color.Lerp(startCol, endCol, t),
-                    Mathf.Lerp(StartOpacity, EndOpacity, t),
-                    ref idx, default, radiusSlope);
-            }
-            if (EnableEndCaps)
-                BuildRing(samples, Length + EndRadius * 0.25f * EndCapExtension, endRad, true, 1f, endCol, EndOpacity, ref idx);
-        }
-        
-        void BuildAdvancedRings(Pose[] samples, ref int idx)
-        {
-            var count = RingParams.Count;
-            var hueShift = m_modulatableParams.HueShift;
-            for (var i = 0; i < count; i++)
-            {
-                var ring = RingParams[i];
-
-                var col = Color.Lerp(ring.Color, m_saberData.CustomColor, ring.CustomWeight);
-                if (Mathf.Abs(hueShift) > 0.001f)
-                    col = ShiftHue(col, hueShift);
-                col.a = ring.Glow;
-
-                var rawRadius = ring.Inverted ? -ring.Radius : ring.Radius;
-                var isZero = Mathf.Abs(rawRadius) < 0.0002f;
-
-                var radiusSlope = 0f;
-                if (!isZero && count > 1 && Length > 0.0001f)
-                {
-                    var prevRing = RingParams[(i - 1 + count) % count];
-                    var nextRing = RingParams[(i + 1) % count];
-
-                    var prevRad = prevRing.Inverted ? -prevRing.Radius : prevRing.Radius;
-                    var nextRad = nextRing.Inverted ? -nextRing.Radius : nextRing.Radius;
-
-                    var curT = ring.PosAlongPart01;
-                    
-                    var dtPrev = curT - prevRing.PosAlongPart01;
-                    if (dtPrev <= 0f) dtPrev += 1f;
-                    var dtNext = nextRing.PosAlongPart01 - curT;
-                    if (dtNext <= 0f) dtNext += 1f;
-
-                    var dt = dtPrev + dtNext;
-                    if (dt > 0.0001f)
-                        radiusSlope = (nextRad - prevRad) / (dt * Length);
-                }
-
-                var opacity = ring.Opacity * m_modulatableParams.OpacityMultiplier;
-                col.a *= m_modulatableParams.GlowMultiplier;
-
-                BuildRing(samples, ring.PosAlongPart01 * Length, rawRadius, isZero, ring.PosAlongPart01, col, opacity, ref idx, ring.Offset, radiusSlope, ring.UvOffset);
-            }
+            return;
         }
         
         Pose SampleAlongCurve(Pose[] samples, float t)
@@ -896,100 +1070,6 @@ public enum GeometryType
             var idx = Mathf.FloorToInt(t * (samples.Length - 1));
     
             return samples[idx];
-        }
-        
-        // Rings are built by building a circle around the center defined by zPos and the cross-section offset (basically
-        // just a fancy roundabout way to use full 3d coordinates), and taking the movement direction at that point (roughly),
-        // dot-ing it with the circle offset, and using that dot to select samples backwards in time to build each vertex with.
-        // all the fancier stuff is handled in the shader because insert reason here.
-        void BuildRing(
-            Pose[] samples,
-            float zPos,
-            float rawRadius,
-            bool isZero,
-            float ringT,
-            Color color,
-            float opacity,
-            ref int idx,
-            Vector2 offset = default,
-            float radiusSlope = 0f,
-            float uvOffset = 0f)
-        {
-            var radius = Mathf.Abs(rawRadius);
-
-            var first = samples[0];
-            var last = samples[samples.Length - 1];
-            var firstPos = first.position + first.forward * zPos;
-            var lastPos = last.position + last.forward * zPos;
-
-            var motionDir = lastPos - firstPos;
-            var dst = motionDir.magnitude;
-
-            var avgFwd = (first.forward + last.forward).normalized;
-            var tangent = (first.up + last.up).normalized;
-            var right = (first.right + last.right).normalized;
-
-            motionDir = Vector3.ProjectOnPlane(motionDir, avgFwd).normalized;
-            var plane = Vector3.Cross(motionDir, avgFwd);
-
-            var sweepRatio = Config.BlurSoftness * 1.5f * dst / (0.035f * Mathf.Sqrt(radius + 0.04f));
-            
-            if (isZero)
-            {
-                radius = 0.00001f;
-            }
-            
-            var sign = Mathf.Sign(rawRadius);
-            
-            var normalAdjustment = Vector3.zero;
-            if (EnableRoundedNormals)
-            {
-                normalAdjustment = isZero
-                    ? avgFwd * (2 * (0.12f * Mathf.Pow(2*(zPos/Length)-1, 9) + Mathf.Pow((2*(zPos/Length)-1) * 0.99f, 171)))
-                    : avgFwd * -radiusSlope;
-            }
-
-            for (var i = 0; i <= ringVerts; i++)
-            {
-                var theta = 2.0f * Mathf.PI * i / ringVerts;
-                var offsetDir = sign * Mathf.Cos(theta) * tangent + Mathf.Sin(theta) * right;
-
-                var dot = Vector3.Dot(offsetDir, motionDir);
-                var dotSign = Mathf.Sign(dot);
-                dot *= dot * dotSign;
-                var tSample = (dot + 1.0f) * 0.5f;
-
-                var interpSample = SampleAlongCurve(samples, tSample);
-                var fwd = interpSample.forward;
-                var ringCenter = interpSample.position + fwd * zPos;
-                ringCenter += interpSample.up * offset.y + interpSample.right * offset.x;
-                var normal = sign * offsetDir;
-                normal += normalAdjustment;
-
-                var vertexPos = ringCenter + offsetDir * (isZero ? 0 : radius);
-
-                var u = sign * (float)i / ringVerts + 0.5f * (1.0f - sign);
-                var v = ringT + uvOffset;
-                var atlasUv = ApplyAtlasUV(new Vector2(u, v));
-                u = atlasUv.x;
-                v = atlasUv.y;
-
-                m_blurTube!.SetVertex(
-                    idx + i,
-                    vertexPos,
-                    normal,
-                    u,
-                    v,
-                    color,
-                    plane,
-                    fwd,
-                    tSample,
-                    Mathf.Clamp((sweepRatio * BlurFadeFactor - 0.7f) * 0.01f, 0.0f, 5.0f),
-                    opacity
-                );
-            }
-
-            idx += ringVerts + 1;
         }
         
         // Sprites are built by subdividing a rectangle and smearing it based on dot-ing the movement vector with the
