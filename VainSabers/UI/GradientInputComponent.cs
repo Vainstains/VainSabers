@@ -9,6 +9,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using VainSabers.Data;
 using VainSabers.Helpers;
+using VainSabers.Menu;
 using VRUIControls;
 
 namespace VainSabers.UI;
@@ -27,8 +28,11 @@ public class GradientInputComponent : UIComponent
     private const float TrackHeight = 4f;
     private const float FieldHeight = 4f;
     private const float ButtonSpacing = 0.5f;
-    private const float DiamondBaseSize = 2.0f;
+    private const float DiamondBaseSize = 2.2f;
     private const float DiamondSelectedBonus = 0.8f;
+    private const float DiamondHitSize = 6f;
+    private const float DiamondDragDeadZoneDegrees = 2f;
+    private const float DiamondDragSensitivity = 0.005f;
 
     private static readonly Color HeaderBaseColor = new Color(0.15f, 0.15f, 0.15f, 1f);
     private static readonly Color PopupBaseColor = new Color(0.07f, 0.07f, 0.07f, 1f);
@@ -716,32 +720,52 @@ public class GradientInputComponent : UIComponent
         if (m_trackContainer == null)
             return 0.5f;
         var rect = m_trackContainer.RectTransform;
-        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, eventData.position, eventData.pressEventCamera, out Vector2 local))
+        // Try multiple cameras for VR / WorldSpace robustness
+        var cams = new[] { eventData.pressEventCamera, eventData.enterEventCamera, Camera.main };
+        foreach (var cam in cams)
+        {
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, eventData.position, cam, out Vector2 local))
+            {
+                float width = rect.rect.width;
+                if (width < 0.001f)
+                    width = PopupWidth - 4f;
+                float normalized = (local.x + width * 0.5f) / width;
+                return Mathf.Clamp01(normalized);
+            }
+        }
+        // Final fallback with null camera (works for ScreenSpace)
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, eventData.position, null, out Vector2 localNull))
         {
             float width = rect.rect.width;
             if (width < 0.001f)
-                width = PopupWidth - 4f; // fallback for before layout
-            float normalized = (local.x + width * 0.5f) / width;
+                width = PopupWidth - 4f;
+            float normalized = (localNull.x + width * 0.5f) / width;
             return Mathf.Clamp01(normalized);
+        }
+        // Delta fallback - nudge based on delta if absolute failed
+        if (eventData.delta.sqrMagnitude > 0.01f)
+        {
+            float width = rect.rect.width;
+            if (width < 0.001f) width = PopupWidth - 4f;
+            // use selected key time + delta proportion
+            if (m_selectedKey != null)
+                return Mathf.Clamp01(m_selectedKey.Time + eventData.delta.x / width);
         }
         return 0.5f;
     }
 
-    private void Update()
-    {
-        // Keep header preview up-to-date if gradient externally modified
-        // lightweight check not needed; preview is updated on changes anyway
-    }
-
-    // Diamond marker handling dragging and selection
-    private class DiamondMarker : UIComponent, IPointerDownHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
+    private class DiamondMarker : UIComponent, IPointerDownHandler
     {
         private ImageView m_imageView = null!;
+        private ImageView m_colorView = null!;
+        private RectTransform m_colorRect = null!;
+        private ImageView m_hitView = null!;
         public ColorGradientKey Key { get; private set; } = null!;
         private GradientInputComponent m_owner = null!;
         private RoundRectComponent m_track = null!;
         private bool m_isSelected;
-        private bool m_isDragging;
+        private ControllerYawDragHandler? m_yawHandler;
+        private float m_dragStartTime;
 
         public void Setup(ColorGradientKey key, GradientInputComponent owner, RoundRectComponent track)
         {
@@ -774,19 +798,23 @@ public class GradientInputComponent : UIComponent
         {
             if (m_imageView == null || Key == null)
                 return;
-            // show key color; add slight outline via background? For now just key color
-            // ensure visibility on dark track: use key color directly
-            m_imageView.color = Key.Color;
-            // also add border for selected via inner?
-            // inner can be slightly dimmer?
+            // Outer always white half-opacity to resolve gray-on-gray
+            m_imageView.color = new Color(1f, 1f, 1f, 0.5f);
+            if (m_colorView != null)
+                m_colorView.color = Key.Color;
         }
 
         public void RefreshSize()
         {
             float size = m_isSelected ? DiamondBaseSize + DiamondSelectedBonus : DiamondBaseSize;
             SizeDelta = new Vector2(size, size);
-            // rotate 45 degrees to make diamond
             RectTransform.localEulerAngles = new Vector3(0, 0, 45f);
+
+            if (m_colorRect != null)
+            {
+                float inner = Mathf.Max(0.5f, size - 0.5f);
+                m_colorRect.sizeDelta = new Vector2(inner, inner);
+            }
         }
 
         public void SetSelected(bool selected)
@@ -795,22 +823,75 @@ public class GradientInputComponent : UIComponent
                 return;
             m_isSelected = selected;
             RefreshSize();
-            // highlight selected maybe brighten
-            if (selected)
-                m_imageView.color = Key.Color * new Color(1.2f, 1.2f, 1.2f, 1f);
-            else
-                m_imageView.color = Key.Color;
+            // Keep outer white half-opacity; inner already shows real color
         }
 
         protected override void Init()
         {
             base.Init();
+            // Outer diamond - white half opacity border
             m_imageView = gameObject.RequireComponent<ImageView>();
-            m_imageView.raycastTarget = true;
+            m_imageView.raycastTarget = false; // hit handled by dedicated hit area
             m_imageView.sprite = UIResources.LoadSpriteFromResource("VainSabers.ui_round.png", borderRatio: 0.5f);
             m_imageView.type = Image.Type.Sliced;
             m_imageView.material = UIResources.NoGlowMat;
-            m_imageView.color = Color.white;
+            m_imageView.color = new Color(1f, 1f, 1f, 0.5f);
+
+            // Inner color diamond inset 0.5 units
+            var colorGo = new GameObject("Color");
+            colorGo.transform.SetParent(transform, false);
+            m_colorRect = colorGo.AddComponent<RectTransform>();
+            m_colorRect.anchorMin = new Vector2(0.5f, 0.5f);
+            m_colorRect.anchorMax = new Vector2(0.5f, 0.5f);
+            m_colorRect.pivot = new Vector2(0.5f, 0.5f);
+            m_colorRect.anchoredPosition = Vector2.zero;
+            // size set in RefreshSize to be outer -1.0
+            m_colorView = colorGo.AddComponent<ImageView>();
+            m_colorView.sprite = UIResources.LoadSpriteFromResource("VainSabers.ui_round.png", borderRatio: 0.5f);
+            m_colorView.type = Image.Type.Sliced;
+            m_colorView.material = UIResources.NoGlowMat;
+            m_colorView.color = Color.white;
+            m_colorView.raycastTarget = false;
+
+            // Larger invisible hit area to make dragging easy (especially in VR)
+            var hitGo = new GameObject("HitArea");
+            hitGo.transform.SetParent(transform, false);
+            var hitRect = hitGo.AddComponent<RectTransform>();
+            hitRect.anchorMin = new Vector2(0.5f, 0.5f);
+            hitRect.anchorMax = new Vector2(0.5f, 0.5f);
+            hitRect.pivot = new Vector2(0.5f, 0.5f);
+            hitRect.sizeDelta = new Vector2(DiamondHitSize, DiamondHitSize);
+            hitRect.anchoredPosition = Vector2.zero;
+            m_hitView = hitGo.AddComponent<ImageView>();
+            m_hitView.sprite = UIResources.LoadSpriteFromResource("VainSabers.ui_round.png", borderRatio: 0.5f);
+            m_hitView.type = Image.Type.Sliced;
+            m_hitView.material = UIResources.NoGlowMat;
+            m_hitView.color = new Color(1, 1, 1, 0.01f); // near-transparent but raycastable
+            m_hitView.raycastTarget = true;
+
+            // Common rotation-based drag handler (reused with NumberInputComponent)
+            m_yawHandler = gameObject.AddComponent<ControllerYawDragHandler>();
+            m_yawHandler.DeadZoneDegrees = DiamondDragDeadZoneDegrees;
+            m_yawHandler.OnDragStarted += () =>
+            {
+                m_dragStartTime = Key.Time;
+                m_owner.SelectKey(Key);
+            };
+            m_yawHandler.OnYawDragged += (effectiveAngle) =>
+            {
+                float newTime = m_dragStartTime + effectiveAngle * DiamondDragSensitivity;
+                newTime = Mathf.Clamp01(newTime);
+                if (Mathf.Abs(newTime - Key.Time) < 0.0001f) return;
+                Key.Time = newTime;
+                RefreshPosition();
+                m_owner.OnKeyTimeDragged(Key);
+            };
+            m_yawHandler.OnDragEnded += () =>
+            {
+                m_owner.Gradient.Keys.Sort((a, b) => a.Time.CompareTo(b.Time));
+                m_owner.Gradient.SetDirty();
+                m_owner.RefreshPreviews();
+            };
 
             // ensure pivot center
             RectTransform.pivot = new Vector2(0.5f, 0.5f);
@@ -819,33 +900,6 @@ public class GradientInputComponent : UIComponent
         public void OnPointerDown(PointerEventData eventData)
         {
             m_owner.SelectKey(Key);
-        }
-
-        public void OnBeginDrag(PointerEventData eventData)
-        {
-            m_isDragging = true;
-            m_owner.SelectKey(Key);
-        }
-
-        public void OnDrag(PointerEventData eventData)
-        {
-            if (!m_isDragging)
-                return;
-            float t = m_owner.GetTimeFromPointer(eventData);
-            Key.Time = t;
-            RefreshPosition();
-            m_owner.OnKeyTimeDragged(Key);
-        }
-
-        public void OnEndDrag(PointerEventData eventData)
-        {
-            m_isDragging = false;
-            // ensure sorted
-            m_owner.Gradient.Keys.Sort((a, b) => a.Time.CompareTo(b.Time));
-            m_owner.Gradient.SetDirty();
-            // rebuild markers ordering? Not needed since positions are time based, but to keep list order consistent for future operations we already sorted
-            // Refresh selection visuals
-            m_owner.RefreshPreviews();
         }
     }
 }

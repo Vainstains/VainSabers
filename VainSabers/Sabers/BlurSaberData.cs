@@ -501,8 +501,7 @@ public class BlurSaberData : MonoBehaviour
                         var c = ArrToColor(td.Color ?? new float[] { 1, 1, 1 });
                         gradKeys = new List<VainSabers.Data.ColorGradientKey>
                         {
-                            new VainSabers.Data.ColorGradientKey(0f, c),
-                            new VainSabers.Data.ColorGradientKey(1f, c)
+                            new VainSabers.Data.ColorGradientKey(0f, c)
                         };
                     }
                     List<VainSabers.Data.FloatGradientKey>? blendKeys = null;
@@ -514,8 +513,7 @@ public class BlurSaberData : MonoBehaviour
                     {
                         blendKeys = new List<VainSabers.Data.FloatGradientKey>
                         {
-                            new VainSabers.Data.FloatGradientKey(0f, td.CustomBlend),
-                            new VainSabers.Data.FloatGradientKey(1f, td.CustomBlend)
+                            new VainSabers.Data.FloatGradientKey(0f, td.CustomBlend)
                         };
                     }
                     TipTrails.Add(new SaberTrailData(
@@ -566,8 +564,7 @@ public class BlurSaberData : MonoBehaviour
                         var c = ArrToColor(bt.Color ?? new float[] { 1, 1, 1 });
                         gradKeys = new List<VainSabers.Data.ColorGradientKey>
                         {
-                            new VainSabers.Data.ColorGradientKey(0f, c),
-                            new VainSabers.Data.ColorGradientKey(1f, c)
+                            new VainSabers.Data.ColorGradientKey(0f, c)
                         };
                     }
                     List<VainSabers.Data.FloatGradientKey>? blendKeys = null;
@@ -576,8 +573,7 @@ public class BlurSaberData : MonoBehaviour
                     else
                         blendKeys = new List<VainSabers.Data.FloatGradientKey>
                         {
-                            new VainSabers.Data.FloatGradientKey(0f, bt.CustomBlend),
-                            new VainSabers.Data.FloatGradientKey(1f, bt.CustomBlend)
+                            new VainSabers.Data.FloatGradientKey(0f, bt.CustomBlend)
                         };
                     BladeTrails.Add(new SaberTrailData(
                         position: bt.Position ?? new float[] { 0, 0, 1 },
@@ -624,8 +620,7 @@ public class BlurSaberData : MonoBehaviour
                     var c = ArrToColor(bt.Color ?? new float[] { 1, 1, 1 });
                     gradKeys = new List<VainSabers.Data.ColorGradientKey>
                     {
-                        new VainSabers.Data.ColorGradientKey(0f, c),
-                        new VainSabers.Data.ColorGradientKey(1f, c)
+                        new VainSabers.Data.ColorGradientKey(0f, c)
                     };
                 }
                 List<VainSabers.Data.FloatGradientKey>? blendKeys = null;
@@ -634,8 +629,7 @@ public class BlurSaberData : MonoBehaviour
                 else
                     blendKeys = new List<VainSabers.Data.FloatGradientKey>
                     {
-                        new VainSabers.Data.FloatGradientKey(0f, bt.CustomBlend),
-                        new VainSabers.Data.FloatGradientKey(1f, bt.CustomBlend)
+                        new VainSabers.Data.FloatGradientKey(0f, bt.CustomBlend)
                     };
                 BladeTrails.Add(new SaberTrailData(
                     position: bt.Position ?? new float[] { 0, 0, 1 },

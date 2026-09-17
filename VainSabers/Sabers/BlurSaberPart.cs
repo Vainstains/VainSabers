@@ -123,6 +123,13 @@ public enum GeometryType
         public static ColorGradient CreateBakedRimGradient(float rimFactor, float rimPower, int keyCount = 8)
         {
             var g = new ColorGradient();
+            // When fresnel strength (rimFactor) is 0 the curve is flat - single key at start is sufficient
+            if (Mathf.Abs(rimFactor) < 1e-5f)
+            {
+                g.Keys.Add(new ColorGradientKey(0f, new Color(0f, 0f, 0f, 1f)) { Easing = Easing.Linear });
+                g.SetDirty();
+                return g;
+            }
             rimPower = Mathf.Max(rimPower, 0.0001f);
             for (int i = 0; i < keyCount; i++)
             {
@@ -1478,8 +1485,7 @@ public enum GeometryType
                 var c = new Color(color[0], color[1], color[2], 1f);
                 ColorGradientKeys = new List<VainSabers.Data.ColorGradientKey>
                 {
-                    new VainSabers.Data.ColorGradientKey(0f, c),
-                    new VainSabers.Data.ColorGradientKey(1f, c)
+                    new VainSabers.Data.ColorGradientKey(0f, c)
                 };
             }
             if (customBlendGradientKeys != null)
@@ -1488,8 +1494,7 @@ public enum GeometryType
             {
                 CustomBlendGradientKeys = new List<VainSabers.Data.FloatGradientKey>
                 {
-                    new VainSabers.Data.FloatGradientKey(0f, customBlend),
-                    new VainSabers.Data.FloatGradientKey(1f, customBlend)
+                    new VainSabers.Data.FloatGradientKey(0f, customBlend)
                 };
             }
         }

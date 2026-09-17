@@ -107,7 +107,6 @@ internal class BlurSaber : MonoBehaviour
         else
         {
             DestroyDefaultTrails();
-            m_blurSaberData.EnsureDefaultTrails();
             CreateCustomTrails();
         }
     }

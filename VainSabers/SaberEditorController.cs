@@ -1628,7 +1628,6 @@ class SaberEditorComponent : UIComponent
     private void BuildTipTrailEditor()
     {
         var data = EditingSaber.Data;
-        ApplyToBothSabers(s => s.Data.EnsureDefaultTrails());
 
         if (m_selectedTipTrailIndex >= data.TipTrails.Count)
             m_selectedTipTrailIndex = data.TipTrails.Count - 1;
@@ -1735,7 +1734,6 @@ class SaberEditorComponent : UIComponent
             {
                 var c = new Color(trail.Color[0], trail.Color[1], trail.Color[2], 1f);
                 tipGradient.Keys.Add(new ColorGradientKey(0f, c));
-                tipGradient.Keys.Add(new ColorGradientKey(1f, c));
                 tipGradient.SetDirty();
             }
             var gradField = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4).WithLabel("Gradient").SetComponent<GradientInputComponent>().WithMode(VainSabers.UI.GradientMode.Color).WithGradient(tipGradient);
@@ -1760,7 +1758,6 @@ class SaberEditorComponent : UIComponent
             else
             {
                 blendGradient.Keys.Add(new ColorGradientKey(0f, new Color(trail.CustomBlend, trail.CustomBlend, trail.CustomBlend, 1f)));
-                blendGradient.Keys.Add(new ColorGradientKey(1f, new Color(trail.CustomBlend, trail.CustomBlend, trail.CustomBlend, 1f)));
                 blendGradient.SetDirty();
             }
             var blendField = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4).WithLabel("Custom Blend").SetComponent<GradientInputComponent>().WithMode(VainSabers.UI.GradientMode.Float).WithFloatRange(0f, 1f, 0.01f).WithGradient(blendGradient);
@@ -1845,7 +1842,6 @@ class SaberEditorComponent : UIComponent
     private void BuildBladeTrailEditor()
     {
         var data = EditingSaber.Data;
-        ApplyToBothSabers(s => s.Data.EnsureDefaultTrails());
 
         if (m_selectedBladeTrailIndex >= data.BladeTrails.Count)
             m_selectedBladeTrailIndex = data.BladeTrails.Count - 1;
@@ -1951,7 +1947,6 @@ class SaberEditorComponent : UIComponent
             {
                 var c = new Color(trail.Color[0], trail.Color[1], trail.Color[2], 1f);
                 bladeGradient.Keys.Add(new ColorGradientKey(0f, c));
-                bladeGradient.Keys.Add(new ColorGradientKey(1f, c));
                 bladeGradient.SetDirty();
             }
             var gradField = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4).WithLabel("Gradient").SetComponent<GradientInputComponent>().WithMode(VainSabers.UI.GradientMode.Color).WithGradient(bladeGradient);
@@ -1975,7 +1970,6 @@ class SaberEditorComponent : UIComponent
             else
             {
                 blendGradient.Keys.Add(new ColorGradientKey(0f, new Color(trail.CustomBlend, trail.CustomBlend, trail.CustomBlend, 1f)));
-                blendGradient.Keys.Add(new ColorGradientKey(1f, new Color(trail.CustomBlend, trail.CustomBlend, trail.CustomBlend, 1f)));
                 blendGradient.SetDirty();
             }
             var blendField = m_trailPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4).WithLabel("Custom Blend").SetComponent<GradientInputComponent>().WithMode(VainSabers.UI.GradientMode.Float).WithFloatRange(0f, 1f, 0.01f).WithGradient(blendGradient);

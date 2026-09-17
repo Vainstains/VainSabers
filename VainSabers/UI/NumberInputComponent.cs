@@ -46,14 +46,9 @@ public class NumberInputComponent : UIComponent
     private int m_decimalPlaces = 0;
     private string m_formatString = "F0";
 
-    private bool m_isDragging = false;
     private bool m_isPopupOpen = false;
-    private bool m_dragActive = false;
-    private bool m_wasDragged = false;
-    private Transform? m_dragControllerTransform;
-    private Vector3 m_dragStartForwardXZ;
+    private ControllerYawDragHandler? m_yawDragHandler;
     private float m_dragStartValue;
-    private float m_deadZoneOffset;
     private string m_inputBuffer = "";
     private bool m_isTextInputMode = false;
     
@@ -225,9 +220,10 @@ public class NumberInputComponent : UIComponent
         m_headerButton.InstantClick = false;
         m_headerButton.OnClick += OnHeaderClick;
 
-        var dragHandler = m_headerButton.gameObject.AddComponent<DragHandlerComponent>();
-        dragHandler.OnPointerPressed += OnDragPointerDown;
-        dragHandler.OnPointerReleased += OnDragPointerUp;
+        m_yawDragHandler = m_headerButton.gameObject.AddComponent<ControllerYawDragHandler>();
+        m_yawDragHandler.DeadZoneDegrees = DragDeadZoneDegrees;
+        m_yawDragHandler.OnDragStarted += () => m_dragStartValue = m_value;
+        m_yawDragHandler.OnYawDragged += OnYawDragged;
 
         // Display text inside header
         m_displayText = m_headerButton.AddChild<TextComponent>().ToFill().Inset(0.5f);
@@ -325,63 +321,19 @@ public class NumberInputComponent : UIComponent
 
     private void OnHeaderClick()
     {
-        if (m_wasDragged)
+        if (m_yawDragHandler != null && m_yawDragHandler.WasDragged)
         {
-            m_wasDragged = false;
+            // consume drag so click doesn't open popup
+            // WasDragged will be reset on next pointer down
             return;
         }
         TogglePopup();
     }
 
-    private void OnDragPointerDown(PointerEventData eventData)
+    private void OnYawDragged(float effectiveAngle)
     {
-        var controller = VRPointerManager.Instance?.ActiveTransform;
-        if (controller == null)
-        {
-            Plugin.Log.Info("DragPointerDown: no active controller");
-            return;
-        }
-        
-        m_isDragging = true;
-        m_dragActive = false;
-        m_wasDragged = false;
-        m_dragControllerTransform = controller;
-        m_dragStartForwardXZ = Vector3.ProjectOnPlane(controller.forward, Vector3.up).normalized;
-        m_dragStartValue = m_value;
-        m_deadZoneOffset = 0f;
-    }
-
-    private void OnDragPointerUp(PointerEventData eventData)
-    {
-        m_isDragging = false;
-        m_dragActive = false;
-        m_dragControllerTransform = null;
-    }
-
-    private void Update()
-    {
-        if (!m_isDragging || m_dragControllerTransform == null)
-            return;
-
-        Vector3 currentForwardXZ = Vector3.ProjectOnPlane(m_dragControllerTransform.forward, Vector3.up).normalized;
-        float angle = Vector3.SignedAngle(m_dragStartForwardXZ, currentForwardXZ, Vector3.up);
-
-        if (!m_dragActive)
-        {
-            if (Mathf.Abs(angle) > DragDeadZoneDegrees)
-            {
-                m_dragActive = true;
-                m_wasDragged = true;
-                m_deadZoneOffset = angle;
-            }
-        }
-
-        if (m_dragActive)
-        {
-            float effectiveAngle = angle - m_deadZoneOffset;
-            float newValue = m_dragStartValue + effectiveAngle * m_dragSensitivity;
-            SetValue(newValue, true);
-        }
+        float newValue = m_dragStartValue + effectiveAngle * m_dragSensitivity;
+        SetValue(newValue, true);
     }
 
     private void UpdateDisplayText()
@@ -557,21 +509,5 @@ public class NumberInputComponent : UIComponent
             SetValue(parsedValue, true);
         }
         ClosePopup();
-    }
-    
-    private class DragHandlerComponent : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
-    {
-        public event Action<PointerEventData>? OnPointerPressed;
-        public event Action<PointerEventData>? OnPointerReleased;
-
-        public void OnPointerDown(PointerEventData eventData)
-        {
-            OnPointerPressed?.Invoke(eventData);
-        }
-
-        public void OnPointerUp(PointerEventData eventData)
-        {
-            OnPointerReleased?.Invoke(eventData);
-        }
     }
 }

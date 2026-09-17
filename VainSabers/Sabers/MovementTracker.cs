@@ -57,19 +57,15 @@ namespace VainSabers.Sabers
         return pose;
     }
 
-        private bool IsPositionSmoothingEnabled =>
-            m_config != null && (m_config.PositionSmoothingEnabled || m_config.MotionSmoothingEnabled);
+        private bool IsPositionSmoothingEnabled => m_config.PositionSmoothingEnabled;
 
-        private bool IsRotationSmoothingEnabled =>
-            m_config != null && (m_config.RotationSmoothingEnabled || m_config.MotionSmoothingEnabled);
+        private bool IsRotationSmoothingEnabled => m_config.RotationSmoothingEnabled;
 
         private bool IsAnySmoothingEnabled => IsPositionSmoothingEnabled || IsRotationSmoothingEnabled;
 
-        private float EffectivePositionStrength =>
-            m_config.PositionSmoothingEnabled ? m_config.PositionSmoothingStrength : m_config.MotionSmoothingStrength;
+        private float EffectivePositionStrength => m_config.PositionSmoothingStrength;
 
-        private float EffectiveRotationStrength =>
-            m_config.RotationSmoothingEnabled ? m_config.RotationSmoothingStrength : m_config.MotionSmoothingStrength;
+        private float EffectiveRotationStrength => m_config.RotationSmoothingStrength;
 
         private Pose GetCurrentPose()
         {
