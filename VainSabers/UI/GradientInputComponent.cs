@@ -32,7 +32,7 @@ public class GradientInputComponent : UIComponent
     private const float DiamondSelectedBonus = 0.8f;
     private const float DiamondHitSize = 6f;
     private const float DiamondDragDeadZoneDegrees = 2f;
-    private const float DiamondDragSensitivity = 0.005f;
+    private const float DiamondDragSensitivity = 0.01f;
 
     private static readonly Color HeaderBaseColor = new Color(0.15f, 0.15f, 0.15f, 1f);
     private static readonly Color PopupBaseColor = new Color(0.07f, 0.07f, 0.07f, 1f);

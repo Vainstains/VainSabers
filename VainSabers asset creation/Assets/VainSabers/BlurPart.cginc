@@ -297,10 +297,17 @@ static const float _OppositeSideSharpness = 0.9;
 float _RimFactor;
 sampler2D _RimPowerGradient;
 float _RimPerpendicular;
+sampler2D _GlowAddendGradient;
+sampler2D _OpacityAddendGradient;
 
 SaberFragVariables GetCommonSaberVars(v2f vertStage)
 {
-    float3 viewDelta = _WorldSpaceCameraPos.xyz - vertStage.worldPos;
+#ifdef USING_STEREO_MATRICES
+    float3 worldSpaceCameraPos = unity_StereoWorldSpaceCameraPos[unity_StereoEyeIndex].xyz;
+#else
+    float3 worldSpaceCameraPos = _WorldSpaceCameraPos.xyz;
+#endif
+    float3 viewDelta = worldSpaceCameraPos - vertStage.worldPos;
     float viewDeltaLenSq = dot(viewDelta, viewDelta);
     float3 viewDir = (viewDeltaLenSq > 1e-6) ? normalize(viewDelta) : float3(0,0,1);
 
@@ -415,6 +422,11 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float fresnelTerm = tex2Dbias(_RimPowerGradient, float4(saturate(fresnelRaw), 0.5, 0, gradientLodBias)).r;
 
     commonVars.rimFactor = 1.0 + fresnelTerm;
+    // Angle-mapped glow / opacity addends (sampled with same fresnelRaw)
+    float glowAddend = tex2Dbias(_GlowAddendGradient, float4(saturate(fresnelRaw), 0.5, 0, gradientLodBias)).r;
+    float opacityAddend = tex2Dbias(_OpacityAddendGradient, float4(saturate(fresnelRaw), 0.5, 0, gradientLodBias)).r;
+    commonVars.glowStrength += glowAddend;
+    commonVars.alpha = saturate(commonVars.alpha + opacityAddend);
     
     float lodBias = blurFac * 8.0 - 1.0;
     float2 texUv = vertStage.uv;

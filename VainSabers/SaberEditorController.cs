@@ -847,6 +847,38 @@ class SaberEditorComponent : UIComponent
                     part.RimPowerGradient.SetFloatKeys(rimGradient.GetFloatKeys());
                 });
             };
+        var glowGradient = sourcePart.GlowAddendGradient;
+        if (glowGradient == null || glowGradient.Keys.Count == 0)
+        {
+            glowGradient = BlurSaberPart.CreateDefaultAddendGradient(0f);
+            sourcePart.GlowAddendGradient = glowGradient;
+        }
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Glow").SetComponent<GradientInputComponent>().WithMode(VainSabers.UI.GradientMode.Float).WithFloatRange(-1f, 1f, 0.05f).WithGradient(glowGradient)
+            .OnGradientChanged += () =>
+            {
+                ApplyToBothResolvedParts(part =>
+                {
+                    if (part.GlowAddendGradient == glowGradient) return;
+                    part.GlowAddendGradient.SetFloatKeys(glowGradient.GetFloatKeys());
+                });
+            };
+        var opacityGradient = sourcePart.OpacityAddendGradient;
+        if (opacityGradient == null || opacityGradient.Keys.Count == 0)
+        {
+            opacityGradient = BlurSaberPart.CreateDefaultAddendGradient(0f);
+            sourcePart.OpacityAddendGradient = opacityGradient;
+        }
+        m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+            .WithLabel("Opacity").SetComponent<GradientInputComponent>().WithMode(VainSabers.UI.GradientMode.Float).WithFloatRange(-1f, 1f, 0.05f).WithGradient(opacityGradient)
+            .OnGradientChanged += () =>
+            {
+                ApplyToBothResolvedParts(part =>
+                {
+                    if (part.OpacityAddendGradient == opacityGradient) return;
+                    part.OpacityAddendGradient.SetFloatKeys(opacityGradient.GetFloatKeys());
+                });
+            };
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Perpendicular Filter").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1f, 0.1f).WithSensitivityCoef(0.3f)
             .WithValue(sourcePart.RimPerpendicular).OnValueChanged += val =>

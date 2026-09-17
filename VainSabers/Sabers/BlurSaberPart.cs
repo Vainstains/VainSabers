@@ -106,6 +106,25 @@ public enum GeometryType
         public ColorGradient RimPowerGradient = CreateBakedRimGradient(0f, 3f);
         public float RimPerpendicular = 0;
 
+        public ColorGradient GlowAddendGradient = CreateDefaultAddendGradient(0f);
+        public ColorGradient OpacityAddendGradient = CreateDefaultAddendGradient(0f);
+
+        public static ColorGradient CreateDefaultAddendGradient(float defaultValue = 0f)
+        {
+            var g = new ColorGradient();
+            g.Keys.Add(new ColorGradientKey(0f, new Color(defaultValue, defaultValue, defaultValue, 1f)) { Easing = Easing.Linear });
+            g.SetDirty();
+            return g;
+        }
+
+        public static ColorGradient CreateDefaultMultiplierGradient(float defaultValue = 1f)
+        {
+            var g = new ColorGradient();
+            g.Keys.Add(new ColorGradientKey(0f, new Color(defaultValue, defaultValue, defaultValue, 1f)) { Easing = Easing.Linear });
+            g.SetDirty();
+            return g;
+        }
+
         public static ColorGradient CreateBakedPowerGradient(float power, int keyCount = 8)
         {
             var g = new ColorGradient();
@@ -685,6 +704,10 @@ public enum GeometryType
             if (RimPowerGradient == null) RimPowerGradient = new ColorGradient();
             RimPowerGradient.SetFloatKeys(source.RimPowerGradient.GetFloatKeys());
             RimPerpendicular = source.RimPerpendicular;
+            if (GlowAddendGradient == null) GlowAddendGradient = new ColorGradient();
+            GlowAddendGradient.SetFloatKeys(source.GlowAddendGradient.GetFloatKeys());
+            if (OpacityAddendGradient == null) OpacityAddendGradient = new ColorGradient();
+            OpacityAddendGradient.SetFloatKeys(source.OpacityAddendGradient.GetFloatKeys());
             SpecularStrength = source.SpecularStrength;
             SpecularPower = source.SpecularPower;
             Metallic = source.Metallic;
@@ -740,6 +763,8 @@ public enum GeometryType
                 // RimFactor is now baked into RimPowerGradient (-3..3), direct sample is used in shader
                 m_propertyBlock.SetTexture("_RimPowerGradient", RimPowerGradient.GetGradientTexture());
                 m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
+                m_propertyBlock.SetTexture("_GlowAddendGradient", GlowAddendGradient.GetGradientTexture());
+                m_propertyBlock.SetTexture("_OpacityAddendGradient", OpacityAddendGradient.GetGradientTexture());
 
                 // _BlurPartIsBlade: 1 for blade geometry (Simple/Advanced tubes), 0 for images/obj (Sprite/Obj)
                 m_propertyBlock.SetFloat("_BlurPartIsBlade",
