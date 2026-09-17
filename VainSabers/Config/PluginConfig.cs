@@ -19,6 +19,14 @@ public class PluginConfig
     
     public virtual float ZRotationOffset { get; set; } = 0f;
 
+    public virtual bool PositionSmoothingEnabled { get; set; } = false;
+    public virtual float PositionSmoothingStrength { get; set; } = 0.5f;
+    public virtual bool RotationSmoothingEnabled { get; set; } = false;
+    public virtual float RotationSmoothingStrength { get; set; } = 0.5f;
+
+    // Legacy unified settings — kept for migration from older configs
     public virtual bool MotionSmoothingEnabled { get; set; } = false;
     public virtual float MotionSmoothingStrength { get; set; } = 0.5f;
+
+    public virtual bool MenuPointerBlurEnabled { get; set; } = false;
 }

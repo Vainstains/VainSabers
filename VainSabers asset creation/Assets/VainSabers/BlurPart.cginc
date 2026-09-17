@@ -283,16 +283,16 @@ struct SaberFragVariables {
 
 #define MINIMUM_EDGE_SOFTNESS 0.05
 
-static const float _BlurTunableConstant = 3.0;
+static const float _BlurTunableConstant = 2.0;
 float _BlurPartIsBlade;
 static const float _MotionViewBoost = 1.0;
-static const float _MotionViewPower = 4.0;
+static const float _MotionViewPower = 3.0;
 static const float _MotionViewThreshold = 0.60;
 static const float _PlanarCoplanarBoost = 1.0;
-static const float _PlanarCoplanarPower = 14.0;
-static const float _PlanarCoplanarThreshold = 0.8;
+static const float _PlanarCoplanarPower = 10.0;
+static const float _PlanarCoplanarThreshold = 0.7;
 static const float _OppositeSideFade = 1.0;
-static const float _OppositeSideSharpness = 1.5;
+static const float _OppositeSideSharpness = 0.9;
 
 float _RimFactor;
 sampler2D _RimPowerGradient;

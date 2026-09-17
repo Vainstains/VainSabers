@@ -35,7 +35,7 @@ internal class SaberSettingsPanelController : MonoBehaviour
         if (!state.SettingsOpen)
             return;
 
-        m_panel = SimpleFloatingPanel.Create(new Vector2(110, 66), new Vector3(0, 1.2f, 2.0f));
+        m_panel = SimpleFloatingPanel.Create(new Vector2(110, 84), new Vector3(0, 1.2f, 2.0f));
         m_panel.Show();
         var settings = m_panel.AddChild<SaberSettingsPanelComponent>().ToFill();
         settings.Build(m_config);
@@ -57,6 +57,23 @@ internal class SaberSettingsPanelComponent : UIComponent
     public void Build(PluginConfig config)
     {
         m_config = config;
+
+        // One-time migration from legacy unified smoothing to split channels
+        if (config.MotionSmoothingEnabled)
+        {
+            if (!config.PositionSmoothingEnabled)
+            {
+                config.PositionSmoothingEnabled = true;
+                config.PositionSmoothingStrength = config.MotionSmoothingStrength;
+            }
+            if (!config.RotationSmoothingEnabled)
+            {
+                config.RotationSmoothingEnabled = true;
+                config.RotationSmoothingStrength = config.MotionSmoothingStrength;
+            }
+            config.MotionSmoothingEnabled = false;
+        }
+
         var content = m_panel.Content;
 
         var blurMs = content.AddChild<FieldComponent>()
@@ -105,18 +122,37 @@ internal class SaberSettingsPanelComponent : UIComponent
             ApplyZRotationOffset();
         };
 
-        var smoothMotion = content.AddChild<FieldComponent>()
-            .WithPreferredHeight(4).WithLabel("Smooth Motion")
+        var posSmooth = content.AddChild<FieldComponent>()
+            .WithPreferredHeight(4).WithLabel("Pos Smoothing")
             .SetComponent<ToggleComponent>()
-            .WithValue(config.MotionSmoothingEnabled);
-        smoothMotion.OnValueChanged += v => m_config.MotionSmoothingEnabled = v;
+            .WithValue(config.PositionSmoothingEnabled);
+        posSmooth.OnValueChanged += v => m_config.PositionSmoothingEnabled = v;
 
-        var smoothness = content.AddChild<FieldComponent>()
-            .WithPreferredHeight(4).WithLabel("Smoothness")
+        var posSmoothness = content.AddChild<FieldComponent>()
+            .WithPreferredHeight(4).WithLabel("Pos Smoothness")
             .SetComponent<NumberInputComponent>()
             .WithMinMaxStep(0f, 1f, 0.01f)
-            .WithValue(config.MotionSmoothingStrength);
-        smoothness.OnValueChanged += v => m_config.MotionSmoothingStrength = v;
+            .WithValue(config.PositionSmoothingStrength);
+        posSmoothness.OnValueChanged += v => m_config.PositionSmoothingStrength = v;
+
+        var rotSmooth = content.AddChild<FieldComponent>()
+            .WithPreferredHeight(4).WithLabel("Rot Smoothing")
+            .SetComponent<ToggleComponent>()
+            .WithValue(config.RotationSmoothingEnabled);
+        rotSmooth.OnValueChanged += v => m_config.RotationSmoothingEnabled = v;
+
+        var rotSmoothness = content.AddChild<FieldComponent>()
+            .WithPreferredHeight(4).WithLabel("Rot Smoothness")
+            .SetComponent<NumberInputComponent>()
+            .WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(config.RotationSmoothingStrength);
+        rotSmoothness.OnValueChanged += v => m_config.RotationSmoothingStrength = v;
+
+        var pointerBlur = content.AddChild<FieldComponent>()
+            .WithPreferredHeight(4).WithLabel("Blur Pointer")
+            .SetComponent<ToggleComponent>()
+            .WithValue(config.MenuPointerBlurEnabled);
+        pointerBlur.OnValueChanged += v => m_config.MenuPointerBlurEnabled = v;
 
         var closeRow = content.AddChild<UIComponent>().WithPreferredHeight(4);
         var closeButton = closeRow.AddChild<TextButtonComponent>().ToFill().WithText("Close");

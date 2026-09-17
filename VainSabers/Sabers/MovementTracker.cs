@@ -54,12 +54,26 @@ namespace VainSabers.Sabers
         return pose;
     }
 
-    private Pose GetCurrentPose()
-    {
-        if (m_config is { MotionSmoothingEnabled: true } && m_smoothedInitialized)
-            return m_smoothedPose;
-        return GetTargetPose();
-    }
+        private bool IsPositionSmoothingEnabled =>
+            m_config != null && (m_config.PositionSmoothingEnabled || m_config.MotionSmoothingEnabled);
+
+        private bool IsRotationSmoothingEnabled =>
+            m_config != null && (m_config.RotationSmoothingEnabled || m_config.MotionSmoothingEnabled);
+
+        private bool IsAnySmoothingEnabled => IsPositionSmoothingEnabled || IsRotationSmoothingEnabled;
+
+        private float EffectivePositionStrength =>
+            m_config.PositionSmoothingEnabled ? m_config.PositionSmoothingStrength : m_config.MotionSmoothingStrength;
+
+        private float EffectiveRotationStrength =>
+            m_config.RotationSmoothingEnabled ? m_config.RotationSmoothingStrength : m_config.MotionSmoothingStrength;
+
+        private Pose GetCurrentPose()
+        {
+            if (IsAnySmoothingEnabled && m_smoothedInitialized)
+                return m_smoothedPose;
+            return GetTargetPose();
+        }
         public override Pose GetPoseAgo(float age)
         {
             if (m_movementData.Count == 0)
@@ -141,7 +155,7 @@ namespace VainSabers.Sabers
         {
             var currentPose = GetTargetPose();
 
-            if (m_config is { MotionSmoothingEnabled: true })
+            if (IsAnySmoothingEnabled)
             {
                 if (!m_smoothedInitialized)
                 {
@@ -150,9 +164,32 @@ namespace VainSabers.Sabers
                 }
                 else
                 {
-                    float rate = Mathf.Lerp(100f, 10f, Mathf.Clamp01(m_config.MotionSmoothingStrength));
-                    float alpha = 1f - Mathf.Exp(-rate * Time.deltaTime);
-                    m_smoothedPose = m_smoothedPose.LerpTo(currentPose, alpha);
+                    Vector3 smoothedPos = m_smoothedPose.position;
+                    Quaternion smoothedRot = m_smoothedPose.rotation;
+
+                    if (IsPositionSmoothingEnabled)
+                    {
+                        float rate = Mathf.Lerp(100f, 10f, Mathf.Clamp01(EffectivePositionStrength));
+                        float alpha = 1f - Mathf.Exp(-rate * Time.deltaTime);
+                        smoothedPos = Vector3.Lerp(smoothedPos, currentPose.position, alpha);
+                    }
+                    else
+                    {
+                        smoothedPos = currentPose.position;
+                    }
+
+                    if (IsRotationSmoothingEnabled)
+                    {
+                        float rate = Mathf.Lerp(100f, 10f, Mathf.Clamp01(EffectiveRotationStrength));
+                        float alpha = 1f - Mathf.Exp(-rate * Time.deltaTime);
+                        smoothedRot = Quaternion.Slerp(smoothedRot, currentPose.rotation, alpha);
+                    }
+                    else
+                    {
+                        smoothedRot = currentPose.rotation;
+                    }
+
+                    m_smoothedPose = new Pose(smoothedPos, smoothedRot);
                 }
                 m_movementData.Add(new MovementData { Pose = m_smoothedPose, DeltaTime = Time.deltaTime });
             }
