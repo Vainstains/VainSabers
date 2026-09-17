@@ -24,10 +24,8 @@ public static class ConfigUtil
                 .EnumerateFiles(ConfigDir, "*.json", SearchOption.TopDirectoryOnly)
                 .Any();
 
-            if (hasJsonConfigs)
-                return;
-
-            Plugin.Log.Info("No JSON configs found. Extracting default configs...");
+            if (!hasJsonConfigs)
+                Plugin.Log.Info("No JSON configs found. Extracting default configs...");
 
             Assembly asm = Assembly.GetExecutingAssembly();
             
@@ -41,6 +39,9 @@ public static class ConfigUtil
 
                 string fileName = resourceName.Substring(resourcePrefix.Length);
                 string outputPath = Path.Combine(ConfigDir, fileName);
+
+                if (File.Exists(outputPath))
+                    continue;
 
                 using Stream resourceStream = asm.GetManifestResourceStream(resourceName);
                 if (resourceStream == null)

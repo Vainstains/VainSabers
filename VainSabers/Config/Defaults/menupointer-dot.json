@@ -1,0 +1,383 @@
+{
+  "Version": 2,
+  "Parts": [
+    {
+      "Name": "Part 1",
+      "Position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "LinkedPartIndex": -1,
+      "Length": 0.025,
+      "GeometryMode": 0,
+      "SpriteSizeX": 0.05,
+      "SpriteSizeY": 0.05,
+      "SpriteDivisionsX": 4,
+      "SpriteDivisionsY": 4,
+      "DoubleSided": false,
+      "HueShift": 0.0,
+      "StartRadius": 0.008,
+      "StartColor": [
+        0.0,
+        0.199999988,
+        1.0
+      ],
+      "StartCustomWeight": 0.0,
+      "StartGlow": 0.7,
+      "StartOpacity": 1.0,
+      "EndRadius": 0.008,
+      "EndColor": [
+        0.0,
+        0.199999988,
+        1.0
+      ],
+      "EndCustomWeight": 0.0,
+      "EndGlow": 0.7,
+      "EndOpacity": 1.0,
+      "Inverted": false,
+      "Lit": false,
+      "Blur": 1.0,
+      "BlurFade": 0.1,
+      "EnableEndCaps": true,
+      "EnableRoundedNormals": true,
+      "ManualRingVerts": false,
+      "RingVertsManual": 20,
+      "Side": 0,
+      "MirrorOnLeft": false,
+      "EndCapExtension": 1.15,
+      "LookDir": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "UseLookDir": false,
+      "BulgeAmount": 1.0,
+      "MinimumRings": 5,
+      "RenderQueueOffset": 0,
+      "DepthOffset": 0.0,
+      "DisableGlowPass": false,
+      "DisableDepthPrepass": false,
+      "RimFactor": 0.0,
+      "RimPower": 3.0,
+      "RimPowerGradient": [
+        {
+          "Time": 0.0,
+          "Value": 0.0,
+          "Easing": 0
+        },
+        {
+          "Time": 0.142857149,
+          "Value": 0.0,
+          "Easing": 0
+        },
+        {
+          "Time": 0.2857143,
+          "Value": 0.0,
+          "Easing": 0
+        },
+        {
+          "Time": 0.428571433,
+          "Value": 0.0,
+          "Easing": 0
+        },
+        {
+          "Time": 0.5714286,
+          "Value": 0.0,
+          "Easing": 0
+        },
+        {
+          "Time": 0.714285731,
+          "Value": 0.0,
+          "Easing": 0
+        },
+        {
+          "Time": 0.857142866,
+          "Value": 0.0,
+          "Easing": 0
+        },
+        {
+          "Time": 1.0,
+          "Value": 0.0,
+          "Easing": 0
+        }
+      ],
+      "RimPerpendicular": 0.0,
+      "SpecularStrength": 0.41,
+      "SpecularPower": 48.0,
+      "Metallic": 0.0,
+      "Smoothness": 0.0,
+      "CubemapStrength": 0.78,
+      "CubemapRotation": 0.0,
+      "FresnelStrength": 0.6,
+      "FresnelPower": 2.89,
+      "FresnelCustomBlend": 0.0,
+      "RimColor": [
+        0.47,
+        0.51,
+        0.57
+      ],
+      "ColorTexture": null,
+      "GlowTexture": null,
+      "ColorTextureBase64": null,
+      "GlowTextureBase64": null,
+      "TextureWrap": 1,
+      "ColorAtlasCount": {
+        "x": 1.0,
+        "y": 1.0,
+        "normalized": {
+          "x": 0.707106769,
+          "y": 0.707106769,
+          "magnitude": 1.0,
+          "sqrMagnitude": 0.99999994
+        },
+        "magnitude": 1.41421354,
+        "sqrMagnitude": 2.0
+      },
+      "ColorAtlasSpeedFlip": {
+        "x": 1.0,
+        "y": 0.0,
+        "z": 0.0,
+        "magnitude": 1.0,
+        "sqrMagnitude": 1.0
+      },
+      "GlowAtlasCount": {
+        "x": 1.0,
+        "y": 1.0,
+        "normalized": {
+          "x": 0.707106769,
+          "y": 0.707106769,
+          "magnitude": 1.0,
+          "sqrMagnitude": 0.99999994
+        },
+        "magnitude": 1.41421354,
+        "sqrMagnitude": 2.0
+      },
+      "GlowAtlasSpeedFlip": {
+        "x": 1.0,
+        "y": 0.0,
+        "z": 0.0,
+        "magnitude": 1.0,
+        "sqrMagnitude": 1.0
+      },
+      "ObjFile": null,
+      "ObjBase64": null,
+      "ObjScale": 1.0,
+      "Animators": null,
+      "Rings": null
+    }
+  ],
+  "UseCustomTrails": true,
+  "TipTrails": [
+    {
+      "Position": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "CustomBlend": 1.0,
+      "ColorGradient": [
+        {
+          "Time": 0.0,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Easing": 0
+        },
+        {
+          "Time": 1.0,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Easing": 0
+        }
+      ],
+      "CustomBlendGradient": [
+        {
+          "Time": 0.0,
+          "Value": 1.0,
+          "Easing": 0
+        },
+        {
+          "Time": 1.0,
+          "Value": 1.0,
+          "Easing": 0
+        }
+      ],
+      "Glow": 1.0,
+      "Opacity": 0.0,
+      "Width": 0.008,
+      "Length": 0,
+      "QueueOffset": 0,
+      "DepthOffset": 0.0,
+      "Fade": 1.0,
+      "ColorTexture": null,
+      "GlowTexture": null,
+      "ColorTextureBase64": null,
+      "GlowTextureBase64": null,
+      "TextureWrap": 1,
+      "MotionActivation": 1.0,
+      "NoiseEnabled": false,
+      "NoiseIntensity": 0.02,
+      "NoiseScale": 2.0,
+      "NoiseSpeed": 1.0,
+      "MotionFadePower": 0.0,
+      "ColorAtlasCount": {
+        "x": 1.0,
+        "y": 1.0,
+        "normalized": {
+          "x": 0.707106769,
+          "y": 0.707106769,
+          "magnitude": 1.0,
+          "sqrMagnitude": 0.99999994
+        },
+        "magnitude": 1.41421354,
+        "sqrMagnitude": 2.0
+      },
+      "ColorAtlasSpeedFlip": {
+        "x": 1.0,
+        "y": 0.0,
+        "z": 0.0,
+        "magnitude": 1.0,
+        "sqrMagnitude": 1.0
+      },
+      "GlowAtlasCount": {
+        "x": 1.0,
+        "y": 1.0,
+        "normalized": {
+          "x": 0.707106769,
+          "y": 0.707106769,
+          "magnitude": 1.0,
+          "sqrMagnitude": 0.99999994
+        },
+        "magnitude": 1.41421354,
+        "sqrMagnitude": 2.0
+      },
+      "GlowAtlasSpeedFlip": {
+        "x": 1.0,
+        "y": 0.0,
+        "z": 0.0,
+        "magnitude": 1.0,
+        "sqrMagnitude": 1.0
+      }
+    }
+  ],
+  "BladeTrail": null,
+  "BladeTrails": [
+    {
+      "Position": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "CustomBlend": 1.0,
+      "ColorGradient": [
+        {
+          "Time": 0.0,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Easing": 0
+        },
+        {
+          "Time": 1.0,
+          "Color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Easing": 0
+        }
+      ],
+      "CustomBlendGradient": [
+        {
+          "Time": 0.0,
+          "Value": 1.0,
+          "Easing": 0
+        },
+        {
+          "Time": 1.0,
+          "Value": 1.0,
+          "Easing": 0
+        }
+      ],
+      "Glow": 1.0,
+      "Opacity": 0.0,
+      "Width": 0.01,
+      "Length": 0,
+      "QueueOffset": 0,
+      "DepthOffset": 0.0,
+      "Fade": 1.0,
+      "ColorTexture": null,
+      "GlowTexture": null,
+      "ColorTextureBase64": null,
+      "GlowTextureBase64": null,
+      "TextureWrap": 1,
+      "MotionActivation": 1.0,
+      "NoiseEnabled": false,
+      "NoiseIntensity": 0.02,
+      "NoiseScale": 2.0,
+      "NoiseSpeed": 1.0,
+      "MotionFadePower": 0.0,
+      "ColorAtlasCount": {
+        "x": 1.0,
+        "y": 1.0,
+        "normalized": {
+          "x": 0.707106769,
+          "y": 0.707106769,
+          "magnitude": 1.0,
+          "sqrMagnitude": 0.99999994
+        },
+        "magnitude": 1.41421354,
+        "sqrMagnitude": 2.0
+      },
+      "ColorAtlasSpeedFlip": {
+        "x": 1.0,
+        "y": 0.0,
+        "z": 0.0,
+        "magnitude": 1.0,
+        "sqrMagnitude": 1.0
+      },
+      "GlowAtlasCount": {
+        "x": 1.0,
+        "y": 1.0,
+        "normalized": {
+          "x": 0.707106769,
+          "y": 0.707106769,
+          "magnitude": 1.0,
+          "sqrMagnitude": 0.99999994
+        },
+        "magnitude": 1.41421354,
+        "sqrMagnitude": 2.0
+      },
+      "GlowAtlasSpeedFlip": {
+        "x": 1.0,
+        "y": 0.0,
+        "z": 0.0,
+        "magnitude": 1.0,
+        "sqrMagnitude": 1.0
+      }
+    }
+  ]
+}

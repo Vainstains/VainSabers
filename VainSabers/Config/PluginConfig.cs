@@ -24,9 +24,7 @@ public class PluginConfig
     public virtual bool RotationSmoothingEnabled { get; set; } = false;
     public virtual float RotationSmoothingStrength { get; set; } = 0.5f;
 
-    // Legacy unified settings — kept for migration from older configs
-    public virtual bool MotionSmoothingEnabled { get; set; } = false;
-    public virtual float MotionSmoothingStrength { get; set; } = 0.5f;
-
     public virtual bool MenuPointerBlurEnabled { get; set; } = false;
+    public virtual float MenuPointerLaserBlurFactor { get; set; } = 1f;
+    public virtual string MenuPointerDotPreset { get; set; } = "menupointer-dot";
 }

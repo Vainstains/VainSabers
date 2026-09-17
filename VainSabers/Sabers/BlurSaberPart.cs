@@ -953,6 +953,12 @@ public enum GeometryType
             transform.localEulerAngles = rot;
         }
 
+        public void ResetMotion()
+        {
+            m_smoothedMotion = 0f;
+            m_motionFactor = 0f;
+        }
+
         private void UpdateMotion()
         {
             if (m_saberData == null || m_movementHistoryProvider == null)
@@ -968,10 +974,10 @@ public enum GeometryType
             float release = 1f - Mathf.Exp(-70.5f * dt);
             m_smoothedMotion = Mathf.Lerp(m_smoothedMotion, rawMotion, rawMotion > m_smoothedMotion ? attack : release);
 
-            float targetFactor = Mathf.Clamp01(Mathf.InverseLerp(0.3f, 4f, m_smoothedMotion));
+            float targetFactor = Mathf.Clamp01(Mathf.InverseLerp(0.15f, 4f, m_smoothedMotion));
             targetFactor = targetFactor * targetFactor * (3f - 2f * targetFactor);
 
-            float smoothRate = dt * (targetFactor > m_motionFactor ? 3f : 1.2f);
+            float smoothRate = dt * (targetFactor > m_motionFactor ? 5f : 1.2f);
             m_motionFactor = Mathf.MoveTowards(m_motionFactor, targetFactor, smoothRate);
         }
 

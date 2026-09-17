@@ -330,6 +330,16 @@ internal class BlurSaber : MonoBehaviour
         return m_saberTransform;
     }
 
+    public void ClearHistoryAndResetMotion()
+    {
+        m_tracker?.ClearHistory();
+        if (m_blurSaberData != null)
+        {
+            foreach (var part in m_blurSaberData.Components)
+                part.ResetMotion();
+        }
+    }
+
     private void FixedUpdate()
     {
         Shader.SetGlobalFloat("_VainSaberBlurSoftness", m_config.BlurSoftness);

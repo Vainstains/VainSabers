@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEngine;
 using VainSabers.Config;
 using VainSabers.UI;
@@ -57,22 +60,7 @@ internal class SaberSettingsPanelComponent : UIComponent
     public void Build(PluginConfig config)
     {
         m_config = config;
-
-        // One-time migration from legacy unified smoothing to split channels
-        if (config.MotionSmoothingEnabled)
-        {
-            if (!config.PositionSmoothingEnabled)
-            {
-                config.PositionSmoothingEnabled = true;
-                config.PositionSmoothingStrength = config.MotionSmoothingStrength;
-            }
-            if (!config.RotationSmoothingEnabled)
-            {
-                config.RotationSmoothingEnabled = true;
-                config.RotationSmoothingStrength = config.MotionSmoothingStrength;
-            }
-            config.MotionSmoothingEnabled = false;
-        }
+    
 
         var content = m_panel.Content;
 
@@ -154,6 +142,30 @@ internal class SaberSettingsPanelComponent : UIComponent
             .WithValue(config.MenuPointerBlurEnabled);
         pointerBlur.OnValueChanged += v => m_config.MenuPointerBlurEnabled = v;
 
+        var laserBlur = content.AddChild<FieldComponent>()
+            .WithPreferredHeight(4).WithLabel("Laser Blur")
+            .SetComponent<NumberInputComponent>()
+            .WithMinMaxStep(0f, 1f, 0.01f)
+            .WithValue(config.MenuPointerLaserBlurFactor);
+        laserBlur.OnValueChanged += v => m_config.MenuPointerLaserBlurFactor = Mathf.Clamp01(v);
+
+        var dotPresetNames = GetDotPresetNames();
+        // ensure current preset is in list
+        if (!dotPresetNames.Contains(config.MenuPointerDotPreset))
+            dotPresetNames = dotPresetNames.Concat(new[] { config.MenuPointerDotPreset }).Distinct().OrderBy(x => x).ToList();
+        int dotPresetIdx = dotPresetNames.IndexOf(config.MenuPointerDotPreset);
+        if (dotPresetIdx < 0) dotPresetIdx = dotPresetNames.IndexOf("menupointer-dot");
+        if (dotPresetIdx < 0) dotPresetIdx = 0;
+        var dotPresetField = content.AddChild<FieldComponent>()
+            .WithPreferredHeight(4).WithLabel("Dot Preset")
+            .SetComponent<DropdownComponent>();
+        dotPresetField.SetOptions(dotPresetNames, dotPresetIdx);
+        dotPresetField.OnSelectionChanged += idx =>
+        {
+            if (idx >= 0 && idx < dotPresetNames.Count)
+                m_config.MenuPointerDotPreset = dotPresetNames[idx];
+        };
+
         var closeRow = content.AddChild<UIComponent>().WithPreferredHeight(4);
         var closeButton = closeRow.AddChild<TextButtonComponent>().ToFill().WithText("Close");
         closeButton.OnClick += () => MenuStateHandler.SetSettingsOpen(false);
@@ -165,5 +177,24 @@ internal class SaberSettingsPanelComponent : UIComponent
         var (left, right) = MenuStateHandler.Sabers;
         left?.ApplyZRotationOffset();
         right?.ApplyZRotationOffset();
+    }
+
+    private static List<string> GetDotPresetNames()
+    {
+        try
+        {
+            var dir = ConfigUtil.ConfigDir;
+            if (!Directory.Exists(dir)) return new List<string> { "menupointer-dot" };
+            var json = Directory.GetFiles(dir, "*.json").Select(Path.GetFileNameWithoutExtension);
+            var vainsaber = Directory.GetFiles(dir, "*.vainsaber").Select(Path.GetFileNameWithoutExtension);
+            var names = json.Concat(vainsaber).Distinct().OrderBy(x => x).ToList();
+            if (names.Count == 0) names.Add("menupointer-dot");
+            if (!names.Contains("menupointer-dot")) names.Insert(0, "menupointer-dot");
+            return names;
+        }
+        catch
+        {
+            return new List<string> { "menupointer-dot" };
+        }
     }
 }

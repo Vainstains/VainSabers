@@ -11,6 +11,7 @@ public class MenuInstaller : Installer
         Container.BindInterfacesAndSelfTo<MenuPointers>().AsSingle();
         Container.BindInterfacesAndSelfTo<MenuSaberManager>().AsSingle();
         Container.BindInterfacesAndSelfTo<VRPointerManager>().AsSingle();
+        Container.BindInterfacesAndSelfTo<Menu.MenuPointerBlurController>().AsSingle();
         Container.BindInterfacesAndSelfTo<GameplaySetupUI>().AsSingle();
     }
 }

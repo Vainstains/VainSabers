@@ -19,6 +19,9 @@ namespace VainSabers.Sabers
         
         private bool m_smoothedInitialized;
         private Pose m_smoothedPose;
+
+        public float PositionSmoothingCoefficient = 1f;
+        public float RotationSmoothingCoefficient = 1f;
         
         private CircularBuffer<MovementData> m_movementData = new CircularBuffer<MovementData>(100);
 
@@ -169,8 +172,10 @@ namespace VainSabers.Sabers
 
                     if (IsPositionSmoothingEnabled)
                     {
+                        var coeff = PositionSmoothingCoefficient;
+                        if (coeff < 0.01f) coeff = 0.01f;
                         float rate = Mathf.Lerp(100f, 10f, Mathf.Clamp01(EffectivePositionStrength));
-                        float alpha = 1f - Mathf.Exp(-rate * Time.deltaTime);
+                        float alpha = 1f - Mathf.Exp(-rate * Time.deltaTime / coeff);
                         smoothedPos = Vector3.Lerp(smoothedPos, currentPose.position, alpha);
                     }
                     else
@@ -180,8 +185,10 @@ namespace VainSabers.Sabers
 
                     if (IsRotationSmoothingEnabled)
                     {
+                        var coeff = RotationSmoothingCoefficient;
+                        if (coeff < 0.01f) coeff = 0.01f;
                         float rate = Mathf.Lerp(100f, 10f, Mathf.Clamp01(EffectiveRotationStrength));
-                        float alpha = 1f - Mathf.Exp(-rate * Time.deltaTime);
+                        float alpha = 1f - Mathf.Exp(-rate * Time.deltaTime / coeff);
                         smoothedRot = Quaternion.Slerp(smoothedRot, currentPose.rotation, alpha);
                     }
                     else
