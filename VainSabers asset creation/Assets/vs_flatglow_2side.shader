@@ -26,21 +26,18 @@ Shader "Unlit/vs_flatglow_2side"
             LOD 100
             Cull Off
             ZWrite Off
-            // ZTest defaults to LEqual; keep it unless you need different sorting behavior
     
-            // -------- Pass 1: RGB only (flat color from vertex colors) --------
+            // -------- Pass 1: RGB only --------
             Pass
             {
                 Name "RGB"
-                // Standard premultiplied? No—this assumes non-premultiplied vertex colors.
                 Blend SrcAlpha OneMinusSrcAlpha
-                // Only write RGB channels; keep destination alpha untouched.
                 ColorMask RGB
     
                 CGPROGRAM
                 #pragma vertex vert
                 #pragma fragment frag
-                #pragma target 3.0
+                #pragma target 3.5
                 #include "UnityCG.cginc"
     
                 float _ColorBoost;
@@ -57,6 +54,16 @@ Shader "Unlit/vs_flatglow_2side"
                 float _NoiseSpeed;
 
                 float _TrailDuration;
+
+                // GPU history for shader-based ribbon
+                #define TRAIL_HIST_COUNT 32
+                float4 _TrailHistPos[TRAIL_HIST_COUNT];
+                float4 _TrailHistFwd[TRAIL_HIST_COUNT];
+                float4 _TrailHistUp[TRAIL_HIST_COUNT];
+                int _TrailHistCount;
+                float4 _TrailLocalOffset;
+                float _TrailBaseFraction;
+                float _TrailOpacityScale;
      
                 float2 ApplyAtlas(float2 uv, float2 atlasCount, float3 atlasSpeedFlip)
                 {
@@ -100,6 +107,51 @@ Shader "Unlit/vs_flatglow_2side"
                     UNITY_INITIALIZE_OUTPUT(v2f, o);
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                     float t = v.uv.x;
+                    float vFrac = v.uv.y;
+
+                    // Shader-based history path
+                    if (_TrailHistCount > 0)
+                    {
+                        float histF = t * (_TrailHistCount - 1);
+                        int idx = (int)floor(histF);
+                        idx = clamp(idx, 0, _TrailHistCount - 2);
+                        float frac = histF - (float)idx;
+                        float3 sPos = lerp(_TrailHistPos[idx].xyz, _TrailHistPos[idx+1].xyz, frac);
+                        float3 sFwd = normalize(lerp(_TrailHistFwd[idx].xyz, _TrailHistFwd[idx+1].xyz, frac));
+                        float3 sUp = normalize(lerp(_TrailHistUp[idx].xyz, _TrailHistUp[idx+1].xyz, frac));
+                        // handle zero vectors fallback
+                        if (length(sFwd) < 0.0001) sFwd = float3(0,0,1);
+                        if (length(sUp) < 0.0001) sUp = float3(0,1,0);
+                        float3 sRight = normalize(cross(sUp, sFwd));
+                        if (length(sRight) < 0.0001) sRight = float3(1,0,0);
+                        sUp = normalize(cross(sFwd, sRight));
+
+                        float4 localOff = _TrailLocalOffset;
+                        float baseFrac = _TrailBaseFraction;
+                        float3 tipLocal = localOff.xyz;
+                        float3 baseLocal = tipLocal * baseFrac;
+                        float3 tipWorld = sPos + sRight * tipLocal.x + sUp * tipLocal.y + sFwd * tipLocal.z;
+                        float3 baseWorld = sPos + sRight * baseLocal.x + sUp * baseLocal.y + sFwd * baseLocal.z;
+                        float3 worldPos = lerp(baseWorld, tipWorld, vFrac);
+
+                        float noiseFactor = t * _NoiseIntensity;
+                        if (noiseFactor > 0.0001)
+                        {
+                            float scroll = _Time.y * _NoiseSpeed - t * 0.1 * _TrailDuration;
+                            float3 noiseCoord = worldPos * _NoiseScale * 0.03125 + float3(scroll,scroll,scroll) * 0.2;
+                            float4 n = tex3Dlod(_NoiseTex, float4(noiseCoord, 0));
+                            float3 dispWorld = (n.rgb * 2.0 - 1.0) * noiseFactor;
+                            worldPos += dispWorld;
+                        }
+                        o.pos = mul(UNITY_MATRIX_VP, float4(worldPos, 1));
+                        o.pos.z += _DepthOffset * o.pos.w;
+                        o.uv = v.uv;
+                        o.color = v.color;
+                        o.color.a *= _TrailOpacityScale;
+                        return o;
+                    }
+
+                    // CPU fallback (original)
                     float noiseFactor = t * _NoiseIntensity;
                     if (noiseFactor > 0.0001)
                     {
@@ -115,6 +167,7 @@ Shader "Unlit/vs_flatglow_2side"
                     o.pos.z += _DepthOffset;
                     o.uv    = v.uv;
                     o.color = v.color;
+                    o.color.a *= _TrailOpacityScale;
                     return o;
                 }
      
@@ -135,23 +188,16 @@ Shader "Unlit/vs_flatglow_2side"
                 ENDCG
             }
     
-            // -------- Pass 2: Alpha only (glow mask from vertex alpha) --------
+            // -------- Pass 2: Alpha only --------
             Pass
             {
                 Name "ALPHA"
-                // Only touch the alpha channel.
                 ColorMask A
-    
-                // Choose ONE of these (default is a standard "alpha over" into A):
-                Blend One OneMinusSrcAlpha           // <- default: composite src alpha into dest alpha
-                // Blend One Zero                    // <- overwrite: src alpha replaces dest alpha
-                // BlendOp Max                       // <- use with Blend One One to take max alpha
-                // Blend One One                     // <- additive alpha accumulation (clamped)
-    
+                Blend One OneMinusSrcAlpha
                 CGPROGRAM
                 #pragma vertex vert
                 #pragma fragment frag
-                #pragma target 3.0
+                #pragma target 3.5
                 #include "UnityCG.cginc"
     
                 float _GlowBoost;
@@ -167,6 +213,15 @@ Shader "Unlit/vs_flatglow_2side"
 
                 float _TrailDuration;
 
+                #define TRAIL_HIST_COUNT 32
+                float4 _TrailHistPos[TRAIL_HIST_COUNT];
+                float4 _TrailHistFwd[TRAIL_HIST_COUNT];
+                float4 _TrailHistUp[TRAIL_HIST_COUNT];
+                int _TrailHistCount;
+                float4 _TrailLocalOffset;
+                float _TrailBaseFraction;
+                float _TrailOpacityScale;
+     
                 float2 ApplyAtlasGlow(float2 uv, float2 atlasCount, float3 atlasSpeedFlip)
                 {
                     float atlasX = atlasCount.x;
@@ -209,6 +264,47 @@ Shader "Unlit/vs_flatglow_2side"
                     UNITY_INITIALIZE_OUTPUT(v2f, o);
                     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                     float t = v.uv.x;
+                    float vFrac = v.uv.y;
+
+                    if (_TrailHistCount > 0)
+                    {
+                        float histF = t * (_TrailHistCount - 1);
+                        int idx = (int)floor(histF);
+                        idx = clamp(idx, 0, _TrailHistCount - 2);
+                        float frac = histF - (float)idx;
+                        float3 sPos = lerp(_TrailHistPos[idx].xyz, _TrailHistPos[idx+1].xyz, frac);
+                        float3 sFwd = normalize(lerp(_TrailHistFwd[idx].xyz, _TrailHistFwd[idx+1].xyz, frac));
+                        float3 sUp = normalize(lerp(_TrailHistUp[idx].xyz, _TrailHistUp[idx+1].xyz, frac));
+                        if (length(sFwd) < 0.0001) sFwd = float3(0,0,1);
+                        if (length(sUp) < 0.0001) sUp = float3(0,1,0);
+                        float3 sRight = normalize(cross(sUp, sFwd));
+                        if (length(sRight) < 0.0001) sRight = float3(1,0,0);
+                        sUp = normalize(cross(sFwd, sRight));
+
+                        float4 localOff = _TrailLocalOffset;
+                        float baseFrac = _TrailBaseFraction;
+                        float3 tipLocal = localOff.xyz;
+                        float3 baseLocal = tipLocal * baseFrac;
+                        float3 tipWorld = sPos + sRight * tipLocal.x + sUp * tipLocal.y + sFwd * tipLocal.z;
+                        float3 baseWorld = sPos + sRight * baseLocal.x + sUp * baseLocal.y + sFwd * baseLocal.z;
+                        float3 worldPos = lerp(baseWorld, tipWorld, vFrac);
+
+                        float noiseFactor = t * _NoiseIntensity;
+                        if (noiseFactor > 0.0001)
+                        {
+                            float scroll = _Time.y * _NoiseSpeed - t * 0.1 * _TrailDuration;
+                            float3 noiseCoord = worldPos * _NoiseScale * 0.03125 + float3(scroll,scroll,scroll) * 0.2;
+                            float4 n = tex3Dlod(_NoiseTex, float4(noiseCoord, 0));
+                            float3 dispWorld = (n.rgb * 2.0 - 1.0) * noiseFactor;
+                            worldPos += dispWorld;
+                        }
+                        o.pos = mul(UNITY_MATRIX_VP, float4(worldPos, 1));
+                        o.pos.z += _DepthOffset * o.pos.w;
+                        o.uv = v.uv;
+                        o.alpha = v.color.a * _TrailOpacityScale;
+                        return o;
+                    }
+
                     float noiseFactor = t * _NoiseIntensity;
                     if (noiseFactor > 0.0001)
                     {
@@ -223,13 +319,12 @@ Shader "Unlit/vs_flatglow_2side"
                     o.pos   = UnityObjectToClipPos(v.vertex);
                     o.pos.z += _DepthOffset;
                     o.uv    = v.uv;
-                    o.alpha = v.color.a;
+                    o.alpha = v.color.a * _TrailOpacityScale;
                     return o;
                 }
      
                 fixed4 frag (v2f i) : SV_Target
                 {
-                    // Write only alpha (glow), RGB is discarded by ColorMask.
                     float glow = saturate(i.alpha * _GlowBoost);
                     if (_GlowTexEnabled > 0.5)
                     {
@@ -237,12 +332,10 @@ Shader "Unlit/vs_flatglow_2side"
                         float4 glowTex = tex2D(_GlowTex, uvAtlas);
                         glow *= glowTex.r * glowTex.a;
                     }
-                        
                     return fixed4(0, 0, 0, glow);
                 }
                 ENDCG
             }
         }
-    
         FallBack Off
 }

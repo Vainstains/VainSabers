@@ -10,14 +10,14 @@ public class SaberRibbonTrail : MonoBehaviour
     private int _segmentCount = 30;
     private const int VerticalSubdivisions = 6;
     private const int VerticalVertexCount = VerticalSubdivisions + 1;
+    private const int TrailHistCount = 32;
 
     private void UpdateSegmentCount(int lengthMs)
     {
         int target = Mathf.Clamp(lengthMs / 6, 4, 512);
         if (target == _segmentCount) return;
         _segmentCount = target;
-        InitializeMeshData();
-        // reassign mesh after reinit
+        RebuildStaticMesh();
         if (_meshFilter != null && _mesh != null)
             _meshFilter.mesh = _mesh;
     }
@@ -32,7 +32,6 @@ public class SaberRibbonTrail : MonoBehaviour
     private int[] _triangles = null!;
     
     private float _opacity = 0.0f;
-    private Color m_trailColor = Color.white;
     private Color m_baseColor = Color.white;
     private Color m_gameColor = Color.white;
     private SaberTrailData m_trailData;
@@ -43,7 +42,14 @@ public class SaberRibbonTrail : MonoBehaviour
     private BlurSaberPart.AssetKeyCache m_colorTexKey = new();
     private BlurSaberPart.AssetKeyCache m_glowTexKey = new();
 
-    // Shared 32x32x32 random RGB 3D noise texture, sampled in vertex shader with tex3Dlod
+    // GPU history
+    private Pose[] _histPoseBuffer = new Pose[TrailHistCount];
+    private Vector4[] _histPos = new Vector4[TrailHistCount];
+    private Vector4[] _histFwd = new Vector4[TrailHistCount];
+    private Vector4[] _histUp = new Vector4[TrailHistCount];
+    private MaterialPropertyBlock _propBlock = null!;
+
+    // Shared 32x32x32 random RGB 3D noise texture
     private static Texture3D? s_noiseTex;
     private static Texture3D GetOrCreateNoiseTexture()
     {
@@ -77,11 +83,16 @@ public class SaberRibbonTrail : MonoBehaviour
         _mesh = new Mesh();
         _mesh.name = "SaberRibbonTrail";
         _meshFilter.mesh = _mesh;
+        _propBlock = new MaterialPropertyBlock();
+        
+        _histPoseBuffer = new Pose[TrailHistCount];
+        _histPos = new Vector4[TrailHistCount];
+        _histFwd = new Vector4[TrailHistCount];
+        _histUp = new Vector4[TrailHistCount];
         
         _meshRenderer.material = new Material(VainSabersAssets.VertexGlowShader);
         
         UpdateSegmentCount(trailData.Length);
-        // InitializeMeshData called by UpdateSegmentCount
         ApplyConfig(trailData);
     }
 
@@ -101,7 +112,6 @@ public class SaberRibbonTrail : MonoBehaviour
         mat.SetTexture("_GlowTex", glowTex ?? Texture2D.whiteTexture);
         mat.SetFloat("_ColorTexEnabled", colorTex != null ? 1f : 0f);
         mat.SetFloat("_GlowTexEnabled", glowTex != null ? 1f : 0f);
-        // compact atlas: float2 count, float3 speedFlip
         var cCount = new Vector4(Mathf.Max(1, trailData.ColorAtlasCount.x), Mathf.Max(1, trailData.ColorAtlasCount.y), 0, 0);
         var cAnim = new Vector4(Mathf.Clamp(trailData.ColorAtlasSpeedFlip.x, 0f, 120f), trailData.ColorAtlasSpeedFlip.y > 0.5f ? 1f : 0f, trailData.ColorAtlasSpeedFlip.z > 0.5f ? 1f : 0f, 0);
         var gCount = new Vector4(Mathf.Max(1, trailData.GlowAtlasCount.x), Mathf.Max(1, trailData.GlowAtlasCount.y), 0, 0);
@@ -110,7 +120,6 @@ public class SaberRibbonTrail : MonoBehaviour
         mat.SetVector("_ColorTexAtlasSpeedFlip", cAnim);
         mat.SetVector("_GlowTexAtlasCount", gCount);
         mat.SetVector("_GlowTexAtlasSpeedFlip", gAnim);
-        // legacy fallback (for old bundles)
         mat.SetFloat("_ColorTexAtlasX", cCount.x);
         mat.SetFloat("_ColorTexAtlasY", cCount.y);
         mat.SetFloat("_ColorTexAtlasSpeed", cAnim.x);
@@ -122,7 +131,6 @@ public class SaberRibbonTrail : MonoBehaviour
         mat.SetFloat("_GlowTexAtlasFlipX", gAnim.y);
         mat.SetFloat("_GlowTexAtlasFlipY", gAnim.z);
 
-        // Noise: world-space 3D scrolling noise. If NoiseEnabled is false, intensity is forced to 0.
         var noiseTex = GetOrCreateNoiseTexture();
         mat.SetTexture("_NoiseTex", noiseTex);
         float effectiveIntensity = trailData.NoiseEnabled ? trailData.NoiseIntensity : 0f;
@@ -134,12 +142,15 @@ public class SaberRibbonTrail : MonoBehaviour
 
         m_baseColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
         UpdateFinalColor();
+        // Rebuild static mesh colors on config change
+        RebuildStaticMesh();
     }
 
     public void SetGameColor(Color color)
     {
         m_gameColor = color;
         UpdateFinalColor();
+        RebuildStaticColors();
     }
 
     private void UpdateFinalColor()
@@ -150,7 +161,6 @@ public class SaberRibbonTrail : MonoBehaviour
         {
             _meshRenderer.material.SetColor("_CustomColor", tonemappedGame);
         }
-        m_trailColor = m_baseColor;
         m_tonemappedGame = tonemappedGame;
     }
 
@@ -189,7 +199,6 @@ public class SaberRibbonTrail : MonoBehaviour
             return m_baseColor;
         if (keys.Count == 1)
             return keys[0].Color;
-        // Sort copy to avoid mutating original
         var sorted = new List<ColorGradientKey>(keys);
         sorted.Sort((a, b) => a.Time.CompareTo(b.Time));
         t = Mathf.Clamp01(t);
@@ -226,35 +235,97 @@ public class SaberRibbonTrail : MonoBehaviour
         );
     }
 
-    private void InitializeMeshData()
+    private void RebuildStaticMesh()
     {
         int vertexCount = (SegmentCount + 1) * VerticalVertexCount;
         int triangleCount = SegmentCount * VerticalSubdivisions * 2 * 3;
         
-        _vertices = new Vector3[vertexCount];
-        _colors = new Color[vertexCount];
-        _uvs = new Vector2[vertexCount];
-        _triangles = new int[triangleCount];
-        
-        for (int i = 0; i < SegmentCount; i++)
+        // Reallocate only if size changed
+        if (_vertices == null || _vertices.Length != vertexCount)
         {
-            for (int v = 0; v < VerticalSubdivisions; v++)
+            _vertices = new Vector3[vertexCount];
+            _colors = new Color[vertexCount];
+            _uvs = new Vector2[vertexCount];
+            _triangles = new int[triangleCount];
+            
+            for (int i = 0; i < SegmentCount; i++)
             {
-                int quadIndex = i * VerticalSubdivisions + v;
-                int triIndex = quadIndex * 6;
-                int vert00 = i * VerticalVertexCount + v;
-                int vert01 = vert00 + 1;
-                int vert10 = (i + 1) * VerticalVertexCount + v;
-                int vert11 = vert10 + 1;
-                
-                _triangles[triIndex] = vert00;
-                _triangles[triIndex + 1] = vert10;
-                _triangles[triIndex + 2] = vert01;
-                
-                _triangles[triIndex + 3] = vert01;
-                _triangles[triIndex + 4] = vert10;
-                _triangles[triIndex + 5] = vert11;
+                for (int v = 0; v < VerticalSubdivisions; v++)
+                {
+                    int quadIndex = i * VerticalSubdivisions + v;
+                    int triIndex = quadIndex * 6;
+                    int vert00 = i * VerticalVertexCount + v;
+                    int vert01 = vert00 + 1;
+                    int vert10 = (i + 1) * VerticalVertexCount + v;
+                    int vert11 = vert10 + 1;
+                    
+                    _triangles[triIndex] = vert00;
+                    _triangles[triIndex + 1] = vert10;
+                    _triangles[triIndex + 2] = vert01;
+                    
+                    _triangles[triIndex + 3] = vert01;
+                    _triangles[triIndex + 4] = vert10;
+                    _triangles[triIndex + 5] = vert11;
+                }
             }
+        }
+
+        RebuildStaticColors();
+
+        // Static positions are zero – shader computes world pos from history. Keep dummy.
+        for (int i = 0; i < vertexCount; i++)
+            _vertices[i] = Vector3.zero;
+
+        // UVs: x = t along trail (0=current,1=oldest), y = vFrac across width
+        int idx = 0;
+        for (int i = 0; i <= SegmentCount; i++)
+        {
+            float t = (float)i / SegmentCount;
+            for (int v = 0; v < VerticalVertexCount; v++)
+            {
+                float vFrac = (float)v / VerticalSubdivisions;
+                _uvs[idx] = new Vector2(t, vFrac);
+                idx++;
+            }
+        }
+
+        _mesh.Clear();
+        _mesh.vertices = _vertices;
+        _mesh.colors = _colors;
+        _mesh.uv = _uvs;
+        _mesh.triangles = _triangles;
+        
+        _mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 100f);
+        _mesh.MarkDynamic();
+    }
+
+    private void RebuildStaticColors()
+    {
+        if (_colors == null || _uvs == null) return;
+        int idx = 0;
+        for (int i = 0; i <= SegmentCount; i++)
+        {
+            float t = (float)i / SegmentCount;
+            float segmentOpacity = CalculateSegmentOpacity(t);
+            Color gradColor = EvaluateTrailGradient(t);
+            float blend = EvaluateCustomBlend(t);
+            Color blended = Color.Lerp(gradColor, m_tonemappedGame, blend);
+            // Static opacity includes segment shape + config opacity, but not per-frame speed/motion
+            float staticOpacity = segmentOpacity * m_trailData.Opacity;
+            Color tipBase = new Color(blended.r, blended.g, blended.b, 0f);
+            Color tipFull = new Color(blended.r, blended.g, blended.b, staticOpacity);
+            for (int v = 0; v < VerticalVertexCount; v++)
+            {
+                float vFrac = (float)v / VerticalSubdivisions;
+                // lerp base->tip by vFrac (base is transparent)
+                _colors[idx] = Color.Lerp(tipBase, tipFull, vFrac);
+                // Apply atlas uv static? Keep uv as (t, vFrac) – atlas handled in shader, so uv stays (t,vFrac)
+                idx++;
+            }
+        }
+        if (_mesh != null && _colors.Length == _mesh.vertexCount)
+        {
+            _mesh.colors = _colors;
         }
     }
 
@@ -265,8 +336,8 @@ public class SaberRibbonTrail : MonoBehaviour
 
         float tipSpeed = EstimateTipSpeed();
         UpdateOpacity(tipSpeed);
-        UpdateMesh();
-        
+        UpdateHistoryAndMaterial();
+
         _meshRenderer.enabled = m_trailData.Length > 0;
     }
 
@@ -293,25 +364,34 @@ public class SaberRibbonTrail : MonoBehaviour
         _opacity = Mathf.Max(gated, Mathf.MoveTowards(_opacity, 0.0f, Time.deltaTime * decay));
     }
 
-    private void UpdateMesh()
+    private void UpdateHistoryAndMaterial()
     {
-        Vector3 localOffset = new Vector3(m_trailData.Position[0], m_trailData.Position[1], m_trailData.Position[2]);
-        float baseFraction = Mathf.Clamp01(m_trailData.Width);
+        if (_movementHistory == null) return;
+        float duration = m_trailData.Length * 0.001f;
+        // Sample history
+        _movementHistory.SampleNonAlloc(TrailHistCount, duration, _histPoseBuffer);
+        for (int i = 0; i < TrailHistCount; i++)
+        {
+            var p = _histPoseBuffer[i];
+            _histPos[i] = new Vector4(p.position.x, p.position.y, p.position.z, 1f);
+            _histFwd[i] = new Vector4(p.forward.x, p.forward.y, p.forward.z, 0f);
+            _histUp[i] = new Vector4(p.up.x, p.up.y, p.up.z, 0f);
+        }
 
-        // Compute average total distance of top and bottom edges for MotionFadePower
+        // Motion fade – compute average distance of tip/base using hist (cheaper than per-segment loop)
         float motionFade = 1f;
         if (m_trailData.MotionFadePower > 0.001f)
         {
+            Vector3 localOffset = new Vector3(m_trailData.Position[0], m_trailData.Position[1], m_trailData.Position[2]);
+            float baseFraction = Mathf.Clamp01(m_trailData.Width);
             float tipTotal = 0f;
             float baseTotal = 0f;
             Vector3 prevTip = Vector3.zero;
             Vector3 prevBase = Vector3.zero;
             bool first = true;
-            for (int i = 0; i <= SegmentCount; i++)
+            for (int i = 0; i < TrailHistCount; i++)
             {
-                float t = (float)i / SegmentCount;
-                float timeAgo = t * m_trailData.Length * 0.001f;
-                Pose pose = _movementHistory.GetPoseAgo(timeAgo);
+                var pose = _histPoseBuffer[i];
                 Vector3 tipWorld = pose.position + pose.rotation * localOffset;
                 Vector3 baseWorld = pose.position + pose.rotation * (localOffset * baseFraction);
                 if (!first)
@@ -324,83 +404,30 @@ public class SaberRibbonTrail : MonoBehaviour
                 first = false;
             }
             float avgDist = (tipTotal + baseTotal) * 0.5f;
-            float avgSpeed = avgDist;
-            motionFade = Mathf.Exp(-avgSpeed * m_trailData.MotionFadePower);
+            motionFade = Mathf.Exp(-avgDist * m_trailData.MotionFadePower);
         }
 
-        int vertexIndex = 0;
-        
-        for (int i = 0; i <= SegmentCount; i++)
-        {
-            float t = (float)i / SegmentCount;
-            float timeAgo = t * m_trailData.Length * 0.001f;
-            
-            Pose pose = _movementHistory.GetPoseAgo(timeAgo);
-            
-            Vector3 tipPosWorld = pose.position + pose.rotation * localOffset;
-            Vector3 basePosWorld = pose.position + pose.rotation * (localOffset * baseFraction);
+        float opacityScale = _opacity * motionFade;
+        // Clamp to avoid denorm
+        opacityScale = Mathf.Clamp01(opacityScale);
 
-            Vector3 basePos = transform.InverseTransformPoint(basePosWorld);
-            Vector3 tipPos = transform.InverseTransformPoint(tipPosWorld);
-            
-            float segmentOpacity = CalculateSegmentOpacity(t);
-            float finalOpacity = segmentOpacity * _opacity * m_trailData.Opacity * motionFade;
-            Color gradColor = EvaluateTrailGradient(t);
-            float blend = EvaluateCustomBlend(t);
-            Color blended = Color.Lerp(gradColor, m_tonemappedGame, blend);
-            Color tipColorFull = new Color(blended.r, blended.g, blended.b, finalOpacity);
-            Color baseColor = new Color(blended.r, blended.g, blended.b, 0f);
+        Vector3 localOffsetVec = new Vector3(m_trailData.Position[0], m_trailData.Position[1], m_trailData.Position[2]);
+        float baseFrac = Mathf.Clamp01(m_trailData.Width);
 
-            for (int v = 0; v < VerticalVertexCount; v++)
-            {
-                float vFrac = (float)v / VerticalSubdivisions;
-                _vertices[vertexIndex] = Vector3.Lerp(basePos, tipPos, vFrac);
-                _uvs[vertexIndex] = ApplyTrailAtlasUV(new Vector2(t, vFrac));
-                _colors[vertexIndex] = Color.Lerp(baseColor, tipColorFull, vFrac);
-                vertexIndex++;
-            }
-        }
-
-        _mesh.Clear();
-        _mesh.vertices = _vertices;
-        _mesh.colors = _colors;
-        _mesh.uv = _uvs;
-        _mesh.triangles = _triangles;
-        _mesh.RecalculateBounds();
+        _propBlock.Clear();
+        _propBlock.SetVectorArray("_TrailHistPos", _histPos);
+        _propBlock.SetVectorArray("_TrailHistFwd", _histFwd);
+        _propBlock.SetVectorArray("_TrailHistUp", _histUp);
+        _propBlock.SetInt("_TrailHistCount", TrailHistCount);
+        _propBlock.SetFloat("_TrailDuration", duration);
+        _propBlock.SetVector("_TrailLocalOffset", new Vector4(localOffsetVec.x, localOffsetVec.y, localOffsetVec.z, 0f));
+        _propBlock.SetFloat("_TrailBaseFraction", baseFrac);
+        _propBlock.SetFloat("_TrailOpacityScale", opacityScale);
+        // Noise already set via material, but need to ensure _TrailDuration also for noise
+        _meshRenderer.SetPropertyBlock(_propBlock);
     }
 
-    private Vector2 ApplyTrailAtlasUV(Vector2 uv)
-    {
-        if (_meshRenderer != null && _meshRenderer.material != null && (_meshRenderer.material.HasProperty("_ColorTexAtlasCount") || _meshRenderer.material.HasProperty("_ColorTexAtlasX")))
-            return uv; // GPU will handle after asset bundle rebuild
-        bool hasColor = m_trailData.ColorAtlasCount.x > 1.5f || m_trailData.ColorAtlasCount.y > 1.5f;
-        bool hasGlow = m_trailData.GlowAtlasCount.x > 1.5f || m_trailData.GlowAtlasCount.y > 1.5f;
-        if (!hasColor && !hasGlow) return uv;
-        int ax, ay; float spd;
-        bool useColor = hasColor;
-        if (!hasColor && hasGlow) useColor = false;
-        else if (hasColor && hasGlow)
-        {
-            bool hasColorTex = !string.IsNullOrEmpty(m_trailData.ColorTextureName);
-            bool hasGlowTex = !string.IsNullOrEmpty(m_trailData.GlowTextureName);
-            if (hasColorTex && !hasGlowTex) useColor = true;
-            else if (!hasColorTex && hasGlowTex) useColor = false;
-            else useColor = true;
-        }
-        bool flipX = false, flipY = false;
-        if (useColor) { ax = Mathf.Clamp(Mathf.RoundToInt(m_trailData.ColorAtlasCount.x), 1, 16); ay = Mathf.Clamp(Mathf.RoundToInt(m_trailData.ColorAtlasCount.y), 1, 16); spd = Mathf.Clamp(m_trailData.ColorAtlasSpeedFlip.x, 0f, 120f); flipX = m_trailData.ColorAtlasSpeedFlip.y > 0.5f; flipY = m_trailData.ColorAtlasSpeedFlip.z > 0.5f; }
-        else { ax = Mathf.Clamp(Mathf.RoundToInt(m_trailData.GlowAtlasCount.x), 1, 16); ay = Mathf.Clamp(Mathf.RoundToInt(m_trailData.GlowAtlasCount.y), 1, 16); spd = Mathf.Clamp(m_trailData.GlowAtlasSpeedFlip.x, 0f, 120f); flipX = m_trailData.GlowAtlasSpeedFlip.y > 0.5f; flipY = m_trailData.GlowAtlasSpeedFlip.z > 0.5f; }
-        if (ax <= 1 && ay <= 1) return uv;
-        float count = ax * ay;
-        if (count < 1.5f) return uv;
-        float time = Time.unscaledTime;
-        float frame = Mathf.Floor(Mathf.Repeat(time * spd, count));
-        float tileX = Mathf.Repeat(frame, ax);
-        float tileY = Mathf.Floor(frame / ax);
-        if (flipX) tileX = ax - 1 - tileX;
-        if (flipY) tileY = ay - 1 - tileY;
-        return new Vector2((uv.x + tileX) / ax, (uv.y + tileY) / ay);
-    }
+    // Legacy CPU mesh path removed – now shader driven
 
     private float CalculateSegmentOpacity(float t)
     {
