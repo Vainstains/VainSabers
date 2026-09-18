@@ -32,8 +32,9 @@ public enum GeometryType
             RightOnly
         }
 
-        private const int SampleCount = 32;
+        private const int SampleCount = 16;
         private Pose[] m_poseSamples = new Pose[SampleCount];
+        private Pose[] m_coarsePoseSamples = new Pose[8];
         private int RingCount =>
             GeometryHandling == GeometryType.Advanced
                 ? RingParams.Count
@@ -1282,27 +1283,59 @@ public enum GeometryType
         private Pose[] InterpolateData(float maxTime)
         {
             maxTime *= m_motionFactor;
-
-            m_movementHistoryProvider.SampleNonAlloc(SampleCount, maxTime, m_poseSamples);
+            maxTime = Mathf.Min(maxTime, 0.025f);
 
             const float smoothing = 1f;
+            int coarseCount = m_coarsePoseSamples.Length;
+            m_movementHistoryProvider.SampleNonAlloc(coarseCount, maxTime, m_coarsePoseSamples);
+
             if (smoothing > 0.001f)
             {
-                for (int i = 1; i < SampleCount - 1; i++)
+                for (int i = 1; i < coarseCount - 1; i++)
                 {
-                    var prev = m_poseSamples[i - 1];
-                    var curr = m_poseSamples[i];
-                    var next = m_poseSamples[i + 1];
+                    var prev = m_coarsePoseSamples[i - 1];
+                    var curr = m_coarsePoseSamples[i];
+                    var next = m_coarsePoseSamples[i + 1];
 
                     var smoothedPos = Vector3.Lerp(curr.position, (prev.position + curr.position + next.position) / 3f, smoothing);
                     var smoothedFwd = Vector3.Slerp(curr.forward, (prev.forward + curr.forward + next.forward).normalized, smoothing);
                     var smoothedUp = Vector3.Slerp(curr.up, (prev.up + curr.up + next.up).normalized, smoothing);
 
-                    m_poseSamples[i] = new Pose(smoothedPos, Quaternion.LookRotation(smoothedFwd, smoothedUp));
+                    m_coarsePoseSamples[i] = new Pose(smoothedPos, Quaternion.LookRotation(smoothedFwd, smoothedUp));
                 }
             }
 
+            RefinePoses(m_coarsePoseSamples, m_poseSamples);
+
             return m_poseSamples;
+        }
+
+        private static void RefinePoses(Pose[] coarse, Pose[] refined)
+        {
+            int coarseLen = coarse.Length;
+            int refinedLen = refined.Length;
+            
+            for (int i = 0; i < coarseLen; i++)
+            {
+                int evenIdx = 2 * i;
+                if (evenIdx < refinedLen)
+                    refined[evenIdx] = coarse[i];
+                if (evenIdx + 1 < refinedLen && i < coarseLen - 1)
+                    refined[evenIdx + 1] = coarse[i].LerpTo(coarse[i + 1], 0.5f);
+            }
+            
+            if (refinedLen % 2 == 0 && coarseLen * 2 == refinedLen)
+            {
+                refined[refinedLen - 1] = coarse[coarseLen - 1];
+            }
+            
+            for (int i = 1; i < coarseLen - 1; i++)
+            {
+                int idx = 2 * i;
+                if (idx <= 0 || idx >= refinedLen - 1) continue;
+                var midpointAverage = refined[idx - 1].LerpTo(refined[idx + 1], 0.5f);
+                refined[idx] = refined[idx].LerpTo(midpointAverage, 0.5f);
+            }
         }
 
         private Vector2 ApplyAtlasUV(Vector2 uv)

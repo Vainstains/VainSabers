@@ -87,7 +87,7 @@ Shader "VainSabers/Blur Part"
                 discard;
                 return fixed4(0.0, 0.0, 0.0, 0.0);
 #else
-                // UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 SaberFragVariables vars = GetCommonSaberVars(i);
 
                 float glow = vars.glowStrength * vars.alpha;

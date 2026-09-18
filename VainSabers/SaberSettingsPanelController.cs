@@ -67,9 +67,9 @@ internal class SaberSettingsPanelComponent : UIComponent
         var blurMs = content.AddChild<FieldComponent>()
             .WithPreferredHeight(4).WithLabel("Blur MS")
             .SetComponent<NumberInputComponent>()
-            .WithMinMaxStep(0f, 50f, 1f).WithSensitivityCoef(20)
-            .WithValue(config.BlurMS);
-        blurMs.OnValueChanged += v => m_config.BlurMS = Mathf.RoundToInt(v);
+            .WithMinMaxStep(0f, 25f, 1f).WithSensitivityCoef(20)
+            .WithValue(Mathf.Min(config.BlurMS, 25));
+        blurMs.OnValueChanged += v => m_config.BlurMS = Mathf.Clamp(Mathf.RoundToInt(v), 0, 25);
 
         var softness = content.AddChild<FieldComponent>()
             .WithPreferredHeight(4).WithLabel("Softness")

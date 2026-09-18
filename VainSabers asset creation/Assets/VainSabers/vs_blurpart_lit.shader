@@ -169,7 +169,11 @@
                 discard;
                 return fixed4(0.0, 0.0, 0.0, 0.0);
 #else
-                return fixed4(0.0, 0.0, 0.0, 0.0);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                // Lit parts now glow – same logic as unlit blur part
+                SaberFragVariables vars = GetCommonSaberVars(i);
+                float glow = vars.glowStrength * vars.alpha;
+                return fixed4(0.0, 0.0, 0.0, glow);
 #endif
             }
             ENDCG

@@ -23,7 +23,7 @@ public class BlurSaberData : MonoBehaviour
 
     private PluginConfig? m_config = null;
     public Color CustomColor;
-    public float BlurTime => m_config != null ? m_config.BlurMS * 0.001f : 0.04f;
+    public float BlurTime => m_config != null ? Mathf.Min(m_config.BlurMS * 0.001f, 0.025f) : 0.025f;
     
     private readonly List<BlurSaberPart> m_components = new List<BlurSaberPart>();
     public IReadOnlyList<BlurSaberPart> Components => m_components.AsReadOnly();
@@ -494,6 +494,20 @@ public class BlurSaberData : MonoBehaviour
                             offset: new Vector2(ring.OffsetX, ring.OffsetY),
                             uvOffset: ring.UvOffset
                         ));
+                    }
+                }
+
+                // Legacy compat: lit parts did not glow – for older presets force glow to 0
+                if (preset.Version < CurrentVersion && part.Lit)
+                {
+                    part.StartGlow = 0f;
+                    part.EndGlow = 0f;
+                    part.GlowAddendGradient.SetFloatKeys(BlurSaberPart.CreateDefaultAddendGradient(0f).GetFloatKeys());
+                    for (int ri = 0; ri < part.RingParams.Count; ri++)
+                    {
+                        var rp = part.RingParams[ri];
+                        rp.Glow = 0f;
+                        part.RingParams[ri] = rp;
                     }
                 }
             }
@@ -1145,6 +1159,23 @@ public class BlurSaberData : MonoBehaviour
                     if (vals.Length >= 3)
                         currentPart.RimColor = new Color(vals[0], vals[1], vals[2], 1f);
                     break;
+            }
+        }
+
+        // Lit parts in legacy presets should not glow
+        foreach (var p in m_components)
+        {
+            if (p.Lit)
+            {
+                p.StartGlow = 0f;
+                p.EndGlow = 0f;
+                p.GlowAddendGradient.SetFloatKeys(BlurSaberPart.CreateDefaultAddendGradient(0f).GetFloatKeys());
+                for (int ri = 0; ri < p.RingParams.Count; ri++)
+                {
+                    var rp = p.RingParams[ri];
+                    rp.Glow = 0f;
+                    p.RingParams[ri] = rp;
+                }
             }
         }
 

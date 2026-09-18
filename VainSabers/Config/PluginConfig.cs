@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using IPA.Config.Stores;
+using UnityEngine;
 
 [assembly: InternalsVisibleTo(GeneratedStore.AssemblyVisibilityTarget)]
 namespace VainSabers.Config;
@@ -8,7 +9,12 @@ public class PluginConfig
 {
     public virtual bool Enabled { get; set; } = true;
     public virtual string CurrentSaber { get; set; } = "default";
-    public virtual int BlurMS { get; set; } = 16;
+    private int _blurMS = 16;
+    public virtual int BlurMS
+    {
+        get => _blurMS;
+        set => _blurMS = Mathf.Clamp(value, 0, 25);
+    }
     public virtual float BlurSoftness { get; set; } = 0.8f;
     public virtual bool ActiveInMenu { get; set; } = true;
     

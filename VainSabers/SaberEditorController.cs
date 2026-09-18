@@ -1131,8 +1131,7 @@ class SaberEditorComponent : UIComponent
             .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.0001f, 0.05f, 0.0001f).WithSensitivityCoef(0.03f)
             .WithValue(referencePart.StartRadius).OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.StartRadius = val);
-        if (!referencePart.Lit)
-            m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
                 .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
                 .WithValue(referencePart.StartGlow).OnValueChanged += val =>
                 ApplyToBothResolvedParts(part => part.StartGlow = val);
@@ -1167,8 +1166,7 @@ class SaberEditorComponent : UIComponent
             .WithLabel("Radius").SetComponent<NumberInputComponent>().WithMinMaxStep(0.0001f, 0.05f, 0.0001f).WithSensitivityCoef(0.03f)
             .WithValue(referencePart.EndRadius).OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.EndRadius = val);
-        if (!referencePart.Lit)
-            m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
                 .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
                 .WithValue(referencePart.EndGlow).OnValueChanged += val =>
                 ApplyToBothResolvedParts(part => part.EndGlow = val);
@@ -1278,8 +1276,7 @@ class SaberEditorComponent : UIComponent
             ApplyToBothResolvedParts(part => part.DoubleSided = val);
         
         m_geometryPanel.Content.AddSubHeader("Vertex properties");
-        if (!referencePart.Lit)
-            m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
                 .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
                 .WithValue(referencePart.StartGlow).OnValueChanged += val =>
                 ApplyToBothResolvedParts(part => part.StartGlow = val);
@@ -1331,8 +1328,7 @@ class SaberEditorComponent : UIComponent
             ApplyToBothResolvedParts(part => part.ObjScale = val);
 
         m_geometryPanel.Content.AddSubHeader("Vertex properties");
-        if (!referencePart.Lit)
-            m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
                 .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
                 .WithValue(referencePart.StartGlow).OnValueChanged += val =>
                 ApplyToBothResolvedParts(part => part.StartGlow = val);
@@ -1531,8 +1527,7 @@ class SaberEditorComponent : UIComponent
                 });
             };
 
-        if (!referencePart.Lit)
-            m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
+        m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
                 .WithLabel("Glow").SetComponent<NumberInputComponent>().WithMinMaxStep(0f, 1.5f, 0.005f)
                 .WithValue(ring.Glow).OnValueChanged += val =>
             {

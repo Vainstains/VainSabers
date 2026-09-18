@@ -2,11 +2,11 @@
 #pragma target 3.5
 #include "UnityCG.cginc"
 
-#define GPU_HIST_COUNT 32
+#define GPU_HIST_COUNT 16
 float4 _HistPos[GPU_HIST_COUNT];
 float4 _HistFwd[GPU_HIST_COUNT];
 float4 _HistUp[GPU_HIST_COUNT];
-int _HistCount; // 32
+int _HistCount; // 16
 float _VertexBlurFade;
 float _VertexHueShift;
 float3 _VertexCustomColor;
