@@ -8,9 +8,31 @@ on:
   pull_request:
     branches:
       - master
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - gameVersion: "1.29.1"
+            bsmlUrl: "https://github.com/monkeymanboy/BeatSaberMarkupLanguage/releases/download/v1.7.0/BeatSaberMarkupLanguage-v1.7.0-RELEASE.zip"
+            siraUrl: "https://github.com/Auros/SiraUtil/releases/download/3.1.7/SiraUtil-3.1.7.zip"
+          - gameVersion: "1.34.2"
+            bsmlUrl: "https://github.com/monkeymanboy/BeatSaberMarkupLanguage/releases/download/v1.8.0/BeatSaberMarkupLanguage-v1.8.0-RELEASE.zip"
+            siraUrl: "https://github.com/Auros/SiraUtil/releases/download/3.1.7/SiraUtil-3.1.7.zip"
+          - gameVersion: "1.37.1"
+            bsmlUrl: "https://github.com/monkeymanboy/BeatSaberMarkupLanguage/releases/download/v1.11.4/BeatSaberMarkupLanguage-v1.11.4+bs.1.36.2-RELEASE.zip"
+            siraUrl: "https://github.com/Auros/SiraUtil/releases/download/3.1.7/SiraUtil-3.1.7.zip"
+          - gameVersion: "1.40.8"
+            bsmlUrl: "https://github.com/monkeymanboy/BeatSaberMarkupLanguage/releases/download/v1.12.5/BeatSaberMarkupLanguage-v1.12.5+bs.1.40.0-RELEASE.zip"
+            siraUrl: "https://github.com/Auros/SiraUtil/releases/download/v3.2.1/SiraUtil-v3.2.1+bs.1.40.0.zip"
+          - gameVersion: "1.42.1"
+            bsmlUrl: "https://github.com/monkeymanboy/BeatSaberMarkupLanguage/releases/download/v1.14.2/BeatSaberMarkupLanguage-v1.14.2+bs.1.41.1-RELEASE.zip"
+            siraUrl: "https://github.com/Auros/SiraUtil/releases/download/v3.3.1/SiraUtil-v3.3.1+bs.1.42.0.zip"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -61,38 +83,45 @@ jobs:
       - name: Initialize Modding Environment
         uses: codeman4033/init-beatsaber@v2
         with:
-          version: 1.40.8
+          version: ${{ matrix.gameVersion }}
 
       - name: Download dependencies
         run: |
-          wget https://beatmods.com/cdn/mod/5b90d82d3a9c095747c0ec8cde199d4c.zip -O SiraUtil-v3.2.1.zip
-          wget https://github.com/monkeymanboy/BeatSaberMarkupLanguage/releases/download/v1.12.5/BeatSaberMarkupLanguage-v1.12.5+bs.1.40.0-RELEASE.zip
-          unzip SiraUtil-v3.2.1.zip -d Refs
-          unzip BeatSaberMarkupLanguage-v1.12.5+bs.1.40.0-RELEASE.zip -d Refs
+          echo "Downloading SiraUtil for ${{ matrix.gameVersion }}: ${{ matrix.siraUrl }}"
+          wget "${{ matrix.siraUrl }}" -O SiraUtil.zip
+          echo "Downloading BSML for ${{ matrix.gameVersion }}: ${{ matrix.bsmlUrl }}"
+          wget "${{ matrix.bsmlUrl }}" -O BSML.zip
+          unzip -o SiraUtil.zip -d Refs
+          unzip -o BSML.zip -d Refs
+          mkdir -p Refs/Plugins || true
+          # Some zips extract dlls to root or nested folders; ensure Plugins copies exist
+          find Refs -type f -name "SiraUtil.dll" -exec cp -n {} Refs/Plugins/ \; 2>/dev/null || true
+          find Refs -type f -name "BSML.dll" -exec cp -n {} Refs/Plugins/ \; 2>/dev/null || true
+          echo "Refs contents:"
+          ls -R Refs | head -n 200
 
       - name: Restore dependencies
-        run: dotnet restore VainSabers
+        run: dotnet restore VainSabers -p:GameVersion=${{ matrix.gameVersion }}
 
       - name: Create user file
         run: echo '<?xml version="1.0" encoding="utf-8"?><Project><PropertyGroup><BeatSaberDir>${{github.workspace}}/Refs/</BeatSaberDir></PropertyGroup></Project>' > VainSabers/VainSabers.csproj.user
 
       - name: Build Release
         id: build-release
-        run: dotnet publish VainSabers -r win-x64 -c Release
+        run: dotnet publish VainSabers -r win-x64 -c Release -p:GameVersion=${{ matrix.gameVersion }}
 
       - name: Build Debug
         id: build-debug
-        run: dotnet publish VainSabers -r win-x64 -c Debug
+        run: dotnet publish VainSabers -r win-x64 -c Debug -p:GameVersion=${{ matrix.gameVersion }}
 
       - name: Upload Release
         uses: actions/upload-artifact@v7
         with:
-          name: VainSabers-${{ env.COMMIT_SHORT_SHA }}-Release.zip
+          name: VainSabers-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.gameVersion }}-Release.zip
           path: ${{ steps.build-release.outputs.artifactpath }}
 
       - name: Upload Debug
         uses: actions/upload-artifact@v7
         with:
-          name: VainSabers-${{ env.COMMIT_SHORT_SHA }}-Debug.zip
+          name: VainSabers-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.gameVersion }}-Debug.zip
           path: ${{ steps.build-debug.outputs.artifactpath }}
-      

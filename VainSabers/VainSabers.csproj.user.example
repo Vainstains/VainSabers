@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <!--
+      Example BeatSaberDir for local builds.
+      The actual VainSabers.csproj.user is git-ignored, so copy this file to
+      VainSabers.csproj.user and edit the path.
+
+      For single-version quick builds you can also bypass this file entirely:
+        dotnet publish VainSabers -c Release -p:GameVersion=1.29.1 -p:BeatSaberDir="C:/Users/dbasp/BSManager/BSInstances/1.29.1/"
+        dotnet publish VainSabers -c Release -p:GameVersion=1.40.8 -p:BeatSaberDir="C:/Users/dbasp/BSManager/BSInstances/1.40.8/"
+
+      For all 5 versions at once, use the repo-root script:
+        .\BuildAll.ps1
+        .\BuildAll.ps1 -Versions @("1.29.1","1.40.8") -Configuration Release
+    -->
+    <!-- Use Condition so `dotnet publish -p:BeatSaberDir=...` can override this default -->
+    <BeatSaberDir Condition="'$(BeatSaberDir)' == ''">C:/Users/dbasp/BSManager/BSInstances/1.40.8</BeatSaberDir>
+  </PropertyGroup>
+</Project>

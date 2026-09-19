@@ -8,7 +8,8 @@
     <PluginName>VainSabers</PluginName>
     <Authors>Vainstains</Authors>
     <Version>0.0.5</Version>
-    <GameVersion>1.40.8</GameVersion>
+    <!-- Default GameVersion; override via `dotnet publish -p:GameVersion=1.29.1` or CI matrix -->
+    <GameVersion Condition="'$(GameVersion)' == ''">1.40.8</GameVersion>
     <Description>ReeSabers but bad lol</Description>
     <!--<PluginIcon></PluginIcon>-->
     <!--<ProjectSource></ProjectSource>-->
@@ -29,6 +30,106 @@
   
   <PropertyGroup Condition="'$(Configuration)' != 'Release'">
     <DisableZipRelease>true</DisableZipRelease>
+  </PropertyGroup>
+
+  <!-- ================================================================
+       Beat Saber version preprocessor directives
+       Define BSVER_* symbols so code can #if per game version.
+       Usage:
+         #if BSVER_1_40_8_OR_LATER
+             // API present since 1.40.8
+         #endif
+         #if BSVER_1_42_1
+             // exact 1.42.1 only
+         #endif
+       Generated for each of: 1.29.1, 1.34.2, 1.37.1, 1.40.8, 1.42.1
+       Comparators: OR_LATER/OR_GREATER (>=), GREATER (>), LESS (<), OR_EARLIER/OR_LESS (<=)
+       ================================================================ -->
+  <!-- Exact version -->
+  <PropertyGroup Condition="'$(GameVersion)' == '1.29.1'">
+    <DefineConstants>$(DefineConstants);BSVER_1_29_1;BSVER_1_29_1_EXACT</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GameVersion)' == '1.34.2'">
+    <DefineConstants>$(DefineConstants);BSVER_1_34_2;BSVER_1_34_2_EXACT</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GameVersion)' == '1.37.1'">
+    <DefineConstants>$(DefineConstants);BSVER_1_37_1;BSVER_1_37_1_EXACT</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GameVersion)' == '1.40.8'">
+    <DefineConstants>$(DefineConstants);BSVER_1_40_8;BSVER_1_40_8_EXACT</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GameVersion)' == '1.42.1'">
+    <DefineConstants>$(DefineConstants);BSVER_1_42_1;BSVER_1_42_1_EXACT</DefineConstants>
+  </PropertyGroup>
+
+  <!-- 1.29.1 comparators -->
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.29.1')))) &gt;= 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_29_1_OR_LATER;BSVER_1_29_1_OR_GREATER;BSVER_1_29_1_OR_NEWER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.29.1')))) &gt; 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_29_1_GREATER;BSVER_1_29_1_GREATER_THAN;BSVER_1_29_1_NEWER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.29.1')))) &lt; 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_29_1_LESS;BSVER_1_29_1_LESS_THAN;BSVER_1_29_1_EARLIER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.29.1')))) &lt;= 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_29_1_OR_EARLIER;BSVER_1_29_1_OR_LESS;BSVER_1_29_1_OR_OLDER</DefineConstants>
+  </PropertyGroup>
+
+  <!-- 1.34.2 comparators -->
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.34.2')))) &gt;= 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_34_2_OR_LATER;BSVER_1_34_2_OR_GREATER;BSVER_1_34_2_OR_NEWER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.34.2')))) &gt; 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_34_2_GREATER;BSVER_1_34_2_GREATER_THAN;BSVER_1_34_2_NEWER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.34.2')))) &lt; 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_34_2_LESS;BSVER_1_34_2_LESS_THAN;BSVER_1_34_2_EARLIER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.34.2')))) &lt;= 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_34_2_OR_EARLIER;BSVER_1_34_2_OR_LESS;BSVER_1_34_2_OR_OLDER</DefineConstants>
+  </PropertyGroup>
+
+  <!-- 1.37.1 comparators -->
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.37.1')))) &gt;= 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_37_1_OR_LATER;BSVER_1_37_1_OR_GREATER;BSVER_1_37_1_OR_NEWER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.37.1')))) &gt; 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_37_1_GREATER;BSVER_1_37_1_GREATER_THAN;BSVER_1_37_1_NEWER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.37.1')))) &lt; 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_37_1_LESS;BSVER_1_37_1_LESS_THAN;BSVER_1_37_1_EARLIER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.37.1')))) &lt;= 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_37_1_OR_EARLIER;BSVER_1_37_1_OR_LESS;BSVER_1_37_1_OR_OLDER</DefineConstants>
+  </PropertyGroup>
+
+  <!-- 1.40.8 comparators -->
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.40.8')))) &gt;= 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_40_8_OR_LATER;BSVER_1_40_8_OR_GREATER;BSVER_1_40_8_OR_NEWER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.40.8')))) &gt; 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_40_8_GREATER;BSVER_1_40_8_GREATER_THAN;BSVER_1_40_8_NEWER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.40.8')))) &lt; 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_40_8_LESS;BSVER_1_40_8_LESS_THAN;BSVER_1_40_8_EARLIER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.40.8')))) &lt;= 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_40_8_OR_EARLIER;BSVER_1_40_8_OR_LESS;BSVER_1_40_8_OR_OLDER</DefineConstants>
+  </PropertyGroup>
+
+  <!-- 1.42.1 comparators -->
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.42.1')))) &gt;= 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_42_1_OR_LATER;BSVER_1_42_1_OR_GREATER;BSVER_1_42_1_OR_NEWER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.42.1')))) &gt; 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_42_1_GREATER;BSVER_1_42_1_GREATER_THAN;BSVER_1_42_1_NEWER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.42.1')))) &lt; 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_42_1_LESS;BSVER_1_42_1_LESS_THAN;BSVER_1_42_1_EARLIER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([System.Version]::Parse('$(GameVersion)').CompareTo($([System.Version]::Parse('1.42.1')))) &lt;= 0">
+    <DefineConstants>$(DefineConstants);BSVER_1_42_1_OR_EARLIER;BSVER_1_42_1_OR_LESS;BSVER_1_42_1_OR_OLDER</DefineConstants>
   </PropertyGroup>
   
 </Project>
