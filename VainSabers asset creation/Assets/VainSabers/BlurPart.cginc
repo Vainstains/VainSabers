@@ -1,5 +1,6 @@
 #pragma vertex vert
 #pragma target 3.5
+#pragma multi_compile __ _GEOMETRY_SPRITE _GEOMETRY_OBJ
 #include "UnityCG.cginc"
 
 #define GPU_HIST_COUNT 16
@@ -14,21 +15,27 @@ float _VertexGlowMul;
 float _VertexOpacityMul;
 float _VertexEnableRoundedNormals;
 float _VertexLength;
-float _VertexEnabled;
+float _VertexEnabled; // legacy, unused with keywords
 float _VertexGeometry;
 float _VertexManualIsZero;
 
 float _VainSaberBlurSoftness;
 
+// new uniforms for sprite/obj GPU path
+float2 _VertexSpriteSize; // x=SizeX y=SizeY
+float _VertexObjScale;
+float3 _VertexObjBoundsMin;
+float3 _VertexObjBoundsMax;
+
 // god this is messy
 struct appdata_t {
     float4 vertex : POSITION;    // tube: x=zPos y=offX z=offY w=1   obj: xyz=localPos   sprite: x=localX y=localY
-    float3 polar : NORMAL;       // tube: x=cosTheta y=sinTheta z=sign  obj: xyz=localNormal
+    float3 polar : NORMAL;       // tube: x=cosTheta y=sinTheta z=sign  obj: xyz=localNormal  sprite: z=sign
     float4 meta : TANGENT;       // tube: x=radiusSlope y=isZeroFlag z=ringT w=radius
     float4 color  : COLOR;
     float2 uv : TEXCOORD0;
-    float4 dataC : TEXCOORD1;    // tube: x=customWeight y=opacity  sprite/obj: w=opacity etc
-    float2 dataD : TEXCOORD2;    // spare: x=uvOffset or sprite half info
+    float4 dataC : TEXCOORD1;    // tube: x=customWeight y=opacity  sprite/obj: x=customWeight y=opacity
+    float2 dataD : TEXCOORD2;    // spare
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
@@ -121,6 +128,18 @@ float3 ShiftHue(float3 c, float hShift)
     return HSVToRGB_Unity(hsv);
 }
 
+// slerp between two normalized vectors
+float3 SlerpNormalized(float3 a, float3 b, float t)
+{
+    float d = clamp(dot(a,b), -1.0, 1.0);
+    float angle = acos(d);
+    if (angle < 1e-4) return normalize(lerp(a, b, t));
+    float sinA = sin(angle);
+    float wA = sin((1.0 - t) * angle) / sinA;
+    float wB = sin(t * angle) / sinA;
+    return normalize(wA * a + wB * b);
+}
+
 v2f vert (appdata_t v)
 {
     v2f o;
@@ -128,23 +147,222 @@ v2f vert (appdata_t v)
     UNITY_INITIALIZE_OUTPUT(v2f, o);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-    if (_VertexEnabled < 0.5)
-    {
-        // treat vertex as actual object space pos for compatibility
-        float3 pos = v.vertex.xyz;
-        o.vertex = UnityObjectToClipPos(float4(pos,1));
-        o.vertex.z += _DepthOffset;
-        o.uv = v.uv;
+#if defined(_GEOMETRY_SPRITE)
+    // ===== SPRITE GPU PATH =====
+    float localX = v.vertex.x;
+    float localY = v.vertex.y;
+    float signVal = v.polar.z; // 1 or -1 for double sided
+    if (abs(signVal) < 0.1) signVal = 1;
+    float customWeight = v.dataC.x;
+    float baseOpacity = v.dataC.y;
+    float2 baseUv = v.uv;
+    float4 baseColor = v.color;
 
-        o.planeNormal = float4(0,0,1,0);
-        o.normal = float3(0,0,1);
-        o.color = v.color;
-        o.worldPos = mul(unity_ObjectToWorld, float4(pos,1)).xyz;
-        o.bladeDir = float4(0,1,0,1);
-        o.uv2 = float2(0.5,0);
-        return o;
+    float3 colRgb = lerp(baseColor.rgb, _VertexCustomColor, saturate(customWeight));
+    colRgb = ShiftHue(colRgb, _VertexHueShift);
+    float glow = baseColor.a * _VertexGlowMul;
+    float opacity = baseOpacity * _VertexOpacityMul;
+    float4 outColor = float4(colRgb, glow);
+
+    float3 fPos0 = _HistPos[0].xyz;
+    float3 fFwd0 = _HistFwd[0].xyz; fFwd0 = length(fFwd0) > 1e-6 ? normalize(fFwd0) : float3(0,0,1);
+    float3 fUp0 = _HistUp[0].xyz; fUp0 = length(fUp0) > 1e-6 ? normalize(fUp0) : float3(0,1,0);
+    float3 fRight0 = cross(fUp0, fFwd0); fRight0 = length(fRight0) > 1e-6 ? normalize(fRight0) : float3(1,0,0);
+    
+    float3 lPos0 = _HistPos[_HistCount-1].xyz;
+    float3 lFwd0 = _HistFwd[_HistCount-1].xyz; lFwd0 = length(lFwd0) > 1e-6 ? normalize(lFwd0) : float3(0,0,1);
+    float3 lUp0 = _HistUp[_HistCount-1].xyz; lUp0 = length(lUp0) > 1e-6 ? normalize(lUp0) : float3(0,1,0);
+    float3 lRight0 = cross(lUp0, lFwd0); lRight0 = length(lRight0) > 1e-6 ? normalize(lRight0) : float3(1,0,0);
+    
+    float3 sumFwd = fFwd0 + lFwd0;
+    float3 sumUp = fUp0 + lUp0;
+    float3 sumRight = fRight0 + lRight0;
+    float3 avgFwd = length(sumFwd) > 1e-6 ? normalize(sumFwd) : fFwd0;
+    float3 avgUp = length(sumUp) > 1e-6 ? normalize(sumUp) : fUp0;
+    float3 avgRight = length(sumRight) > 1e-6 ? normalize(sumRight) : fRight0;
+
+    float3 motionVec = lPos0 - fPos0;
+    float dst = length(motionVec);
+    float3 motionDir = dst > 1e-4 ? motionVec / dst : avgRight;
+    // keep motionDir roughly perpendicular to avgFwd like tube? For sprite we keep as is for bending, but also ensure not parallel to avgFwd for plane
+    // Do not project onto avgFwd plane here to keep original sprite motion direction
+
+    float sweepRatio = _VainSaberBlurSoftness * dst * 50.0;
+    float sweepRatioClamped = clamp((sweepRatio * _VertexBlurFade - 0.7) * 0.01, 0.0, 5.0);
+
+    float bendAmount = saturate(sweepRatioClamped);
+    float3 bentRight = SlerpNormalized(avgRight, motionDir, bendAmount);
+    float3 bentUpRaw = avgUp - bentRight * dot(avgUp, bentRight);
+    float3 bentUp = length(bentUpRaw) > 1e-6 ? normalize(bentUpRaw) : avgUp;
+    // re-orthogonalize bentRight if needed
+    float3 bentPlane = cross(bentRight, bentUp);
+    bentPlane = length(bentPlane) > 1e-6 ? normalize(bentPlane) : float3(0,0,1);
+
+    // motion plane for blur (like tube)
+    float3 motionDirForPlane = motionVec;
+    if (dst > 1e-4) motionDirForPlane /= dst;
+    else motionDirForPlane = float3(0,0,1);
+    // project motionDir onto plane perpendicular to avgFwd for stable plane
+    float3 tmpMotion = motionDirForPlane - avgFwd * dot(motionDirForPlane, avgFwd);
+    float tmpLen = length(tmpMotion);
+    if (tmpLen > 1e-6) motionDirForPlane = tmpMotion / tmpLen;
+    else motionDirForPlane = avgRight;
+    float3 plane = cross(motionDirForPlane, avgFwd);
+    float planeLen = length(plane);
+    if (planeLen > 1e-6) plane /= planeLen;
+    else plane = float3(0,0,1);
+
+    float halfX = _VertexSpriteSize.x * 0.5;
+    float halfY = _VertexSpriteSize.y * 0.5;
+    // avoid zero size
+    halfX = max(halfX, 1e-4);
+    halfY = max(halfY, 1e-4);
+    float dR = dot(bentRight, motionDir);
+    float dU = dot(bentUp, motionDir);
+    float maxAbs = halfX * abs(dR) + halfY * abs(dU);
+    maxAbs = max(maxAbs, 1e-4);
+    float3 offset = bentRight * localX + bentUp * localY;
+    float dotVal = dot(offset, motionDir);
+    float tSample = (dotVal + maxAbs) / (2.0 * maxAbs);
+    tSample = saturate(tSample);
+
+    int idx = (int)floor(tSample * (_HistCount - 1) + 0.001);
+    idx = clamp(idx, 0, max(_HistCount-1,0));
+    float3 sPos = _HistPos[idx].xyz;
+    float3 sFwdRaw = _HistFwd[idx].xyz;
+    float3 sUpRaw = _HistUp[idx].xyz;
+    float3 sFwd = length(sFwdRaw) > 1e-6 ? normalize(sFwdRaw) : float3(0,0,1);
+    float3 sUp = length(sUpRaw) > 1e-6 ? normalize(sUpRaw) : float3(0,1,0);
+    float3 sRightTmp = cross(sUp, sFwd);
+    float3 sRight = length(sRightTmp) > 1e-6 ? normalize(sRightTmp) : float3(1,0,0);
+
+    float3 vertexPos = sPos + offset; // CPU style: sample pos + bent offset (keeps shape rigid)
+
+    // FIX normals: geometric normal is bentPlane * sign, not constant
+    float3 localNormal = bentPlane * signVal;
+    float3 worldNormal = UnityObjectToWorldNormal(localNormal);
+    float3 worldPlane = UnityObjectToWorldNormal(plane);
+    float3 worldBlade = UnityObjectToWorldNormal(sFwd);
+
+    o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
+    o.vertex.z += _DepthOffset;
+    o.uv = baseUv;
+    o.planeNormal = float4(worldPlane, 0);
+    o.normal = worldNormal;
+    o.color = outColor;
+    float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
+    o.worldPos = worldPos;
+    o.bladeDir = float4(worldBlade, opacity);
+    o.uv2 = float2(tSample, sweepRatioClamped);
+    return o;
+
+#elif defined(_GEOMETRY_OBJ)
+    // ===== OBJ GPU PATH =====
+    float3 localPos = v.vertex.xyz * _VertexObjScale;
+    float3 localNormal = v.polar.xyz;
+    // normalize local normal if needed
+    float lnLen = length(localNormal);
+    if (lnLen > 1e-6) localNormal /= lnLen; else localNormal = float3(0,0,1);
+    float customWeight = v.dataC.x;
+    float baseOpacity = v.dataC.y;
+    float2 baseUv = v.uv;
+    float4 baseColor = v.color;
+
+    float3 colRgb = lerp(baseColor.rgb, _VertexCustomColor, saturate(customWeight));
+    colRgb = ShiftHue(colRgb, _VertexHueShift);
+    float glow = baseColor.a * _VertexGlowMul;
+    float opacity = baseOpacity * _VertexOpacityMul;
+    float4 outColor = float4(colRgb, glow);
+
+    float3 fPos0 = _HistPos[0].xyz;
+    float3 fFwd0 = _HistFwd[0].xyz; fFwd0 = length(fFwd0) > 1e-6 ? normalize(fFwd0) : float3(0,0,1);
+    float3 fUp0 = _HistUp[0].xyz; fUp0 = length(fUp0) > 1e-6 ? normalize(fUp0) : float3(0,1,0);
+    float3 fRight0 = cross(fUp0, fFwd0); fRight0 = length(fRight0) > 1e-6 ? normalize(fRight0) : float3(1,0,0);
+    
+    float3 lPos0 = _HistPos[_HistCount-1].xyz;
+    float3 lFwd0 = _HistFwd[_HistCount-1].xyz; lFwd0 = length(lFwd0) > 1e-6 ? normalize(lFwd0) : float3(0,0,1);
+    float3 lUp0 = _HistUp[_HistCount-1].xyz; lUp0 = length(lUp0) > 1e-6 ? normalize(lUp0) : float3(0,1,0);
+    float3 lRight0 = cross(lUp0, lFwd0); lRight0 = length(lRight0) > 1e-6 ? normalize(lRight0) : float3(1,0,0);
+    
+    float3 sumFwd = fFwd0 + lFwd0;
+    float3 sumUp = fUp0 + lUp0;
+    float3 sumRight = fRight0 + lRight0;
+    float3 avgFwd = length(sumFwd) > 1e-6 ? normalize(sumFwd) : fFwd0;
+    float3 avgUp = length(sumUp) > 1e-6 ? normalize(sumUp) : fUp0;
+    float3 avgRight = length(sumRight) > 1e-6 ? normalize(sumRight) : fRight0;
+
+    float3 motionVec = lPos0 - fPos0;
+    float dst = length(motionVec);
+    float3 motionDir = dst > 1e-4 ? motionVec / dst : avgRight;
+    float sweepRatio = _VainSaberBlurSoftness * dst * 50.0;
+    float sweepRatioClamped = clamp((sweepRatio * _VertexBlurFade - 0.7) * 0.05, 0.0, 20.0);
+
+    float3 motionDirForPlane = motionVec;
+    if (dst > 1e-4) motionDirForPlane /= dst;
+    else motionDirForPlane = float3(0,0,1);
+    motionDirForPlane = motionDirForPlane - avgFwd * dot(motionDirForPlane, avgFwd);
+    float mdLen = length(motionDirForPlane);
+    if (mdLen > 1e-6) motionDirForPlane /= mdLen;
+    else motionDirForPlane = avgRight;
+    float3 plane = cross(motionDirForPlane, avgFwd);
+    float planeLen = length(plane);
+    if (planeLen > 1e-6) plane /= planeLen;
+    else plane = float3(0,0,1);
+
+    // compute tSample using avg offset and bounds
+    float3 offsetAvg = avgRight * localPos.x + avgUp * localPos.y + avgFwd * localPos.z;
+    float dR = dot(avgRight, motionDir);
+    float dU = dot(avgUp, motionDir);
+    float dF = dot(avgFwd, motionDir);
+    // min/max dot using bounds
+    float3 bMin = _VertexObjBoundsMin * _VertexObjScale;
+    float3 bMax = _VertexObjBoundsMax * _VertexObjScale;
+    float minDot = (dR >= 0 ? dR * bMin.x : dR * bMax.x) + (dU >= 0 ? dU * bMin.y : dU * bMax.y) + (dF >= 0 ? dF * bMin.z : dF * bMax.z);
+    float maxDot = (dR >= 0 ? dR * bMax.x : dR * bMin.x) + (dU >= 0 ? dU * bMax.y : dU * bMin.y) + (dF >= 0 ? dF * bMax.z : dF * bMin.z);
+    float range = maxDot - minDot;
+    float tSample;
+    if (abs(range) < 1e-4) tSample = 0.5;
+    else {
+        float dotVal = dot(offsetAvg, motionDir);
+        tSample = (dotVal - minDot) / range;
+        tSample = saturate(tSample);
     }
 
+    int idx = (int)floor(tSample * (_HistCount - 1) + 0.001);
+    idx = clamp(idx, 0, max(_HistCount-1,0));
+    float3 sPos = _HistPos[idx].xyz;
+    float3 sFwdRaw = _HistFwd[idx].xyz;
+    float3 sUpRaw = _HistUp[idx].xyz;
+    float3 sFwd = length(sFwdRaw) > 1e-6 ? normalize(sFwdRaw) : float3(0,0,1);
+    float3 sUp = length(sUpRaw) > 1e-6 ? normalize(sUpRaw) : float3(0,1,0);
+    float3 sRightTmp = cross(sUp, sFwd);
+    float3 sRight = length(sRightTmp) > 1e-6 ? normalize(sRightTmp) : float3(1,0,0);
+
+    float3 vertexPos = sPos + offsetAvg; // keep CPU style rigid offset
+
+    // FIX normals: rotate localNormal by sample basis (sRight/up/fwd)
+    float3 localNormalRotated = localNormal.x * sRight + localNormal.y * sUp + localNormal.z * sFwd;
+    float lnRotLen = length(localNormalRotated);
+    if (lnRotLen > 1e-6) localNormalRotated /= lnRotLen;
+
+    float3 worldNormal = UnityObjectToWorldNormal(localNormalRotated);
+    float3 worldPlane = UnityObjectToWorldNormal(plane);
+    float3 worldBlade = UnityObjectToWorldNormal(sFwd);
+
+    o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
+    o.vertex.z += _DepthOffset;
+    o.uv = baseUv;
+    o.planeNormal = float4(worldPlane, 0);
+    o.normal = worldNormal;
+    o.color = outColor;
+    float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
+    o.worldPos = worldPos;
+    o.bladeDir = float4(worldBlade, opacity);
+    o.uv2 = float2(tSample, sweepRatioClamped);
+    return o;
+
+#else
+    // ===== TUBE GPU PATH (default) =====
     float zPos = v.vertex.x;
     float offX = v.vertex.y;
     float offY = v.vertex.z;
@@ -268,6 +486,7 @@ v2f vert (appdata_t v)
     o.bladeDir = float4(worldBlade, opacity);
     o.uv2 = float2(tSample, sweepRatioClamped);
     return o;
+#endif
 }
 
 struct SaberFragVariables {

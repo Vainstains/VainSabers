@@ -26,6 +26,7 @@ Shader "VainSabers/Blur Part"
             #pragma multi_compile_instancing
             #pragma fragment frag
             #pragma multi_compile _ _DISABLE_DEPTH_PREPASS
+            #pragma multi_compile __ _GEOMETRY_SPRITE _GEOMETRY_OBJ
             #include "UnityCG.cginc"
             #include "BlurPart.cginc"
         
@@ -56,6 +57,7 @@ Shader "VainSabers/Blur Part"
             CGPROGRAM
             // #pragma multi_compile_instancing
             #pragma fragment frag
+            #pragma multi_compile __ _GEOMETRY_SPRITE _GEOMETRY_OBJ
             #include "UnityCG.cginc"
             #include "BlurPart.cginc"
             fixed4 frag (v2f i) : SV_Target
@@ -78,6 +80,7 @@ Shader "VainSabers/Blur Part"
             // #pragma multi_compile_instancing
             #pragma fragment frag
             #pragma multi_compile _ _DISABLE_GLOW_PASS
+            #pragma multi_compile __ _GEOMETRY_SPRITE _GEOMETRY_OBJ
             #include "UnityCG.cginc"
             #include "BlurPart.cginc"
 

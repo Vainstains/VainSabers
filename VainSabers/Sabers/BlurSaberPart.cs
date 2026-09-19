@@ -212,14 +212,25 @@ public enum GeometryType
         private MeshFilter m_meshFilter = null!;
         
         private bool m_injected = false;
-        private BlurSprite? m_blurSprite;
-        private BlurObj? m_blurObj;
+        private BlurSprite? m_blurSprite; // legacy CPU (kept for compat, not used)
+        private BlurObj? m_blurObj; // legacy CPU (kept for compat, not used)
         private Vector3[] m_objWorldOffsets = new Vector3[0];
 
         private Mesh? m_vertexTubeMesh;
         private bool m_vertexTubeDirty = true;
         private int m_vertexLastRingVerts = -1;
         private int m_vertexLastRingCount = -1;
+        private Mesh? m_vertexSpriteMesh;
+        private bool m_vertexSpriteDirty = true;
+        private int m_vertexSpriteHash = 0;
+        private bool m_firstSpriteHash = true;
+        private Mesh? m_vertexObjMesh;
+        private bool m_vertexObjDirty = true;
+        private int m_vertexObjHash = 0;
+        private bool m_firstObjHash = true;
+        private Vector3 m_objBoundsMin;
+        private Vector3 m_objBoundsMax;
+        private string m_lastObjCacheKey = "";
         private Vector4[] m_vertexHistPos = new Vector4[SampleCount];
         private Vector4[] m_vertexHistFwd = new Vector4[SampleCount];
         private Vector4[] m_vertexHistUp = new Vector4[SampleCount];
@@ -358,6 +369,8 @@ public enum GeometryType
         private void OnValidate()
         {
             m_vertexTubeDirty = true;
+            m_vertexSpriteDirty = true;
+            m_vertexObjDirty = true;
         }
         
         int ComputeRingVerts(float radius)
@@ -397,7 +410,60 @@ public enum GeometryType
 
         private bool ShouldUseVertexBlur()
         {
-            return GeometryHandling == GeometryType.Simple || GeometryHandling == GeometryType.Advanced;
+            // all geometries now use GPU vertex blur with keyword variants
+            return true;
+        }
+
+        private int ComputeVertexSpriteHash()
+        {
+            var h = new HashCode();
+            h.Add(DivisionsX);
+            h.Add(DivisionsY);
+            h.Add(SizeX);
+            h.Add(SizeY);
+            h.Add(DoubleSided);
+            h.Add(StartColor.r); h.Add(StartColor.g); h.Add(StartColor.b);
+            h.Add(StartGlow);
+            h.Add(StartCustomColorWeight);
+            h.Add(StartOpacity);
+            return h.ToHashCode();
+        }
+
+        private int ComputeVertexObjHash()
+        {
+            var h = new HashCode();
+            var objData = LoadObjData(ObjFileName, ObjBase64, ref m_objKey);
+            h.Add(objData.CacheKey);
+            h.Add(ObjScale);
+            h.Add(StartColor.r); h.Add(StartColor.g); h.Add(StartColor.b);
+            h.Add(StartGlow);
+            h.Add(StartCustomColorWeight);
+            h.Add(StartOpacity);
+            return h.ToHashCode();
+        }
+
+        private bool CheckVertexSpriteDirty()
+        {
+            int cur = ComputeVertexSpriteHash();
+            if (m_firstSpriteHash || cur != m_vertexSpriteHash)
+            {
+                m_firstSpriteHash = false;
+                m_vertexSpriteHash = cur;
+                return true;
+            }
+            return false;
+        }
+
+        private bool CheckVertexObjDirty()
+        {
+            int cur = ComputeVertexObjHash();
+            if (m_firstObjHash || cur != m_vertexObjHash)
+            {
+                m_firstObjHash = false;
+                m_vertexObjHash = cur;
+                return true;
+            }
+            return false;
         }
 
         private int ComputeVertexStaticHash()
@@ -634,6 +700,55 @@ public enum GeometryType
             m_vertexTubeDirty = false;
         }
 
+        private void EnsureVertexSpriteMesh()
+        {
+            if (GeometryHandling != GeometryType.Sprite) return;
+            if (CheckVertexSpriteDirty())
+                m_vertexSpriteDirty = true;
+            if (m_vertexSpriteMesh != null && !m_vertexSpriteDirty)
+                return;
+            if (m_vertexSpriteMesh != null)
+            {
+                DestroyImmediate(m_vertexSpriteMesh);
+                m_vertexSpriteMesh = null;
+            }
+            int divX = Mathf.Max(1, DivisionsX);
+            int divY = Mathf.Max(1, DivisionsY);
+            m_vertexSpriteMesh = GpuBlurMeshBuilder.BuildGpuSprite(divX, divY, DoubleSided, SizeX, SizeY, StartColor, StartGlow, StartCustomColorWeight, StartOpacity);
+            m_vertexSpriteDirty = false;
+        }
+
+        private void EnsureVertexObjMesh()
+        {
+            if (GeometryHandling != GeometryType.Obj) return;
+            var objData = LoadObjData(ObjFileName, ObjBase64, ref m_objKey);
+            if (objData.Positions.Length == 0) return;
+            // compute bounds for shader
+            Vector3 bMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+            Vector3 bMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+            for (int i = 0; i < objData.Positions.Length; i++)
+            {
+                var p = objData.Positions[i];
+                bMin = Vector3.Min(bMin, p);
+                bMax = Vector3.Max(bMax, p);
+            }
+            m_objBoundsMin = bMin;
+            m_objBoundsMax = bMax;
+
+            if (CheckVertexObjDirty())
+                m_vertexObjDirty = true;
+            if (m_vertexObjMesh != null && !m_vertexObjDirty && m_lastObjCacheKey == objData.CacheKey)
+                return;
+            if (m_vertexObjMesh != null)
+            {
+                DestroyImmediate(m_vertexObjMesh);
+                m_vertexObjMesh = null;
+            }
+            m_vertexObjMesh = GpuBlurMeshBuilder.BuildGpuObj(objData, StartColor, StartGlow, StartCustomColorWeight, StartOpacity);
+            m_vertexObjDirty = false;
+            m_lastObjCacheKey = objData.CacheKey;
+        }
+
         private void SampleGpuHistory()
         {
             if (m_movementHistoryProvider == null || m_saberData == null) return;
@@ -739,6 +854,8 @@ public enum GeometryType
             LitInvertedMaterial = source.LitInvertedMaterial;
             RenderQueueOffset = source.RenderQueueOffset;
             m_vertexTubeDirty = true;
+            m_vertexSpriteDirty = true;
+            m_vertexObjDirty = true;
         }
         
         private void ApplyMaterialProps()
@@ -813,25 +930,40 @@ public enum GeometryType
                 m_propertyBlock.SetFloat("_GlowTexAtlasFlipX", gAnim.y);
                 m_propertyBlock.SetFloat("_GlowTexAtlasFlipY", gAnim.z);
 
-                bool useGpu = ShouldUseVertexBlur();
-                m_propertyBlock.SetFloat("_VertexEnabled", useGpu ? 1f : 0f);
-                if (useGpu)
+                // set geometry keyword variants (no if branching in shader)
+                void ApplyGeometryKeyword(Material? mat)
                 {
-                    SampleGpuHistory();
-                    m_propertyBlock.SetVectorArray("_HistPos", m_vertexHistPos);
-                    m_propertyBlock.SetVectorArray("_HistFwd", m_vertexHistFwd);
-                    m_propertyBlock.SetVectorArray("_HistUp", m_vertexHistUp);
-                    m_propertyBlock.SetInt("_HistCount", SampleCount);
-                    m_propertyBlock.SetFloat("_VertexBlurFade", BlurFadeFactor);
-                    m_propertyBlock.SetFloat("_VertexHueShift", m_modulatableParams.HueShift);
-                    var cc = m_saberData != null ? m_saberData.CustomColor : Color.white;
-                    m_propertyBlock.SetVector("_VertexCustomColor", new Vector4(cc.r, cc.g, cc.b, 1f));
-                    m_propertyBlock.SetFloat("_VertexGlowMul", m_modulatableParams.GlowMultiplier);
-                    m_propertyBlock.SetFloat("_VertexOpacityMul", m_modulatableParams.OpacityMultiplier);
-                    m_propertyBlock.SetFloat("_VertexEnableRoundedNormals", EnableRoundedNormals ? 1f : 0f);
-                    m_propertyBlock.SetFloat("_VertexLength", Length);
-                    m_propertyBlock.SetFloat("_VertexGeometry", 0f);
+                    if (mat == null) return;
+                    mat.DisableKeyword("_GEOMETRY_SPRITE");
+                    mat.DisableKeyword("_GEOMETRY_OBJ");
+                    if (GeometryHandling == GeometryType.Sprite) mat.EnableKeyword("_GEOMETRY_SPRITE");
+                    else if (GeometryHandling == GeometryType.Obj) mat.EnableKeyword("_GEOMETRY_OBJ");
                 }
+                ApplyGeometryKeyword(m_runtimeMaterial);
+                ApplyGeometryKeyword(m_runtimeInvertedMaterial);
+                ApplyGeometryKeyword(m_runtimeLitMaterial);
+                ApplyGeometryKeyword(m_runtimeLitInvertedMaterial);
+
+                m_propertyBlock.SetFloat("_VertexEnabled", 1f);
+                SampleGpuHistory();
+                m_propertyBlock.SetVectorArray("_HistPos", m_vertexHistPos);
+                m_propertyBlock.SetVectorArray("_HistFwd", m_vertexHistFwd);
+                m_propertyBlock.SetVectorArray("_HistUp", m_vertexHistUp);
+                m_propertyBlock.SetInt("_HistCount", SampleCount);
+                m_propertyBlock.SetFloat("_VertexBlurFade", BlurFadeFactor);
+                m_propertyBlock.SetFloat("_VertexHueShift", m_modulatableParams.HueShift);
+                var cc = m_saberData != null ? m_saberData.CustomColor : Color.white;
+                m_propertyBlock.SetVector("_VertexCustomColor", new Vector4(cc.r, cc.g, cc.b, 1f));
+                m_propertyBlock.SetFloat("_VertexGlowMul", m_modulatableParams.GlowMultiplier);
+                m_propertyBlock.SetFloat("_VertexOpacityMul", m_modulatableParams.OpacityMultiplier);
+                m_propertyBlock.SetFloat("_VertexEnableRoundedNormals", EnableRoundedNormals ? 1f : 0f);
+                m_propertyBlock.SetFloat("_VertexLength", Length);
+                m_propertyBlock.SetFloat("_VertexGeometry", 0f);
+                // sprite/obj specific uniforms
+                m_propertyBlock.SetVector("_VertexSpriteSize", new Vector4(SizeX, SizeY, 0f, 0f));
+                m_propertyBlock.SetFloat("_VertexObjScale", ObjScale);
+                m_propertyBlock.SetVector("_VertexObjBoundsMin", m_objBoundsMin);
+                m_propertyBlock.SetVector("_VertexObjBoundsMax", m_objBoundsMax);
 
                 m_meshRenderer.SetPropertyBlock(m_propertyBlock);
             }
@@ -846,9 +978,13 @@ public enum GeometryType
                 m_blurSprite?.Destroy();
                 m_blurObj?.Destroy();
                 if (m_vertexTubeMesh != null) { DestroyImmediate(m_vertexTubeMesh); m_vertexTubeMesh = null; }
+                if (m_vertexSpriteMesh != null) { DestroyImmediate(m_vertexSpriteMesh); m_vertexSpriteMesh = null; }
+                if (m_vertexObjMesh != null) { DestroyImmediate(m_vertexObjMesh); m_vertexObjMesh = null; }
                 m_blurSprite = null;
                 m_blurObj = null;
                 m_vertexTubeDirty = true;
+                m_vertexSpriteDirty = true;
+                m_vertexObjDirty = true;
                 return;
             }
 
@@ -857,9 +993,13 @@ public enum GeometryType
                 m_blurSprite?.Destroy();
                 m_blurObj?.Destroy();
                 if (m_vertexTubeMesh != null) { DestroyImmediate(m_vertexTubeMesh); m_vertexTubeMesh = null; }
+                if (m_vertexSpriteMesh != null) { DestroyImmediate(m_vertexSpriteMesh); m_vertexSpriteMesh = null; }
+                if (m_vertexObjMesh != null) { DestroyImmediate(m_vertexObjMesh); m_vertexObjMesh = null; }
                 m_blurSprite = null;
                 m_blurObj = null;
                 m_vertexTubeDirty = true;
+                m_vertexSpriteDirty = true;
+                m_vertexObjDirty = true;
                 m_meshFilter.mesh = null;
                 return;
             }
@@ -873,56 +1013,37 @@ public enum GeometryType
 
             if (GeometryHandling == GeometryType.Obj)
             {
-                if (m_blurSprite != null)
-                {
-                    m_blurSprite.Destroy();
-                    m_blurSprite = null;
-                }
+                // cleanup legacy CPU meshes
+                if (m_blurSprite != null) { m_blurSprite.Destroy(); m_blurSprite = null; }
+                if (m_blurObj != null) { m_blurObj.Destroy(); m_blurObj = null; }
+                // ensure tube mesh not lingering
+                if (m_vertexTubeMesh != null) { DestroyImmediate(m_vertexTubeMesh); m_vertexTubeMesh = null; }
+                if (m_vertexSpriteMesh != null) { DestroyImmediate(m_vertexSpriteMesh); m_vertexSpriteMesh = null; }
 
                 var objData = LoadObjData(ObjFileName, ObjBase64, ref m_objKey);
                 if (objData.Positions.Length == 0)
                 {
-                    m_blurObj?.Destroy();
-                    m_blurObj = null;
+                    if (m_vertexObjMesh != null) { DestroyImmediate(m_vertexObjMesh); m_vertexObjMesh = null; }
                     m_meshFilter.mesh = null;
                     return;
                 }
 
-                if (m_blurObj == null || m_blurObj.CacheKey != objData.CacheKey)
-                {
-                    m_blurObj?.Destroy();
-                    m_blurObj = new BlurObj(objData);
-                }
-
+                EnsureVertexObjMesh();
                 ApplyMaterialProps();
-
-                m_meshFilter.mesh = m_blurObj.ObjMesh;
-
-                RebuildVerts();
-                m_blurObj.RefreshMesh();
+                m_meshFilter.mesh = m_vertexObjMesh;
                 return;
             }
 
             if (GeometryHandling == GeometryType.Sprite)
             {
-                m_blurObj?.Destroy();
-                m_blurObj = null;
+                if (m_blurObj != null) { m_blurObj.Destroy(); m_blurObj = null; }
+                if (m_blurSprite != null) { m_blurSprite.Destroy(); m_blurSprite = null; }
+                if (m_vertexTubeMesh != null) { DestroyImmediate(m_vertexTubeMesh); m_vertexTubeMesh = null; }
+                if (m_vertexObjMesh != null) { DestroyImmediate(m_vertexObjMesh); m_vertexObjMesh = null; }
 
-                int divX = Mathf.Max(1, DivisionsX);
-                int divY = Mathf.Max(1, DivisionsY);
-
-                if (m_blurSprite == null || m_blurSprite.DivisionsX != divX || m_blurSprite.DivisionsY != divY || m_blurSprite.DoubleSided != DoubleSided)
-                {
-                    m_blurSprite?.Destroy();
-                    m_blurSprite = new BlurSprite(divX, divY, DoubleSided);
-                }
-
+                EnsureVertexSpriteMesh();
                 ApplyMaterialProps();
-
-                m_meshFilter.mesh = m_blurSprite.SpriteMesh;
-
-                RebuildVerts();
-                m_blurSprite.RefreshMesh();
+                m_meshFilter.mesh = m_vertexSpriteMesh;
                 return;
             }
             
@@ -933,6 +1054,8 @@ public enum GeometryType
             }
             m_blurObj?.Destroy();
             m_blurObj = null;
+            if (m_vertexSpriteMesh != null) { DestroyImmediate(m_vertexSpriteMesh); m_vertexSpriteMesh = null; }
+            if (m_vertexObjMesh != null) { DestroyImmediate(m_vertexObjMesh); m_vertexObjMesh = null; }
 
             var ringCountVertex = RingCount;
             if (ringCountVertex < 2)
@@ -1055,7 +1178,11 @@ public enum GeometryType
             m_blurSprite = null;
             m_blurObj = null;
             if (m_vertexTubeMesh != null) { DestroyImmediate(m_vertexTubeMesh); m_vertexTubeMesh = null; }
+            if (m_vertexSpriteMesh != null) { DestroyImmediate(m_vertexSpriteMesh); m_vertexSpriteMesh = null; }
+            if (m_vertexObjMesh != null) { DestroyImmediate(m_vertexObjMesh); m_vertexObjMesh = null; }
             m_vertexTubeDirty = true;
+            m_vertexSpriteDirty = true;
+            m_vertexObjDirty = true;
 
             if (m_runtimeMaterial != null) DestroyImmediate(m_runtimeMaterial);
             if (m_runtimeInvertedMaterial != null) DestroyImmediate(m_runtimeInvertedMaterial);

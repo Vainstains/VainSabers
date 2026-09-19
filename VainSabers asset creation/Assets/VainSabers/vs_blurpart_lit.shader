@@ -35,6 +35,7 @@
             // #pragma multi_compile_instancing
             #pragma fragment frag
             #pragma multi_compile _ _DISABLE_DEPTH_PREPASS
+            #pragma multi_compile __ _GEOMETRY_SPRITE _GEOMETRY_OBJ
             // #pragma target 2.0
             #include "UnityCG.cginc"
             #include "BlurPart.cginc"
@@ -70,6 +71,7 @@
             CGPROGRAM
             // #pragma multi_compile_instancing
             #pragma fragment frag
+            #pragma multi_compile __ _GEOMETRY_SPRITE _GEOMETRY_OBJ
             // #pragma target 2.0
 
             #include "UnityCG.cginc"
@@ -160,6 +162,7 @@
             CGPROGRAM
             #pragma fragment frag
             #pragma multi_compile _ _DISABLE_GLOW_PASS
+            #pragma multi_compile __ _GEOMETRY_SPRITE _GEOMETRY_OBJ
             #include "UnityCG.cginc"
             #include "BlurPart.cginc"
 

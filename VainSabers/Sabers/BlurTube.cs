@@ -26,6 +26,145 @@ namespace VainSabers.Sabers
 
     internal static class GpuBlurMeshBuilder
     {
+        public static Mesh BuildGpuSprite(int divisionsX, int divisionsY, bool doubleSided,
+            float sizeX, float sizeY,
+            Color color, float glow, float customWeight, float opacity)
+        {
+            int vertsX = divisionsX + 1;
+            int vertsY = divisionsY + 1;
+            int frontVertCount = vertsX * vertsY;
+            int vertCount = doubleSided ? frontVertCount * 2 : frontVertCount;
+            int cellCount = divisionsX * divisionsY;
+            int indexCount = cellCount * 6 * (doubleSided ? 2 : 1);
+
+            var mesh = new Mesh
+            {
+                indexFormat = vertCount > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16
+            };
+            var vertices = new BlurVertex[vertCount];
+            var indices = new int[indexCount];
+
+            int t = 0;
+            for (int iy = 0; iy < divisionsY; iy++)
+            {
+                for (int ix = 0; ix < divisionsX; ix++)
+                {
+                    int rowStart0 = iy * vertsX;
+                    int rowStart1 = (iy + 1) * vertsX;
+                    int bl = rowStart0 + ix;
+                    int br = rowStart0 + ix + 1;
+                    int tl = rowStart1 + ix;
+                    int tr = rowStart1 + ix + 1;
+                    indices[t++] = bl; indices[t++] = tl; indices[t++] = br;
+                    indices[t++] = br; indices[t++] = tl; indices[t++] = tr;
+                    if (doubleSided)
+                    {
+                        int backBl = bl + frontVertCount;
+                        int backBr = br + frontVertCount;
+                        int backTl = tl + frontVertCount;
+                        int backTr = tr + frontVertCount;
+                        indices[t++] = backBl; indices[t++] = backBr; indices[t++] = backTl;
+                        indices[t++] = backBr; indices[t++] = backTr; indices[t++] = backTl;
+                    }
+                }
+            }
+
+            float halfX = sizeX * 0.5f;
+            float halfY = sizeY * 0.5f;
+            Color vertCol = new Color(color.r, color.g, color.b, glow);
+            int vIdx = 0;
+            for (int iy = 0; iy < vertsY; iy++)
+            {
+                float v = (float)iy / (vertsY - 1);
+                float y = Mathf.Lerp(halfY, -halfY, v);
+                for (int ix = 0; ix < vertsX; ix++)
+                {
+                    float u = (float)ix / (vertsX - 1);
+                    float x = Mathf.Lerp(-halfX, halfX, u);
+                    ref var vert = ref vertices[vIdx++];
+                    vert.position = new Vector3(x, y, 0f);
+                    vert.normal = new Vector3(0f, 0f, 1f); // sign via polar.z
+                    // store sign in normal.z via polar, but we use same vertex normal; shader reads sign from polar.z
+                    // For double sided we will override second half
+                    vert.tangent = new Vector4(0f, 0f, 0f, 0f);
+                    vert.color = vertCol;
+                    vert.uv = new Vector2(u, v);
+                    vert.bladeDir = new Vector4(customWeight, opacity, 0f, 0f);
+                    vert.uv2 = new Vector2(0f, 0f);
+                    // encode sign in normal.z via separate handling for double sided second half
+                    // polar is alias of normal attribute, so we set normal = (0,0,sign)
+                    vert.normal = new Vector3(0f, 0f, 1f);
+                }
+            }
+            if (doubleSided)
+            {
+                for (int i = 0; i < frontVertCount; i++)
+                {
+                    ref var src = ref vertices[i];
+                    ref var dst = ref vertices[i + frontVertCount];
+                    dst.position = src.position;
+                    dst.normal = new Vector3(0f, 0f, -1f);
+                    dst.tangent = src.tangent;
+                    dst.color = src.color;
+                    dst.uv = src.uv;
+                    dst.bladeDir = src.bladeDir;
+                    dst.uv2 = src.uv2;
+                }
+            }
+
+            mesh.SetVertexBufferParams(vertCount,
+                new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
+                new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),
+                new VertexAttributeDescriptor(VertexAttribute.Tangent, VertexAttributeFormat.Float32, 4),
+                new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.Float32, 4),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord2, VertexAttributeFormat.Float32, 2)
+            );
+            mesh.SetVertexBufferData(vertices, 0, 0, vertCount, 0, MeshUpdateFlags.DontRecalculateBounds);
+            mesh.SetTriangles(indices, 0, false);
+            mesh.bounds = BlurBounds.Giant;
+            return mesh;
+        }
+
+        public static Mesh BuildGpuObj(ObjMeshData data, Color color, float glow, float customWeight, float opacity)
+        {
+            int vertCount = data.Positions.Length;
+            var mesh = new Mesh
+            {
+                indexFormat = vertCount > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16
+            };
+            var vertices = new BlurVertex[vertCount];
+            Color vertCol = new Color(color.r, color.g, color.b, glow);
+            for (int i = 0; i < vertCount; i++)
+            {
+                ref var vert = ref vertices[i];
+                vert.position = data.Positions[i]; // raw, scale applied in shader via _VertexObjScale
+                Vector3 n = data.Normals[i];
+                float len = n.magnitude;
+                if (len > 1e-6f) n /= len; else n = Vector3.forward;
+                vert.normal = n;
+                vert.tangent = new Vector4(0f, 0f, 0f, 0f);
+                vert.color = vertCol;
+                vert.uv = data.Uvs[i];
+                vert.bladeDir = new Vector4(customWeight, opacity, 0f, 0f);
+                vert.uv2 = new Vector2(0f, 0f);
+            }
+            mesh.SetVertexBufferParams(vertCount,
+                new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
+                new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),
+                new VertexAttributeDescriptor(VertexAttribute.Tangent, VertexAttributeFormat.Float32, 4),
+                new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.Float32, 4),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord2, VertexAttributeFormat.Float32, 2)
+            );
+            mesh.SetVertexBufferData(vertices, 0, 0, vertCount, 0, MeshUpdateFlags.DontRecalculateBounds);
+            mesh.SetTriangles(data.Triangles, 0, false);
+            mesh.bounds = BlurBounds.Giant;
+            return mesh;
+        }
+
         // this is terrible lmao
         public static Mesh BuildGpuTube(int ringVerts, int ringCount,
             System.Func<int, float> getZPos, System.Func<int, float> getOffX, System.Func<int, float> getOffY,
