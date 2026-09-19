@@ -108,7 +108,7 @@ public enum GeometryType
         public float RimPerpendicular = 0;
 
         public ColorGradient GlowAddendGradient = CreateDefaultAddendGradient(0f);
-        public ColorGradient OpacityAddendGradient = CreateDefaultAddendGradient(0f);
+        public ColorGradient OpacityMultiplierGradient = CreateDefaultMultiplierGradient(1f);
 
         public static ColorGradient CreateDefaultAddendGradient(float defaultValue = 0f)
         {
@@ -822,8 +822,8 @@ public enum GeometryType
             RimPerpendicular = source.RimPerpendicular;
             if (GlowAddendGradient == null) GlowAddendGradient = new ColorGradient();
             GlowAddendGradient.SetFloatKeys(source.GlowAddendGradient.GetFloatKeys());
-            if (OpacityAddendGradient == null) OpacityAddendGradient = new ColorGradient();
-            OpacityAddendGradient.SetFloatKeys(source.OpacityAddendGradient.GetFloatKeys());
+            if (OpacityMultiplierGradient == null) OpacityMultiplierGradient = new ColorGradient();
+            OpacityMultiplierGradient.SetFloatKeys(source.OpacityMultiplierGradient.GetFloatKeys());
             SpecularStrength = source.SpecularStrength;
             SpecularPower = source.SpecularPower;
             Metallic = source.Metallic;
@@ -882,11 +882,7 @@ public enum GeometryType
                 m_propertyBlock.SetTexture("_RimPowerGradient", RimPowerGradient.GetGradientTexture());
                 m_propertyBlock.SetFloat("_RimPerpendicular", RimPerpendicular);
                 m_propertyBlock.SetTexture("_GlowAddendGradient", GlowAddendGradient.GetGradientTexture());
-                m_propertyBlock.SetTexture("_OpacityAddendGradient", OpacityAddendGradient.GetGradientTexture());
-
-                // _BlurPartIsBlade: 1 for blade geometry (Simple/Advanced tubes), 0 for images/obj (Sprite/Obj)
-                m_propertyBlock.SetFloat("_BlurPartIsBlade",
-                    (GeometryHandling == GeometryType.Simple || GeometryHandling == GeometryType.Advanced) ? 1f : 0f);
+                m_propertyBlock.SetTexture("_OpacityMultiplierGradient", OpacityMultiplierGradient.GetGradientTexture());
 
                 m_propertyBlock.SetFloat("_SpecularStrength", SpecularStrength);
                 m_propertyBlock.SetFloat("_SpecularPower", SpecularPower);

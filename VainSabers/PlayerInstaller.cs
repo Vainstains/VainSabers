@@ -26,5 +26,7 @@ public class PlayerInstaller : Installer
         const int priority = 69; // hehe
         // smh it was this simple all along??
         Container.Bind<SaberModelRegistration>().FromInstance(SaberModelRegistration.Create<BlurSaberModelController>(priority)).AsCached();
+        
+        Container.BindInterfacesAndSelfTo<Menu.MenuPointerBlurController>().AsSingle();
     }
 }

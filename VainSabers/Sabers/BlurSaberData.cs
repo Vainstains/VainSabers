@@ -445,13 +445,13 @@ public class BlurSaberData : MonoBehaviour
                 {
                     part.GlowAddendGradient.SetFloatKeys(BlurSaberPart.CreateDefaultAddendGradient(0f).GetFloatKeys());
                 }
-                if (partData.OpacityAddendGradient != null && partData.OpacityAddendGradient.Count > 0)
+                if (partData.OpacityMultiplierGradient != null && partData.OpacityMultiplierGradient.Count > 0)
                 {
-                    part.OpacityAddendGradient.SetFloatKeys(partData.OpacityAddendGradient);
+                    part.OpacityMultiplierGradient.SetFloatKeys(partData.OpacityMultiplierGradient);
                 }
-                else if (part.OpacityAddendGradient.Keys.Count == 0)
+                else if (part.OpacityMultiplierGradient.Keys.Count == 0)
                 {
-                    part.OpacityAddendGradient.SetFloatKeys(BlurSaberPart.CreateDefaultAddendGradient(0f).GetFloatKeys());
+                    part.OpacityMultiplierGradient.SetFloatKeys(BlurSaberPart.CreateDefaultMultiplierGradient(1f).GetFloatKeys());
                 }
                 part.SpecularStrength = partData.SpecularStrength;
                 part.SpecularPower = partData.SpecularPower;
@@ -807,7 +807,7 @@ public class BlurSaberData : MonoBehaviour
                 RimPowerGradient = part.RimPowerGradient != null ? part.RimPowerGradient.GetFloatKeys() : null,
                 RimPerpendicular = part.RimPerpendicular,
                 GlowAddendGradient = part.GlowAddendGradient != null ? part.GlowAddendGradient.GetFloatKeys() : null,
-                OpacityAddendGradient = part.OpacityAddendGradient != null ? part.OpacityAddendGradient.GetFloatKeys() : null,
+                OpacityMultiplierGradient = part.OpacityMultiplierGradient != null ? part.OpacityMultiplierGradient.GetFloatKeys() : null,
 
                 SpecularStrength = part.SpecularStrength,
                 SpecularPower = part.SpecularPower,
@@ -1293,7 +1293,7 @@ public class BlurSaberData : MonoBehaviour
         public List<VainSabers.Data.FloatGradientKey>? RimPowerGradient { get; set; }
         public float RimPerpendicular { get; set; }
         public List<VainSabers.Data.FloatGradientKey>? GlowAddendGradient { get; set; }
-        public List<VainSabers.Data.FloatGradientKey>? OpacityAddendGradient { get; set; }
+        public List<VainSabers.Data.FloatGradientKey>? OpacityMultiplierGradient { get; set; }
 
         public float SpecularStrength { get; set; } = 0.41f;
         public float SpecularPower { get; set; } = 48f;

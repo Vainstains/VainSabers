@@ -503,7 +503,6 @@ struct SaberFragVariables {
 #define MINIMUM_EDGE_SOFTNESS 0.05
 
 static const float _BlurTunableConstant = 2.0;
-float _BlurPartIsBlade;
 static const float _MotionViewBoost = 1.0;
 static const float _MotionViewPower = 3.0;
 static const float _MotionViewThreshold = 0.60;
@@ -517,7 +516,7 @@ float _RimFactor;
 sampler2D _RimPowerGradient;
 float _RimPerpendicular;
 sampler2D _GlowAddendGradient;
-sampler2D _OpacityAddendGradient;
+sampler2D _OpacityMultiplierGradient;
 
 SaberFragVariables GetCommonSaberVars(v2f vertStage)
 {
@@ -562,10 +561,17 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float3 Vperp = V - blade * dot(V, blade);
     float vPerpLenSq = dot(Vperp, Vperp);
     Vperp = (vPerpLenSq > 1e-6) ? Vperp * rsqrt(vPerpLenSq) : V;
-    float isBlade = saturate(_BlurPartIsBlade);
-    float3 Vfinal = normalize(lerp(V, Vperp, isBlade));
+#if defined(_GEOMETRY_SPRITE) || defined(_GEOMETRY_OBJ)
+    float3 Vfinal = V;
+#else
+    float3 Vfinal = Vperp;
+#endif
 
+#if defined(_GEOMETRY_OBJ)
+    float x = 1.0;
+#else
     float x = sqrt(saturate(dot(Nperp, Vfinal))) * 4 * (sweepCoord - sweepCoord * sweepCoord);
+#endif
 
     float safeA = max(a, 0.001);
     float powTerm = pow(saturate(1.0 - x), 2.0 / safeA);
@@ -573,60 +579,63 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float opacity = pow(saturate(1.0 - term), 2.0) / ((0.5 * b)*(0.5 * b) + 1.0);
     opacity = saturate(opacity);
     float rawOpacity = opacity;
+#if !defined(_GEOMETRY_SPRITE) && !defined(_GEOMETRY_OBJ)
     {
-        float3 planeN = vertStage.planeNormal.xyz;
-        float lenSq = dot(planeN, planeN);
-        float motionView = 0;
-        if (lenSq > 1e-6)
         {
-            planeN *= rsqrt(lenSq);
-            float3 motionDir = cross(blade, planeN);
-            float mLenSq = dot(motionDir, motionDir);
-            if (mLenSq > 1e-6)
+            float3 planeN = vertStage.planeNormal.xyz;
+            float lenSq = dot(planeN, planeN);
+            float motionView = 0;
+            if (lenSq > 1e-6)
             {
-                motionDir *= rsqrt(mLenSq);
-                motionView = abs(dot(motionDir, viewDir));
+                planeN *= rsqrt(lenSq);
+                float3 motionDir = cross(blade, planeN);
+                float mLenSq = dot(motionDir, motionDir);
+                if (mLenSq > 1e-6)
+                {
+                    motionDir *= rsqrt(mLenSq);
+                    motionView = abs(dot(motionDir, viewDir));
+                }
+            }
+            float motionBiased = saturate((motionView - _MotionViewThreshold) / (1.0 - _MotionViewThreshold));
+            float motionP = pow(motionBiased, _MotionViewPower);
+            opacity = lerp(opacity, 1.0, motionP * _MotionViewBoost);
+        }
+        {
+            float3 planeN2 = vertStage.planeNormal.xyz;
+            float lenSq2 = dot(planeN2, planeN2);
+            float planarView = 0;
+            if (lenSq2 > 1e-6)
+            {
+                planeN2 *= rsqrt(lenSq2);
+                planarView = abs(dot(planeN2, viewDir));
+            }
+            float planar = saturate(1.0 - planarView);
+            float planarBiased = saturate((planar - _PlanarCoplanarThreshold) / (1.0 - _PlanarCoplanarThreshold));
+            float planarP = pow(planarBiased, _PlanarCoplanarPower);
+            opacity = lerp(opacity, 1.0, planarP * _PlanarCoplanarBoost);
+        }
+        {
+            float3 planeN3 = vertStage.planeNormal.xyz;
+            float lenSq3 = dot(planeN3, planeN3);
+            if (lenSq3 > 1e-6 && a > 0.01)
+            {
+                planeN3 *= rsqrt(lenSq3);
+                float normalSide = dot(N, planeN3);
+                float cameraSide = dot(viewDir, planeN3);
+                float opposite = saturate(-normalSide * cameraSide * _OppositeSideSharpness);
+                float motionFade = saturate(a * 25);
+                opposite *= motionFade;
+                opacity *= saturate(1.0 - opposite * _OppositeSideFade);
             }
         }
-        float motionBiased = saturate((motionView - _MotionViewThreshold) / (1.0 - _MotionViewThreshold));
-        float motionP = pow(motionBiased, _MotionViewPower);
-        opacity = lerp(opacity, 1.0, motionP * _MotionViewBoost);
-    }
-    {
-        float3 planeN2 = vertStage.planeNormal.xyz;
-        float lenSq2 = dot(planeN2, planeN2);
-        float planarView = 0;
-        if (lenSq2 > 1e-6)
-        {
-            planeN2 *= rsqrt(lenSq2);
-            planarView = abs(dot(planeN2, viewDir));
-        }
-        float planar = saturate(1.0 - planarView);
-        float planarBiased = saturate((planar - _PlanarCoplanarThreshold) / (1.0 - _PlanarCoplanarThreshold));
-        float planarP = pow(planarBiased, _PlanarCoplanarPower);
-        opacity = lerp(opacity, 1.0, planarP * _PlanarCoplanarBoost);
-    }
-    {
-        float3 planeN3 = vertStage.planeNormal.xyz;
-        float lenSq3 = dot(planeN3, planeN3);
-        if (lenSq3 > 1e-6 && a > 0.01)
-        {
-            planeN3 *= rsqrt(lenSq3);
-            float normalSide = dot(N, planeN3);
-            float cameraSide = dot(viewDir, planeN3);
-            float opposite = saturate(-normalSide * cameraSide * _OppositeSideSharpness);
-            float motionFade = saturate(a * 25);
-            opposite *= motionFade;
-            float bladeMask = saturate(_BlurPartIsBlade + 0.1);
-            opacity *= lerp(1.0, saturate(1.0 - opposite * _OppositeSideFade), bladeMask);
-        }
-    }
 
-    // the above fixes look good in most cases at *low speeds*, but
-    // it seems at high speeds it works against the blur's interest.
-    // genius solution: remove correction when faster so it only fixes
-    // cases where it's needed. (magic numbers go brrr)
-    opacity = lerp(opacity, rawOpacity, saturate(sweepRatio * 0.8 - 0.3));
+        // the above fixes look good in most cases at *low speeds*, but
+        // it seems at high speeds it works against the blur's interest.
+        // genius solution: remove correction when faster so it only fixes
+        // cases where it's needed. (magic numbers go brrr)
+        opacity = lerp(opacity, rawOpacity, saturate(sweepRatio * 0.8 - 0.3));
+    }
+#endif
 
 
 
@@ -637,15 +646,17 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float fresnelPerp = 1.0 - saturate(dot(Nperp, Vperp));
 
     float fresnelRaw = lerp(fresnelFull, fresnelPerp, saturate(_RimPerpendicular));
-    float gradientLodBias = blurFac * 4.0;
+    
+    float gradientLodBias = 0.0; // fah
+
     float fresnelTerm = tex2Dbias(_RimPowerGradient, float4(saturate(fresnelRaw), 0.5, 0, gradientLodBias)).r;
 
     commonVars.rimFactor = 1.0 + fresnelTerm;
-    // Angle-mapped glow / opacity addends (sampled with same fresnelRaw)
+    // Angle-mapped glow (additive) / opacity (multiplicative) – opacity uses same fresnelRaw but as multiplier
     float glowAddend = tex2Dbias(_GlowAddendGradient, float4(saturate(fresnelRaw), 0.5, 0, gradientLodBias)).r;
-    float opacityAddend = tex2Dbias(_OpacityAddendGradient, float4(saturate(fresnelRaw), 0.5, 0, gradientLodBias)).r;
+    float opacityMul = tex2Dbias(_OpacityMultiplierGradient, float4(saturate(fresnelRaw), 0.5, 0, gradientLodBias)).r;
     commonVars.glowStrength += glowAddend;
-    commonVars.alpha = saturate(commonVars.alpha + opacityAddend);
+    commonVars.alpha = saturate(commonVars.alpha * opacityMul);
     
     float lodBias = blurFac * 8.0 - 1.0;
     float2 texUv = vertStage.uv;

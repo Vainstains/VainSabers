@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -22,6 +23,16 @@ namespace VainSabers.Menu
         private PointerBlurSet? m_rightSet;
 
         private const float DefaultLaserLength = 10f;
+
+        private static float s_lastPauseCheckTime;
+        private static bool s_lastPauseResult;
+        private static float s_lastPointerCheckTime;
+        private float m_lastHideTime;
+
+        // Registry populated by Harmony patches – no FindObjectsOfTypeAll every frame
+        internal static readonly List<VRPointer> s_vrPointers = new();
+        internal static readonly List<PauseMenuManager> s_pauseManagers = new();
+        internal static readonly List<PauseController> s_pauseControllers = new();
 
         private class PointerBlurSet
         {
@@ -54,11 +65,77 @@ namespace VainSabers.Menu
 
         private void TryFindVRPointer()
         {
-            var pointers = Resources.FindObjectsOfTypeAll<VRPointer>();
-            if (pointers.Length > 0)
-                m_vrPointer = pointers[0];
-            else
-                m_vrPointer = UnityEngine.Object.FindObjectOfType<VRPointer>();
+            // Prefer registry list (maintained by patches) – no allocation, no scene scan
+            VRPointer? best = null;
+            for (int i = 0; i < s_vrPointers.Count; i++)
+            {
+                var p = s_vrPointers[i];
+                if (p != null && p.isActiveAndEnabled)
+                {
+                    best = p;
+                    break;
+                }
+            }
+            if (best == null && s_vrPointers.Count > 0)
+                best = s_vrPointers[0];
+
+            if (best == null)
+            {
+                // Fallback for early init before Awake patch ran
+                var pointers = Resources.FindObjectsOfTypeAll<VRPointer>();
+                foreach (var p in pointers)
+                {
+                    if (p != null && p.isActiveAndEnabled) { best = p; break; }
+                }
+                if (best == null && pointers.Length > 0) best = pointers[0];
+                if (best == null) best = UnityEngine.Object.FindObjectOfType<VRPointer>();
+            }
+
+            m_vrPointer = best;
+        }
+
+        private void EnsureSetsUpToDate()
+        {
+            if (m_vrPointer == null) return;
+            var curLeft = m_vrPointer._leftVRController;
+            var curRight = m_vrPointer._rightVRController;
+            if (curLeft == null || curRight == null) return;
+
+            bool leftStale = m_leftSet == null || m_leftSet.controller != curLeft || m_leftSet.viewAnchor != curLeft.viewAnchorTransform;
+            bool rightStale = m_rightSet == null || m_rightSet.controller != curRight || m_rightSet.viewAnchor != curRight.viewAnchorTransform;
+
+            if (leftStale || rightStale)
+            {
+                // VRPointer or its controllers/viewAnchors changed (menu -> gameplay, or replay). Rebuild sets to follow current anchors.
+                if (m_leftSet != null)
+                {
+                    UnityEngine.Object.Destroy(m_leftSet.laserRoot);
+                    UnityEngine.Object.Destroy(m_leftSet.dotSaberRoot);
+                    UnityEngine.Object.Destroy(m_leftSet.hitTrackerGO);
+                    m_leftSet = null;
+                }
+                if (m_rightSet != null)
+                {
+                    UnityEngine.Object.Destroy(m_rightSet.laserRoot);
+                    UnityEngine.Object.Destroy(m_rightSet.dotSaberRoot);
+                    UnityEngine.Object.Destroy(m_rightSet.hitTrackerGO);
+                    m_rightSet = null;
+                }
+                CreateSets();
+                return;
+            }
+
+            // Same controllers but MovementTracker target may have been stale if we reused sets – ensure it points at current viewAnchor
+            if (m_leftSet != null && m_leftSet.laserTracker != null && m_leftSet.laserTracker.Target != m_leftSet.viewAnchor)
+            {
+                m_leftSet.laserTracker.Target = m_leftSet.viewAnchor;
+                m_leftSet.laserTracker.ClearHistory();
+            }
+            if (m_rightSet != null && m_rightSet.laserTracker != null && m_rightSet.laserTracker.Target != m_rightSet.viewAnchor)
+            {
+                m_rightSet.laserTracker.Target = m_rightSet.viewAnchor;
+                m_rightSet.laserTracker.ClearHistory();
+            }
         }
 
         private void CreateSets()
@@ -189,13 +266,37 @@ namespace VainSabers.Menu
 
         public void Tick()
         {
-            if (m_vrPointer == null)
+            // Refresh VRPointer only when necessary – use registry list, throttled.
+            bool needPointerCheck = false;
+            if (m_vrPointer == null || m_vrPointer.Equals(null))
+                needPointerCheck = true;
+            else if (Time.time - s_lastPointerCheckTime > 0.5f)
+                needPointerCheck = true;
+
+            if (needPointerCheck)
             {
-                TryFindVRPointer();
-                if (m_vrPointer == null) return;
-                if (m_leftSet == null || m_rightSet == null)
-                    CreateSets();
+                s_lastPointerCheckTime = Time.time;
+                VRPointer? previous = m_vrPointer;
+                if (previous == null || previous.Equals(null))
+                {
+                    TryFindVRPointer();
+                }
+                else
+                {
+                    VRPointer? active = null;
+                    for (int i = 0; i < s_vrPointers.Count; i++)
+                    {
+                        var p = s_vrPointers[i];
+                        if (p != null && p.isActiveAndEnabled) { active = p; break; }
+                    }
+                    if (active != null && active != previous)
+                        TryFindVRPointer();
+                }
             }
+
+            if (m_vrPointer == null) return;
+            EnsureSetsUpToDate();
+            if (m_leftSet == null || m_rightSet == null) return;
 
             bool blurEnabled = m_config.MenuPointerBlurEnabled;
 
@@ -203,6 +304,12 @@ namespace VainSabers.Menu
             {
                 SetBlurActive(false);
                 RestoreOriginalPointers();
+                return;
+            }
+
+            if (!m_vrPointer.isActiveAndEnabled && !IsPauseMenuActive())
+            {
+                SetBlurActive(false);
                 return;
             }
 
@@ -367,6 +474,21 @@ namespace VainSabers.Menu
         private void HideOriginalPointers()
         {
             if (m_vrPointer == null) return;
+            // Throttle – GetComponentsInChildren allocates; Harmony patches already hide each RefreshLaserPointer call.
+            // Only re-hide every 0.25s or when a renderer is unexpectedly enabled.
+            bool needHide = Time.time - m_lastHideTime > 0.25f;
+            if (!needHide)
+            {
+                var l = m_vrPointer._leftLaserPointer;
+                var r = m_vrPointer._rightLaserPointer;
+                if (l != null && l._renderer != null && l._renderer.enabled) needHide = true;
+                if (r != null && r._renderer != null && r._renderer.enabled) needHide = true;
+                var lc = m_vrPointer._leftCursorTransform;
+                var rc = m_vrPointer._rightCursorTransform;
+                // cursor checks are cheaper to skip – rely on timed throttle
+                if (!needHide) return;
+            }
+            m_lastHideTime = Time.time;
             SetLaserRendererEnabled(m_vrPointer._leftLaserPointer, false);
             SetLaserRendererEnabled(m_vrPointer._rightLaserPointer, false);
             SetCursorRenderersEnabled(m_vrPointer._leftCursorTransform, false);
@@ -413,6 +535,42 @@ namespace VainSabers.Menu
             var data = m_vrPointer._currentPointerData;
             if (data == null) return null;
             return data.pointerCurrentRaycast;
+        }
+
+        private static bool IsPauseMenuActive()
+        {
+            // No FindObjectsOfTypeAll – iterate registry lists populated by patches
+            for (int i = 0; i < s_pauseManagers.Count; i++)
+            {
+                var m = s_pauseManagers[i];
+                if (m != null && m.gameObject.activeInHierarchy && m.enabled)
+                    return true;
+            }
+            for (int i = 0; i < s_pauseControllers.Count; i++)
+            {
+                var c = s_pauseControllers[i];
+                if (c != null && c.gameObject.activeInHierarchy && c.enabled && c._paused != PauseController.PauseState.Playing)
+                    return true;
+            }
+            // Fallback throttled scan only if registry is empty (early init)
+            if (s_pauseManagers.Count == 0 && s_pauseControllers.Count == 0)
+            {
+                if (Time.time - s_lastPauseCheckTime < 0.25f)
+                    return s_lastPauseResult;
+                s_lastPauseCheckTime = Time.time;
+                try
+                {
+                    var managers = Resources.FindObjectsOfTypeAll<PauseMenuManager>();
+                    foreach (var m in managers)
+                        if (m != null && m.gameObject.activeInHierarchy && m.enabled) { s_lastPauseResult = true; return true; }
+                    var controllers = Resources.FindObjectsOfTypeAll<PauseController>();
+                    foreach (var c in controllers)
+                        if (c != null && c.gameObject.activeInHierarchy && c.enabled && c._paused != PauseController.PauseState.Playing) { s_lastPauseResult = true; return true; }
+                }
+                catch { }
+                s_lastPauseResult = false;
+            }
+            return false;
         }
 
         public void LateTick()
@@ -498,6 +656,40 @@ namespace VainSabers.Menu
                 if (rf._renderer != null) rf._renderer.enabled = false;
                 foreach (var r in rf.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
             }
+        }
+    }
+
+    // Registry patches – add each component to the static lists once, no per-frame FindObjectsOfTypeAll
+    [HarmonyPatch(typeof(VRPointer), "Awake")]
+    internal static class VRPointerRegistryPatch
+    {
+        static void Postfix(VRPointer __instance)
+        {
+            var list = MenuPointerBlurController.s_vrPointers;
+            if (!list.Contains(__instance))
+                list.Add(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(PauseMenuManager), "Awake")]
+    internal static class PauseMenuManagerRegistryPatch
+    {
+        static void Postfix(PauseMenuManager __instance)
+        {
+            var list = MenuPointerBlurController.s_pauseManagers;
+            if (!list.Contains(__instance))
+                list.Add(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(PauseController), "Start")]
+    internal static class PauseControllerRegistryPatch
+    {
+        static void Postfix(PauseController __instance)
+        {
+            var list = MenuPointerBlurController.s_pauseControllers;
+            if (!list.Contains(__instance))
+                list.Add(__instance);
         }
     }
 }

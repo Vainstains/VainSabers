@@ -863,20 +863,20 @@ class SaberEditorComponent : UIComponent
                     part.GlowAddendGradient.SetFloatKeys(glowGradient.GetFloatKeys());
                 });
             };
-        var opacityGradient = sourcePart.OpacityAddendGradient;
+        var opacityGradient = sourcePart.OpacityMultiplierGradient;
         if (opacityGradient == null || opacityGradient.Keys.Count == 0)
         {
-            opacityGradient = BlurSaberPart.CreateDefaultAddendGradient(0f);
-            sourcePart.OpacityAddendGradient = opacityGradient;
+            opacityGradient = BlurSaberPart.CreateDefaultMultiplierGradient(1f);
+            sourcePart.OpacityMultiplierGradient = opacityGradient;
         }
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Opacity").SetComponent<GradientInputComponent>().WithMode(VainSabers.UI.GradientMode.Float).WithFloatRange(-1f, 1f, 0.05f).WithGradient(opacityGradient)
+            .WithLabel("Opacity").SetComponent<GradientInputComponent>().WithMode(VainSabers.UI.GradientMode.Float).WithFloatRange(0f, 2f, 0.05f).WithGradient(opacityGradient)
             .OnGradientChanged += () =>
             {
                 ApplyToBothResolvedParts(part =>
                 {
-                    if (part.OpacityAddendGradient == opacityGradient) return;
-                    part.OpacityAddendGradient.SetFloatKeys(opacityGradient.GetFloatKeys());
+                    if (part.OpacityMultiplierGradient == opacityGradient) return;
+                    part.OpacityMultiplierGradient.SetFloatKeys(opacityGradient.GetFloatKeys());
                 });
             };
         m_materialPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
