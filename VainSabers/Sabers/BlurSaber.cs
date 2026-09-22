@@ -24,8 +24,18 @@ internal class BlurSaber : MonoBehaviour
     private Color m_gameColor = Color.white;
     private Transform m_editorPreviewTarget = null!;
     private Transform m_staticTarget = null!;
+    private bool m_suppressDefaultTrails = false;
     
     public BlurSaberData Data => m_blurSaberData!;
+
+    public void SetSuppressDefaultTrails(bool suppress)
+    {
+        m_suppressDefaultTrails = suppress;
+        if (suppress)
+            DestroyDefaultTrails();
+        else
+            RebuildTrails();
+    }
 
     private string m_currentPreset = "";
     
@@ -100,6 +110,11 @@ internal class BlurSaber : MonoBehaviour
         if (!m_blurSaberData.UseCustomTrails)
         {
             DestroyCustomTrails();
+            if (m_suppressDefaultTrails)
+            {
+                DestroyDefaultTrails();
+                return;
+            }
             EnsureDefaultTrails();
             m_defaultTipTrail.SetGameColor(m_gameColor);
             m_defaultRibbonTrail.SetGameColor(m_gameColor);
@@ -148,6 +163,11 @@ internal class BlurSaber : MonoBehaviour
 
     private void EnsureDefaultTrails()
     {
+        if (m_suppressDefaultTrails)
+        {
+            DestroyDefaultTrails();
+            return;
+        }
         if (m_defaultTipTrail == null || m_defaultRibbonTrail == null)
         {
             DestroyDefaultTrails();

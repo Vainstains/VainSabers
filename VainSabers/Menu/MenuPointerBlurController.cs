@@ -17,7 +17,11 @@ namespace VainSabers.Menu
         internal static bool IsBlurEnabled => StaticConfig != null && StaticConfig.MenuPointerBlurEnabled;
 
         private readonly PluginConfig m_config;
+        private readonly ColorSchemesSettings m_colorSchemesSettings;
         private VRPointer? m_vrPointer;
+
+        private readonly Color defaultColorLeft = new Color32(0xC8, 0x14, 0x14, 0xFF);
+        private readonly Color defaultColorRight = new Color32(0x28, 0x8E, 0xD2, 0xFF);
 
         private PointerBlurSet? m_leftSet;
         private PointerBlurSet? m_rightSet;
@@ -48,11 +52,22 @@ namespace VainSabers.Menu
             public string lastDotPreset = "";
         }
 
-        public MenuPointerBlurController(PluginConfig config)
+        public MenuPointerBlurController(PluginConfig config, ColorSchemesSettings colorSchemesSettings)
         {
             m_config = config;
+            m_colorSchemesSettings = colorSchemesSettings;
             StaticConfig = config;
         }
+
+        private (Color left, Color right) GetSaberColors()
+        {
+            var selectedColorScheme = m_colorSchemesSettings.GetOverrideColorScheme();
+            if (selectedColorScheme is null)
+                return (defaultColorLeft, defaultColorRight);
+            return (selectedColorScheme.saberAColor, selectedColorScheme.saberBColor);
+        }
+
+        private MenuStateHandler.ModPanelState m_lastPanelState;
 
         public void Initialize()
         {
@@ -61,6 +76,40 @@ namespace VainSabers.Menu
                 return;
 
             CreateSets();
+            m_lastPanelState = new MenuStateHandler.ModPanelState(false, false, "");
+            MenuStateHandler.ModPanelStateChanged += OnPanelStateChanged;
+        }
+
+        private void OnPanelStateChanged(MenuStateHandler.ModPanelState state)
+        {
+            // When exiting the editor (EditorOpen true -> false), respawn pointer presets
+            // so any edits to the dot preset file (or current saber preset if dot uses it) are reloaded.
+            bool wasEditorOpen = m_lastPanelState.EditorOpen;
+            m_lastPanelState = state;
+            if (wasEditorOpen && !state.EditorOpen)
+            {
+                RespawnPresets();
+            }
+        }
+
+        public void RespawnPresets()
+        {
+            string desired = string.IsNullOrEmpty(m_config.MenuPointerDotPreset) ? "menupointer-dot" : m_config.MenuPointerDotPreset;
+            var (colorLeft, colorRight) = GetSaberColors();
+            foreach (var set in new[] { m_leftSet, m_rightSet })
+            {
+                if (set == null || set.dotSaber == null) continue;
+                // Force reload even if preset name unchanged (file may have been overwritten by editor Save)
+                set.dotSaber.SetPreset(desired);
+                bool hasCustom = set.dotSaber.Data != null && set.dotSaber.Data.UseCustomTrails;
+                set.dotSaber.SetSuppressDefaultTrails(!hasCustom);
+                Color c = set == m_leftSet ? colorLeft : colorRight;
+                set.dotSaber.SetColor(c);
+                set.dotSaber.ClearHistoryAndResetMotion();
+                set.lastDotPreset = desired;
+            }
+            // Also refresh laser colors in case color scheme changed while editor was open
+            SyncLaserColors();
         }
 
         private void TryFindVRPointer()
@@ -162,9 +211,12 @@ namespace VainSabers.Menu
             set.laserRoot.transform.position = Vector3.zero;
             set.laserRoot.transform.rotation = Quaternion.identity;
 
+            var (colorLeft, colorRight) = GetSaberColors();
+            Color saberColor = isLeft ? colorLeft : colorRight;
+
             set.laserData = set.laserRoot.AddInitComponent<BlurSaberData>(m_config);
             set.laserData.IsLeftSaber = isLeft;
-            set.laserData.CustomColor = new Color(0f, 0.7f, 1f, 1f);
+            set.laserData.CustomColor = saberColor;
 
             set.laserTracker = set.laserRoot.AddInitComponent<MovementTracker>(viewAnchor, m_config);
 
@@ -175,7 +227,7 @@ namespace VainSabers.Menu
             set.laserPart = laserPartGO.AddComponent<BlurSaberPart>();
             set.laserPart.Config = m_config;
             AssignMaterials(set.laserPart);
-            ConfigureLaserPart(set.laserPart);
+            ConfigureLaserPart(set.laserPart, saberColor);
 
             set.hitTrackerGO = new GameObject($"MenuDotHitTracker_{(isLeft ? "Left" : "Right")}");
             set.hitTrackerGO.transform.position = viewAnchor.position + viewAnchor.forward * DefaultLaserLength;
@@ -188,6 +240,10 @@ namespace VainSabers.Menu
             set.dotSaber = set.dotSaberRoot.AddInitComponent<BlurSaber>(set.hitTrackerGO.transform, m_config);
             string dotPreset = string.IsNullOrEmpty(m_config.MenuPointerDotPreset) ? "menupointer-dot" : m_config.MenuPointerDotPreset;
             set.dotSaber.SetPreset(dotPreset);
+            // For menu pointers: use custom trails if present, but suppress default trails when no custom trails
+            bool hasCustomTrails = set.dotSaber.Data != null && set.dotSaber.Data.UseCustomTrails;
+            set.dotSaber.SetSuppressDefaultTrails(!hasCustomTrails);
+            set.dotSaber.SetColor(saberColor);
             set.lastDotPreset = dotPreset;
             set.dotSaber.ClearHistoryAndResetMotion();
 
@@ -210,16 +266,16 @@ namespace VainSabers.Menu
                 part.LitInvertedMaterial = VainSabersAssets.InvertedLitSaberMaterial;
         }
 
-        private void ConfigureLaserPart(BlurSaberPart p)
+        private void ConfigureLaserPart(BlurSaberPart p, Color saberColor)
         {
             p.GeometryHandling = BlurSaberPart.GeometryType.Simple;
             p.Length = DefaultLaserLength;
             p.StartRadius = 0.0018f;
             p.EndRadius = 0.0018f;
-            p.StartColor = new Color(0f, 0.7f, 1f, 1f);
-            p.EndColor = new Color(0f, 0.7f, 1f, 1f);
-            p.StartCustomColorWeight = 0f;
-            p.EndCustomColorWeight = 0f;
+            p.StartColor = saberColor;
+            p.EndColor = saberColor;
+            p.StartCustomColorWeight = 1f;
+            p.EndCustomColorWeight = 1f;
             p.StartGlow = 1.5f;
             p.EndGlow = 1.5f;
             p.StartOpacity = 1f;
@@ -236,6 +292,31 @@ namespace VainSabers.Menu
             p.DepthOffset = 0f;
             p.DisableGlowPass = false;
             p.DisableDepthPrepass = false;
+        }
+
+        private void SyncLaserColors()
+        {
+            var (colorLeft, colorRight) = GetSaberColors();
+            if (m_leftSet != null)
+            {
+                m_leftSet.laserData.CustomColor = colorLeft;
+                if (m_leftSet.laserPart != null)
+                {
+                    m_leftSet.laserPart.StartColor = colorLeft;
+                    m_leftSet.laserPart.EndColor = colorLeft;
+                }
+                m_leftSet.dotSaber?.SetColor(colorLeft);
+            }
+            if (m_rightSet != null)
+            {
+                m_rightSet.laserData.CustomColor = colorRight;
+                if (m_rightSet.laserPart != null)
+                {
+                    m_rightSet.laserPart.StartColor = colorRight;
+                    m_rightSet.laserPart.EndColor = colorRight;
+                }
+                m_rightSet.dotSaber?.SetColor(colorRight);
+            }
         }
 
         private static void ConfigureDotPart(BlurSaberPart p)
@@ -316,6 +397,7 @@ namespace VainSabers.Menu
             HideOriginalPointers();
 
             SyncLaserBlurFactor();
+            SyncLaserColors();
             SyncDotPresets();
 
             var raycast = GetCurrentRaycast(out var lastController, out var lastWasRight);
@@ -387,16 +469,23 @@ namespace VainSabers.Menu
         private void SyncDotPresets()
         {
             string desired = string.IsNullOrEmpty(m_config.MenuPointerDotPreset) ? "menupointer-dot" : m_config.MenuPointerDotPreset;
+            var (colorLeft, colorRight) = GetSaberColors();
             if (m_leftSet != null && m_leftSet.lastDotPreset != desired)
             {
                 m_leftSet.lastDotPreset = desired;
                 m_leftSet.dotSaber.SetPreset(desired);
+                bool hasCustom = m_leftSet.dotSaber.Data != null && m_leftSet.dotSaber.Data.UseCustomTrails;
+                m_leftSet.dotSaber.SetSuppressDefaultTrails(!hasCustom);
+                m_leftSet.dotSaber.SetColor(colorLeft);
                 m_leftSet.dotSaber.ClearHistoryAndResetMotion();
             }
             if (m_rightSet != null && m_rightSet.lastDotPreset != desired)
             {
                 m_rightSet.lastDotPreset = desired;
                 m_rightSet.dotSaber.SetPreset(desired);
+                bool hasCustom = m_rightSet.dotSaber.Data != null && m_rightSet.dotSaber.Data.UseCustomTrails;
+                m_rightSet.dotSaber.SetSuppressDefaultTrails(!hasCustom);
+                m_rightSet.dotSaber.SetColor(colorRight);
                 m_rightSet.dotSaber.ClearHistoryAndResetMotion();
             }
         }
@@ -584,6 +673,7 @@ namespace VainSabers.Menu
 
         public void Dispose()
         {
+            MenuStateHandler.ModPanelStateChanged -= OnPanelStateChanged;
             RestoreOriginalPointers();
             if (m_leftSet != null)
             {
