@@ -548,6 +548,16 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
                         : float3(0,0,1);
 
     float3 N = commonVars.normal;
+
+    #if !defined(_GEOMETRY_SPRITE) && !defined(_GEOMETRY_OBJ)
+    {
+        float3 planeN = vertStage.planeNormal.xyz;
+        // as sweep ratio increases, nudge normals towards plane normals (signed)
+        float planeSign = sign(dot(planeN, vertStage.normal));
+        N = normalize(N + planeSign * planeN * b * 0.5);
+    }
+#endif
+
     float3 V = commonVars.viewDir;
 
     float3 blade = (dot(vertStage.bladeDir.xyz, vertStage.bladeDir.xyz) > 1e-6)

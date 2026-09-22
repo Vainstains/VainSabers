@@ -15,7 +15,7 @@
       (contains Beat Saber_Data/Managed and Plugins).
 
 .PARAMETER Versions
-    List of game versions to build. Defaults to the 5 requested versions.
+    List of game versions to build. Defaults to 1.40.8 only (multi-version infra kept).
 
 .PARAMETER BSInstancesDir
     Folder that contains one sub-folder per version (BSManager default).
@@ -29,7 +29,7 @@
 
 .EXAMPLE
     .\BuildAll.ps1
-    # builds 1.29.1, 1.34.2, 1.37.1, 1.40.8, 1.42.1 using BSManager layout
+    # builds 1.40.8 using BSManager layout
 
 .EXAMPLE
     .\BuildAll.ps1 -Versions @("1.40.8") -Configuration Debug -BSInstancesDir "D:\BeatSaber\Vanilla"
@@ -40,7 +40,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string[]]$Versions = @("1.29.1", "1.34.2", "1.37.1", "1.40.8", "1.42.1"),
+    [string[]]$Versions = @("1.40.8"),
     [string]$BSInstancesDir = "C:/Users/dbasp/BSManager/BSInstances",
     [ValidateSet("Release","Debug")][string]$Configuration = "Release",
     [string]$OutputRoot = ""

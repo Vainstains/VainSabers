@@ -17,21 +17,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - gameVersion: "1.29.1"
-            bsmlUrl: "https://github.com/monkeymanboy/BeatSaberMarkupLanguage/releases/download/v1.7.0/BeatSaberMarkupLanguage-v1.7.0-RELEASE.zip"
-            siraUrl: "https://github.com/Auros/SiraUtil/releases/download/3.1.7/SiraUtil-3.1.7.zip"
-          - gameVersion: "1.34.2"
-            bsmlUrl: "https://github.com/monkeymanboy/BeatSaberMarkupLanguage/releases/download/v1.8.0/BeatSaberMarkupLanguage-v1.8.0-RELEASE.zip"
-            siraUrl: "https://github.com/Auros/SiraUtil/releases/download/3.1.7/SiraUtil-3.1.7.zip"
-          - gameVersion: "1.37.1"
-            bsmlUrl: "https://github.com/monkeymanboy/BeatSaberMarkupLanguage/releases/download/v1.11.4/BeatSaberMarkupLanguage-v1.11.4+bs.1.36.2-RELEASE.zip"
-            siraUrl: "https://github.com/Auros/SiraUtil/releases/download/3.1.7/SiraUtil-3.1.7.zip"
+          # Multi-version infrastructure kept – only 1.40.8 active for now (others need UI port, see BSVER_* directives)
+          # To re-enable: add entries for 1.29.1, 1.34.2, 1.37.1, 1.42.1 (see git history for URLs)
           - gameVersion: "1.40.8"
             bsmlUrl: "https://github.com/monkeymanboy/BeatSaberMarkupLanguage/releases/download/v1.12.5/BeatSaberMarkupLanguage-v1.12.5+bs.1.40.0-RELEASE.zip"
             siraUrl: "https://github.com/Auros/SiraUtil/releases/download/v3.2.1/SiraUtil-v3.2.1+bs.1.40.0.zip"
-          - gameVersion: "1.42.1"
-            bsmlUrl: "https://github.com/monkeymanboy/BeatSaberMarkupLanguage/releases/download/v1.14.2/BeatSaberMarkupLanguage-v1.14.2+bs.1.41.1-RELEASE.zip"
-            siraUrl: "https://github.com/Auros/SiraUtil/releases/download/v3.3.1/SiraUtil-v3.3.1+bs.1.42.0.zip"
 
     steps:
       - name: Checkout
