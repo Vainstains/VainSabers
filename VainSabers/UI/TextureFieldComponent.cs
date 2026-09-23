@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using IPA.Utilities;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using VainSabers.Config;
 using VRUIControls;
 
 namespace VainSabers.UI;
@@ -23,6 +25,10 @@ public class TextureFieldComponent : UIComponent
     private NumberInputComponent _speedInput = null!;
     private ToggleComponent _flipXToggle = null!;
     private ToggleComponent _flipYToggle = null!;
+
+    private ImageComponent _previewImage = null!;
+    private UIComponent _previewGridRoot = null!;
+    private readonly List<ImageComponent> _gridLines = new();
 
     private bool _isPopupOpen = false;
     // compact: float2 count, float3 speed+flips (y=flipX, z=flipY)
@@ -53,6 +59,7 @@ public class TextureFieldComponent : UIComponent
     public void SetOptions(IEnumerable<string> options, int selectedIndex = 0)
     {
         _dropdown.SetOptions(options, selectedIndex);
+        UpdatePreviewTexture();
     }
 
     public void SetAtlasValues(int x, int y, float speed, bool flipX = false, bool flipY = false)
@@ -74,6 +81,7 @@ public class TextureFieldComponent : UIComponent
             _flipXToggle.IsOn = _atlasSpeedFlip.y > 0.5f;
         if (_flipYToggle != null)
             _flipYToggle.IsOn = _atlasSpeedFlip.z > 0.5f;
+        RebuildPreviewGrid();
     }
 
     public TextureFieldComponent WithOptions(IEnumerable<string> options, int selectedIndex = 0)
@@ -101,6 +109,8 @@ public class TextureFieldComponent : UIComponent
         _speedInput.SetValue(_atlasSpeedFlip.x, false);
         _flipXToggle.IsOn = _atlasSpeedFlip.y > 0.5f;
         _flipYToggle.IsOn = _atlasSpeedFlip.z > 0.5f;
+        UpdatePreviewTexture();
+        RebuildPreviewGrid();
     }
 
     public void ClosePopup()
@@ -159,10 +169,9 @@ public class TextureFieldComponent : UIComponent
         _popupBlocker.Color = new Color(0, 0, 0, 0);
         _popupBlocker.OnClick += OnBlockerClicked;
         _popupBlocker.IsInteractable = false;
-
-        // popup background – centered above the field
+        
         _popupBackground = AddChild<RoundRectComponent>().ToBottomCenter().Move(0, 18f);
-        _popupBackground.SizeDelta = new Vector2(30, 26);
+        _popupBackground.SizeDelta = new Vector2(30, 55);
         _popupBackground.Color = new Color(0.09f, 0.09f, 0.09f, 1f);
         _popupBackground.IsRaycastTarget = true;
         _popupBackground.gameObject.SetActive(false);
@@ -194,6 +203,21 @@ public class TextureFieldComponent : UIComponent
         header.Color = new Color(0.85f, 0.85f, 0.85f, 1f);
         header.Text = "Atlas";
 
+        // Preview: image + grid overlay matching atlas cutting – use ImageComponent (premade, handles curved via CurvedCanvasSettingsHelper automatically)
+        var previewContainer = popupLayout.AddChild<UIComponent>();
+        previewContainer.LayoutElement.preferredHeight = 24f;
+        previewContainer.LayoutElement.flexibleHeight = 0f;
+        // Background for preview (dark checker) – RoundRectComponent handles curved via ImageView
+        var previewBg = previewContainer.AddChild<RoundRectComponent>().ToFill();
+        previewBg.Color = new Color(0.15f, 0.15f, 0.15f, 1f);
+        previewBg.IsRaycastTarget = false;
+        _previewImage = previewContainer.AddChild<ImageComponent>().ToFill().Inset(0.5f);
+        _previewImage.Color = Color.white;
+        _previewImage.PreserveAspect = false;
+        _previewGridRoot = previewContainer.AddChild<UIComponent>().ToFill();
+        // Ensure preview updates on dropdown change
+        _dropdown.OnSelectionChanged += idx => { OnSelectionChanged?.Invoke(idx); UpdatePreviewTexture(); };
+
         _xInput = popupLayout.AddChild<FieldComponent>().WithPreferredHeight(4).WithLabel("Count X").SetComponent<NumberInputComponent>()
             .WithMinMaxStep(1f, 16f, 1f).WithValue(_atlasCount.x);
         _xInput.OnValueChanged += v =>
@@ -202,6 +226,7 @@ public class TextureFieldComponent : UIComponent
             if (iv == Mathf.RoundToInt(_atlasCount.x)) return;
             _atlasCount.x = iv;
             OnAtlasXChanged?.Invoke(iv);
+            RebuildPreviewGrid();
         };
 
         _yInput = popupLayout.AddChild<FieldComponent>().WithPreferredHeight(4).WithLabel("Count Y").SetComponent<NumberInputComponent>()
@@ -212,6 +237,7 @@ public class TextureFieldComponent : UIComponent
             if (iv == Mathf.RoundToInt(_atlasCount.y)) return;
             _atlasCount.y = iv;
             OnAtlasYChanged?.Invoke(iv);
+            RebuildPreviewGrid();
         };
 
         _speedInput = popupLayout.AddChild<FieldComponent>().WithPreferredHeight(4).WithLabel("Speed (fps)").SetComponent<NumberInputComponent>()
@@ -243,5 +269,123 @@ public class TextureFieldComponent : UIComponent
             _atlasSpeedFlip.z = v ? 1f : 0f;
             OnAtlasFlipYChanged?.Invoke(v);
         };
+    }
+
+    private readonly Dictionary<string, Sprite> _previewSpriteCache = new();
+    private static Sprite _emptySprite = null!;
+    private static Sprite GetEmptySprite()
+    {
+        if (_emptySprite == null)
+        {
+            var tex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            tex.SetPixel(0, 0, Color.clear);
+            tex.Apply();
+            _emptySprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, Vector4.zero, false);
+        }
+        return _emptySprite;
+    }
+    private void UpdatePreviewTexture()
+    {
+        if (_previewImage == null) return;
+        string? selected = SelectedValue;
+        if (string.IsNullOrEmpty(selected) || selected == "None")
+        {
+            _previewImage.Sprite = GetEmptySprite();
+            _previewImage.Color = new Color(0.12f, 0.12f, 0.12f, 1f);
+            return;
+        }
+
+        if (_previewSpriteCache.TryGetValue(selected!, out var cached))
+        {
+            _previewImage.Sprite = cached;
+            _previewImage.Color = Color.white;
+            return;
+        }
+
+        string path = Path.Combine(ConfigUtil.ConfigDir, selected!);
+        if (!File.Exists(path))
+        {
+            _previewImage.Sprite = GetEmptySprite();
+            _previewImage.Color = new Color(0.12f, 0.12f, 0.12f, 1f);
+            return;
+        }
+
+        try
+        {
+            byte[] data = File.ReadAllBytes(path);
+            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            if (tex.LoadImage(data))
+            {
+                var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, Vector4.zero, false);
+                sprite.texture.wrapMode = TextureWrapMode.Clamp;
+                _previewSpriteCache[selected!] = sprite;
+                _previewImage.Sprite = sprite;
+                _previewImage.Color = Color.white;
+            }
+            else
+            {
+                UnityEngine.Object.Destroy(tex);
+                _previewImage.Sprite = GetEmptySprite();
+            }
+        }
+        catch
+        {
+            _previewImage.Sprite = GetEmptySprite();
+        }
+    }
+
+    private void RebuildPreviewGrid()
+    {
+        if (_previewGridRoot == null) return;
+        // Clear previous lines
+        for (int i = _previewGridRoot.transform.childCount - 1; i >= 0; i--)
+            UnityEngine.Object.Destroy(_previewGridRoot.transform.GetChild(i).gameObject);
+        _gridLines.Clear();
+
+        int cols = Mathf.RoundToInt(_atlasCount.x);
+        int rows = Mathf.RoundToInt(_atlasCount.y);
+        if (cols <= 1 && rows <= 1) return;
+        if (_previewGridRoot == null) return;
+
+        // Grid lines are thin ImageComponents with semi-transparent white
+        Color lineColor = new Color(1f, 1f, 1f, 0.45f);
+        // Vertical lines (x divisions)
+        for (int i = 1; i < cols; i++)
+        {
+            float t = (float)i / cols;
+            var line = _previewGridRoot.AddChild<ImageComponent>().SetAnchors(new Vector2(t, 0f), new Vector2(t, 1f)).ClearOffsets();
+            line.RectTransform.sizeDelta = new Vector2(0.2f, 0f);
+            line.Color = lineColor;
+            line.Type = Image.Type.Simple;
+            _gridLines.Add(line);
+        }
+        // Horizontal lines (y divisions)
+        for (int i = 1; i < rows; i++)
+        {
+            float t = (float)i / rows;
+            var line = _previewGridRoot.AddChild<ImageComponent>().SetAnchors(new Vector2(0f, t), new Vector2(1f, t)).ClearOffsets();
+            line.RectTransform.sizeDelta = new Vector2(0f, 0.2f);
+            line.Color = lineColor;
+            line.Type = Image.Type.Simple;
+            _gridLines.Add(line);
+        }
+
+        var borderColor = new Color(1f, 1f, 1f, 0.25f);
+    }
+
+    private void Update()
+    {
+        if (_isPopupOpen)
+        {
+            // the grid lines should fade between black and white on a sine wave, a period of 0.5s
+            float t = (Time.time % 0.5f) / 0.5f;
+            Color a = Color.black;
+            Color b = Color.white;
+            for (int i = 0; i < _gridLines.Count; i++)
+            {
+                _gridLines[i].Color = Color.Lerp(a, b, Mathf.Sin(t * Mathf.PI * 2f) * 0.5f + 0.5f);
+            }
+        }
     }
 }
