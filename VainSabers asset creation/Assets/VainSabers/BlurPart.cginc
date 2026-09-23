@@ -432,6 +432,7 @@ v2f vert (appdata_t v)
     float d = dot(offsetDir, motionDir);
 
     d *= abs(d);
+    
     float tSample = (d + 1.0) * 0.5;
     tSample = saturate(tSample);
 
@@ -549,15 +550,6 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
 
     float3 N = commonVars.normal;
 
-    #if !defined(_GEOMETRY_SPRITE) && !defined(_GEOMETRY_OBJ)
-    {
-        float3 planeN = vertStage.planeNormal.xyz;
-        // as sweep ratio increases, nudge normals towards plane normals (signed)
-        float planeSign = sign(dot(planeN, vertStage.normal));
-        N = normalize(N + planeSign * planeN * b * 0.5);
-    }
-#endif
-
     float3 V = commonVars.viewDir;
 
     float3 blade = (dot(vertStage.bladeDir.xyz, vertStage.bladeDir.xyz) > 1e-6)
@@ -656,6 +648,13 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float fresnelPerp = 1.0 - saturate(dot(Nperp, Vperp));
 
     float fresnelRaw = lerp(fresnelFull, fresnelPerp, saturate(_RimPerpendicular));
+
+    #if !defined(_GEOMETRY_SPRITE) && !defined(_GEOMETRY_OBJ)
+    {
+        float falseFresnel = saturate(1.0 - 4.0 * (sweepCoord - sweepCoord * sweepCoord));
+        fresnelRaw = lerp(fresnelRaw, falseFresnel, saturate(sweepRatio * 0.6));
+    }
+    #endif
     
     float gradientLodBias = 0.0; // fah
 
