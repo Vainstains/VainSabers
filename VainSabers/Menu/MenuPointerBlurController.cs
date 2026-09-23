@@ -14,7 +14,10 @@ namespace VainSabers.Menu
     public class MenuPointerBlurController : IInitializable, ITickable, IDisposable, ILateTickable
     {
         internal static PluginConfig? StaticConfig;
-        internal static bool IsBlurEnabled => StaticConfig != null && StaticConfig.MenuPointerBlurEnabled;
+        internal static bool ShouldHideLaser => StaticConfig != null && StaticConfig.LaserMode != LaserMode.Vanilla;
+        internal static bool ShouldHidePointer => StaticConfig != null && StaticConfig.PointerMode != PointerMode.Vanilla;
+        internal static bool ShouldHideAny => ShouldHideLaser || ShouldHidePointer;
+        internal static bool IsAnyBlurEnabled => StaticConfig != null && (StaticConfig.LaserMode == LaserMode.VainSabers || StaticConfig.PointerMode == PointerMode.VainSabers);
 
         private readonly PluginConfig m_config;
         private readonly ColorSchemesSettings m_colorSchemesSettings;
@@ -379,9 +382,11 @@ namespace VainSabers.Menu
             EnsureSetsUpToDate();
             if (m_leftSet == null || m_rightSet == null) return;
 
-            bool blurEnabled = m_config.MenuPointerBlurEnabled;
+            bool laserVanilla = m_config.LaserMode == LaserMode.Vanilla;
+            bool pointerVanilla = m_config.PointerMode == PointerMode.Vanilla;
+            bool bothVanilla = laserVanilla && pointerVanilla;
 
-            if (!blurEnabled)
+            if (bothVanilla)
             {
                 SetBlurActive(false);
                 RestoreOriginalPointers();
@@ -394,7 +399,7 @@ namespace VainSabers.Menu
                 return;
             }
 
-            HideOriginalPointers();
+            SyncOriginalVisibility();
 
             SyncLaserBlurFactor();
             SyncLaserColors();
@@ -492,53 +497,73 @@ namespace VainSabers.Menu
 
         private void UpdateSet(PointerBlurSet set, float distance, Vector3 hitPos, bool hasHit, bool active)
         {
+            bool laserBlur = m_config.LaserMode == LaserMode.VainSabers;
+            bool pointerBlur = m_config.PointerMode == PointerMode.VainSabers;
+
             if (active)
             {
-                set.laserRoot.SetActive(true);
-
-                float targetLength = hasHit ? distance : DefaultLaserLength;
-                if (Mathf.Abs(set.laserPart.Length - targetLength) > 0.001f)
-                    set.laserPart.Length = Mathf.Clamp(targetLength, 0.01f, 40f);
-
-                float targetEndOpacity = hasHit ? 1f : 0f;
-                if (Mathf.Abs(set.laserPart.EndOpacity - targetEndOpacity) > 0.001f)
-                    set.laserPart.EndOpacity = targetEndOpacity;
-
-                set.hitTrackerGO.transform.position = hitPos;
-                set.hitTrackerGO.transform.rotation = set.viewAnchor.rotation;
-
-                bool wasShowing = set.dotSaberRoot.activeSelf;
-                bool shouldShow = hasHit;
-
-                if (shouldShow)
+                if (laserBlur)
                 {
-                    if (!wasShowing)
-                    {
-                        set.hitTrackerGO.transform.position = hitPos;
-                        set.hitTrackerGO.transform.rotation = set.viewAnchor.rotation;
-                        set.dotSaber.ClearHistoryAndResetMotion();
-                    }
-                    set.dotSaberRoot.SetActive(true);
+                    set.laserRoot.SetActive(true);
+                    float targetLength = hasHit ? distance : DefaultLaserLength;
+                    if (Mathf.Abs(set.laserPart.Length - targetLength) > 0.001f)
+                        set.laserPart.Length = Mathf.Clamp(targetLength, 0.01f, 40f);
+
+                    float targetEndOpacity = hasHit ? 1f : 0f;
+                    if (Mathf.Abs(set.laserPart.EndOpacity - targetEndOpacity) > 0.001f)
+                        set.laserPart.EndOpacity = targetEndOpacity;
                 }
                 else
                 {
-                    if (wasShowing)
-                        set.dotSaber.ClearHistoryAndResetMotion();
+                    if (set.laserRoot.activeSelf)
+                        set.laserPart.ResetMotion();
+                    set.laserRoot.SetActive(false);
+                }
+
+                if (pointerBlur)
+                {
+                    set.hitTrackerGO.transform.position = hitPos;
+                    set.hitTrackerGO.transform.rotation = set.viewAnchor.rotation;
+
+                    bool wasShowing = set.dotSaberRoot.activeSelf;
+                    bool shouldShow = hasHit;
+
+                    if (shouldShow)
+                    {
+                        if (!wasShowing)
+                        {
+                            set.hitTrackerGO.transform.position = hitPos;
+                            set.hitTrackerGO.transform.rotation = set.viewAnchor.rotation;
+                            set.dotSaber.ClearHistoryAndResetMotion();
+                        }
+                        set.dotSaberRoot.SetActive(true);
+                    }
                     else
+                    {
+                        if (wasShowing)
+                            set.dotSaber.ClearHistoryAndResetMotion();
+                        else
+                            set.dotSaber.ClearHistoryAndResetMotion();
+                        set.dotSaberRoot.SetActive(false);
+                    }
+                }
+                else
+                {
+                    if (set.dotSaberRoot.activeSelf)
                         set.dotSaber.ClearHistoryAndResetMotion();
                     set.dotSaberRoot.SetActive(false);
                 }
             }
             else
             {
+                if (set.laserRoot.activeSelf)
+                    set.laserPart.ResetMotion();
                 set.laserRoot.SetActive(false);
                 if (set.dotSaberRoot.activeSelf)
                     set.dotSaber.ClearHistoryAndResetMotion();
                 set.dotSaberRoot.SetActive(false);
             }
         }
-
-        
 
         private void SetBlurActive(bool active)
         {
@@ -560,28 +585,54 @@ namespace VainSabers.Menu
             }
         }
 
-        private void HideOriginalPointers()
+        private void SyncOriginalVisibility()
         {
             if (m_vrPointer == null) return;
-            // Throttle – GetComponentsInChildren allocates; Harmony patches already hide each RefreshLaserPointer call.
-            // Only re-hide every 0.25s or when a renderer is unexpectedly enabled.
-            bool needHide = Time.time - m_lastHideTime > 0.25f;
-            if (!needHide)
+            bool laserShouldBeVisible = m_config.LaserMode == LaserMode.Vanilla;
+            bool pointerShouldBeVisible = m_config.PointerMode == PointerMode.Vanilla;
+
+            bool needSync = Time.time - m_lastHideTime > 0.25f;
+            if (!needSync)
             {
                 var l = m_vrPointer._leftLaserPointer;
                 var r = m_vrPointer._rightLaserPointer;
-                if (l != null && l._renderer != null && l._renderer.enabled) needHide = true;
-                if (r != null && r._renderer != null && r._renderer.enabled) needHide = true;
-                var lc = m_vrPointer._leftCursorTransform;
-                var rc = m_vrPointer._rightCursorTransform;
-                // cursor checks are cheaper to skip – rely on timed throttle
-                if (!needHide) return;
+                bool laserVisible = (l != null && l._renderer != null && l._renderer.enabled) || (r != null && r._renderer != null && r._renderer.enabled);
+                if (laserVisible != laserShouldBeVisible) needSync = true;
             }
+            if (!needSync) return;
             m_lastHideTime = Time.time;
-            SetLaserRendererEnabled(m_vrPointer._leftLaserPointer, false);
-            SetLaserRendererEnabled(m_vrPointer._rightLaserPointer, false);
-            SetCursorRenderersEnabled(m_vrPointer._leftCursorTransform, false);
-            SetCursorRenderersEnabled(m_vrPointer._rightCursorTransform, false);
+            SetLaserRendererEnabled(m_vrPointer._leftLaserPointer, laserShouldBeVisible);
+            SetLaserRendererEnabled(m_vrPointer._rightLaserPointer, laserShouldBeVisible);
+            SetCursorRenderersEnabled(m_vrPointer._leftCursorTransform, pointerShouldBeVisible);
+            SetCursorRenderersEnabled(m_vrPointer._rightCursorTransform, pointerShouldBeVisible);
+        }
+
+        private void HideOriginalPointers()
+        {
+            if (m_vrPointer == null) return;
+            bool laserShouldBeVisible = m_config.LaserMode == LaserMode.Vanilla;
+            bool pointerShouldBeVisible = m_config.PointerMode == PointerMode.Vanilla;
+            
+            if (!laserShouldBeVisible)
+            {
+                SetLaserRendererEnabled(m_vrPointer._leftLaserPointer, false);
+                SetLaserRendererEnabled(m_vrPointer._rightLaserPointer, false);
+            }
+            else
+            {
+                SetLaserRendererEnabled(m_vrPointer._leftLaserPointer, true);
+                SetLaserRendererEnabled(m_vrPointer._rightLaserPointer, true);
+            }
+            if (!pointerShouldBeVisible)
+            {
+                SetCursorRenderersEnabled(m_vrPointer._leftCursorTransform, false);
+                SetCursorRenderersEnabled(m_vrPointer._rightCursorTransform, false);
+            }
+            else
+            {
+                SetCursorRenderersEnabled(m_vrPointer._leftCursorTransform, true);
+                SetCursorRenderersEnabled(m_vrPointer._rightCursorTransform, true);
+            }
         }
 
         private void RestoreOriginalPointers()
@@ -664,9 +715,12 @@ namespace VainSabers.Menu
 
         public void LateTick()
         {
-            if (m_config.MenuPointerBlurEnabled)
+            if (ShouldHideAny)
             {
-                HideOriginalPointers();
+                SyncOriginalVisibility();
+            }
+            if (IsAnyBlurEnabled)
+            {
                 Shader.SetGlobalFloat("_VainSaberBlurSoftness", m_config.BlurSoftness);
             }
         }
@@ -693,38 +747,47 @@ namespace VainSabers.Menu
     [HarmonyPatch(typeof(VRPointer), "RefreshLaserPointerAndLaserHit")]
     internal static class VRPointerRefreshPatch
     {
-        static bool Prefix(VRPointer __instance, PointerEventData pointerData)
+        static void Postfix(VRPointer __instance)
         {
-            if (!MenuPointerBlurController.IsBlurEnabled)
-                return true;
-            
-            var leftLaser = __instance._leftLaserPointer;
-            var rightLaser = __instance._rightLaserPointer;
-            if (leftLaser != null)
+            if (!MenuPointerBlurController.ShouldHideAny)
+                return;
+
+            bool hideLaser = MenuPointerBlurController.ShouldHideLaser;
+            bool hidePointer = MenuPointerBlurController.ShouldHidePointer;
+
+            if (hideLaser)
             {
-                if (leftLaser._renderer != null) leftLaser._renderer.enabled = false;
-                foreach (var r in leftLaser.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
-            }
-            if (rightLaser != null)
-            {
-                if (rightLaser._renderer != null) rightLaser._renderer.enabled = false;
-                foreach (var r in rightLaser.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+                var leftLaser = __instance._leftLaserPointer;
+                var rightLaser = __instance._rightLaserPointer;
+                if (leftLaser != null)
+                {
+                    if (leftLaser._renderer != null) leftLaser._renderer.enabled = false;
+                    foreach (var r in leftLaser.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+                }
+                if (rightLaser != null)
+                {
+                    if (rightLaser._renderer != null) rightLaser._renderer.enabled = false;
+                    foreach (var r in rightLaser.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+                }
             }
 
-            var leftCursor = __instance._leftCursorTransform;
-            var rightCursor = __instance._rightCursorTransform;
-            if (leftCursor != null)
+            if (hidePointer)
             {
-                foreach (var r in leftCursor.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
-                foreach (var g in leftCursor.GetComponentsInChildren<UnityEngine.UI.Graphic>(true)) g.enabled = false;
+                var leftCursor = __instance._leftCursorTransform;
+                var rightCursor = __instance._rightCursorTransform;
+                if (leftCursor != null)
+                {
+                    foreach (var r in leftCursor.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+                    foreach (var g in leftCursor.GetComponentsInChildren<UnityEngine.UI.Graphic>(true)) g.enabled = false;
+                    foreach (var cr in leftCursor.GetComponentsInChildren<CanvasRenderer>(true)) cr.cull = true;
+                }
+                if (rightCursor != null)
+                {
+                    foreach (var r in rightCursor.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+                    foreach (var g in rightCursor.GetComponentsInChildren<UnityEngine.UI.Graphic>(true)) g.enabled = false;
+                    foreach (var cr in rightCursor.GetComponentsInChildren<CanvasRenderer>(true)) cr.cull = true;
+                }
             }
-            if (rightCursor != null)
-            {
-                foreach (var r in rightCursor.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
-                foreach (var g in rightCursor.GetComponentsInChildren<UnityEngine.UI.Graphic>(true)) g.enabled = false;
-            }
-
-            return false;
         }
     }
 
@@ -733,7 +796,7 @@ namespace VainSabers.Menu
     {
         static void Postfix(VRPointer __instance)
         {
-            if (!MenuPointerBlurController.IsBlurEnabled) return;
+            if (!MenuPointerBlurController.ShouldHideLaser) return;
             var lf = __instance._leftLaserPointer;
             var rf = __instance._rightLaserPointer;
             if (lf != null)

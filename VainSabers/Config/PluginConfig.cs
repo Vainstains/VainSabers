@@ -5,6 +5,20 @@ using UnityEngine;
 [assembly: InternalsVisibleTo(GeneratedStore.AssemblyVisibilityTarget)]
 namespace VainSabers.Config;
 
+public enum PointerMode
+{
+    Vanilla = 0,
+    VainSabers = 1,
+    None = 2
+}
+
+public enum LaserMode
+{
+    Vanilla = 0,
+    VainSabers = 1,
+    None = 2
+}
+
 public class PluginConfig
 {
     public virtual bool Enabled { get; set; } = true;
@@ -30,7 +44,8 @@ public class PluginConfig
     public virtual bool RotationSmoothingEnabled { get; set; } = false;
     public virtual float RotationSmoothingStrength { get; set; } = 0.5f;
 
-    public virtual bool MenuPointerBlurEnabled { get; set; } = false;
+    public virtual PointerMode PointerMode { get; set; } = PointerMode.Vanilla;
+    public virtual LaserMode LaserMode { get; set; } = LaserMode.Vanilla;
     public virtual float MenuPointerLaserBlurFactor { get; set; } = 1f;
     public virtual string MenuPointerDotPreset { get; set; } = "menupointer-dot";
 }
