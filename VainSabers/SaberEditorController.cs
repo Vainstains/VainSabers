@@ -130,7 +130,8 @@ internal class SaberEditorController : MonoBehaviour
             if (File.Exists(path))
                 File.Delete(path);
             MenuStateHandler.SetEditingPreset("");
-            config.CurrentSaber = "";
+            if (config.CurrentSaber == editingPreset) config.CurrentSaber = "";
+            if (config.MenuSaberPreset == editingPreset) config.MenuSaberPreset = "";
             MenuStateHandler.NotifyPresetListChanged();
             MenuStateHandler.SetEditorOpen(false);
         };
@@ -151,8 +152,10 @@ internal class SaberEditorController : MonoBehaviour
             else
                 MenuStateHandler.Sabers.right.Data.SaveToFile(newPath);
 
+            string oldName = editingPreset;
             editingPreset = newName;
-            config.CurrentSaber = newName;
+            if (config.CurrentSaber == oldName) config.CurrentSaber = newName;
+            if (config.MenuSaberPreset == oldName) config.MenuSaberPreset = newName;
             editor.ConfigTitle = $"Config : {newName}";
             MenuStateHandler.SetEditingPreset(newName);
             MenuStateHandler.NotifyPresetListChanged();

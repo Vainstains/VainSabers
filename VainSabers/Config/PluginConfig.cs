@@ -19,6 +19,13 @@ public enum LaserMode
     None = 2
 }
 
+public enum MenuPointerDisplayMode
+{
+    Vanilla = 0,
+    Saber = 1, // same saber preset as used ingame
+    Pointer = 2 // a separate saber preset chosen for the menu only
+}
+
 public class PluginConfig
 {
     public virtual bool Enabled { get; set; } = true;
@@ -30,7 +37,8 @@ public class PluginConfig
         set => _blurMS = Mathf.Clamp(value, 0, 25);
     }
     public virtual float BlurSoftness { get; set; } = 0.8f;
-    public virtual bool ActiveInMenu { get; set; } = true;
+    public virtual MenuPointerDisplayMode MenuMode { get; set; } = MenuPointerDisplayMode.Saber;
+    public virtual string MenuSaberPreset { get; set; } = "default";
     
     public virtual int TipTrailMS { get; set; } = 140;
     public virtual int BladeTrailMS { get; set; } = 60;

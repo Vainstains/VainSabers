@@ -34,6 +34,9 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         MenuStateHandler.PresetListChanged += OnPresetListChanged;
         UpdatePresetDropdown();
         m_menuSaberManager.Update(m_config.CurrentSaber);
+        
+        if (m_config.MenuMode == MenuPointerDisplayMode.Pointer)
+            m_menuSaberManager.UpdateMenuPreset(m_config.MenuSaberPreset);
     }
     
     public void Dispose()
@@ -47,8 +50,9 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
     {
         UpdatePresetDropdown();
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedPreset)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedMenuPreset)));
         m_menuSaberManager.Update(m_config.CurrentSaber);
-        UpdateEditorButton();
+        UpdateEditorButtons();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -64,6 +68,32 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         }
     }
     
+    [UIComponent("SaberPresetDropdown")]
+#pragma warning disable CS0649
+    public DropDownListSetting SaberPresetDropdown = null!;
+#pragma warning restore CS0649
+
+    [UIComponent("MenuPresetDropdown")]
+#pragma warning disable CS0649
+    public DropDownListSetting MenuPresetDropdown = null!;
+#pragma warning restore CS0649
+
+    [UIComponent("EditSaberButton")]
+#pragma warning disable CS0649
+    private HMUI.NoTransitionsButton? EditSaberButton = null;
+#pragma warning restore CS0649
+
+    [UIComponent("EditMenuButton")]
+#pragma warning disable CS0649
+    private HMUI.NoTransitionsButton? EditMenuButton = null;
+#pragma warning restore CS0649
+
+    [UIComponent("MenuPresetContainer")]
+#pragma warning disable CS0649
+    private UnityEngine.Transform? MenuPresetContainer = null;
+#pragma warning restore CS0649
+
+    // Keep legacy field for any existing BSML parse that still expects PresetDropdown/EditorButton (not used now)
     [UIComponent("PresetDropdown")]
 #pragma warning disable CS0649
     public DropDownListSetting PresetDropDown = null!;
@@ -76,18 +106,36 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
     
     internal void UpdatePresetDropdown()
     {
-        if (PresetDropDown == null)
+        var names = GetPresetNames();
+        PresetNames = names;
+        MenuPresetNames = new List<object>(names);
+
+        if (SaberPresetDropdown != null)
         {
-            return;
+            SaberPresetDropdown.Values = PresetNames;
+            SaberPresetDropdown.UpdateChoices();
+        }
+        
+        if (PresetDropDown != null)
+        {
+            PresetDropDown.Values = PresetNames;
+            PresetDropDown.UpdateChoices();
+        }
+        if (MenuPresetDropdown != null)
+        {
+            MenuPresetDropdown.Values = MenuPresetNames;
+            MenuPresetDropdown.UpdateChoices();
         }
 
-        PresetNames = GetPresetNames();
-            
-        PresetDropDown.Values = PresetNames;
-        PresetDropDown.UpdateChoices();
+        UpdateEditorButtons();
+        UpdateMenuPresetVisibility();
     }
+
     private static List<object> GetPresetNames()
     {
+        if (!Directory.Exists(Config.ConfigUtil.ConfigDir))
+            return new List<object>();
+
         var jsonFiles = Directory.GetFiles(Config.ConfigUtil.ConfigDir, "*.json");
         var vainsaberFiles = Directory.GetFiles(Config.ConfigUtil.ConfigDir, "*.vainsaber");
         var names = jsonFiles.Select(Path.GetFileNameWithoutExtension)
@@ -104,6 +152,9 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
     [UIValue("PresetNames")]
     private List<object> PresetNames = GetPresetNames();
 
+    [UIValue("MenuPresetNames")]
+    private List<object> MenuPresetNames = GetPresetNames();
+
     [UIValue("SelectedPreset")]
     private string SelectedPreset
     {
@@ -114,40 +165,98 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedPreset)));
             m_menuSaberManager.Update(value);
             MenuStateHandler.SetEditingPreset(value);
-            UpdateEditorButton();
+            UpdateEditorButtons();
         }
     }
-    
-    [UIValue("showInMenu")]
-    private bool ShowInMenu
+
+    [UIValue("SelectedMenuPreset")]
+    private string SelectedMenuPreset
     {
-        get => m_config.ActiveInMenu;
+        get => m_config.MenuSaberPreset;
         set
         {
-            m_config.ActiveInMenu = value;
-            // m_menuSaberManager.SetActive(value);
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowInMenu)));
+            m_config.MenuSaberPreset = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedMenuPreset)));
+            m_menuSaberManager.UpdateMenuPreset(value);
+            // If we are editing menu preset, keep editing target in sync?
+            // Do not change EditingPreset here unless user explicitly edits menu preset; keep separate
+            UpdateEditorButtons();
         }
     }
-    
+
+    [UIValue("menuModeChoices")]
+    private List<object> menuModeChoices = Enum.GetValues(typeof(MenuPointerDisplayMode)).Cast<object>().ToList();
+
+    [UIValue("menuMode")]
+    private MenuPointerDisplayMode menuMode
+    {
+        get => m_config.MenuMode;
+        set
+        {
+            m_config.MenuMode = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(menuMode)));
+            UpdateMenuPresetVisibility();
+            // Ensure visibility and preset update - use full SetActive with current panel state
+            m_menuSaberManager.RefreshVisibility();
+            if (value == MenuPointerDisplayMode.Pointer)
+                m_menuSaberManager.UpdateMenuPreset(m_config.MenuSaberPreset);
+            else if (value == MenuPointerDisplayMode.Saber)
+                m_menuSaberManager.Update(m_config.CurrentSaber);
+        }
+    }
+
+    private void UpdateMenuPresetVisibility()
+    {
+        if (MenuPresetContainer != null)
+        {
+            bool show = m_config.MenuMode == MenuPointerDisplayMode.Pointer;
+            MenuPresetContainer.gameObject.SetActive(show);
+        }
+    }
+
+    [UIAction("EditSaberPreset")]
+    private void EditSaberPreset()
+    {
+        if (string.IsNullOrEmpty(m_config.CurrentSaber))
+            return;
+        if (IsPresetReadOnly(m_config.CurrentSaber))
+            return;
+        MenuStateHandler.SetEditingPreset(m_config.CurrentSaber);
+        MenuStateHandler.SetEditorOpen(true);
+    }
+
+    [UIAction("EditMenuPreset")]
+    private void EditMenuPreset()
+    {
+        if (string.IsNullOrEmpty(m_config.MenuSaberPreset))
+            return;
+        if (IsPresetReadOnly(m_config.MenuSaberPreset))
+            return;
+        MenuStateHandler.SetEditingPreset(m_config.MenuSaberPreset);
+        MenuStateHandler.SetEditorOpen(true);
+    }
+
     public void ToggleEditor() => MenuStateHandler.SetEditorOpen(true);
 
     public void ToggleSettingsPanel() => MenuStateHandler.ToggleSettingsOpen();
 
-    private bool IsSelectedPresetReadOnly()
+    private bool IsPresetReadOnly(string preset)
     {
-        var preset = m_config.CurrentSaber;
         if (string.IsNullOrEmpty(preset))
             return false;
         var profile = Config.ConfigUtil.GetSaberProfile(preset);
         return profile.EndsWith(".vainsaber", StringComparison.OrdinalIgnoreCase);
     }
 
-    private void UpdateEditorButton()
+    private void UpdateEditorButtons()
     {
-        if (EditorButton == null)
-            return;
-        EditorButton.interactable = !IsSelectedPresetReadOnly();
+        if (EditSaberButton != null)
+            EditSaberButton.interactable = !IsPresetReadOnly(m_config.CurrentSaber);
+        if (EditMenuButton != null)
+            EditMenuButton.interactable = !IsPresetReadOnly(m_config.MenuSaberPreset);
+        // Legacy
+        if (EditorButton != null)
+            EditorButton.interactable = !IsPresetReadOnly(m_config.CurrentSaber);
     }
     
     [UIAction("CreateNewPreset")]
@@ -186,6 +295,9 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         _root?.AddInitComponent<MenuStateHandler>(m_config);
         _root?.AddInitComponent<SaberEditorController>(m_config);
         _root?.AddInitComponent<SaberSettingsPanelController>(m_config);
-        UpdateEditorButton();
+        UpdateEditorButtons();
+        UpdateMenuPresetVisibility();
+        // Ensure dropdown choices are populated after parse (BSML creates components after #post-parse? Do again)
+        UpdatePresetDropdown();
     }
 }

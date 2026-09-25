@@ -35,6 +35,11 @@ internal class MenuStateHandler : MonoBehaviour
     
     private static ModPanelState s_modPanelState = new ModPanelState(false, false, "");
     
+    public static ModPanelState CurrentState => s_modPanelState;
+    public static string CurrentEditingPreset => s_modPanelState.EditingPreset;
+    public static bool IsEditorOpen => s_modPanelState.EditorOpen;
+    public static bool IsConfigOpen => s_modPanelState.ConfigOpen;
+    
     public static (BlurSaber left, BlurSaber right) Sabers { get; set; }
     private void OnEnable() {
         s_modPanelState.ConfigOpen = true;

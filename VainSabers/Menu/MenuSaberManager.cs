@@ -49,9 +49,14 @@ public class MenuSaberManager : IDisposable
         var blurSaber = saberObj.AddInitComponent<BlurSaber>(parent, m_config);
         blurSaber.Data.IsLeftSaber = isLeft;
         blurSaber.ApplyZRotationOffset();
-        blurSaber.gameObject.SetActive(m_config.ActiveInMenu);
+        bool shouldShow = ShouldShowMenuSabers;
+        blurSaber.gameObject.SetActive(shouldShow);
         return blurSaber;
     }
+
+    private bool ShouldShowMenuSabers => m_config.MenuMode == MenuPointerDisplayMode.Saber || m_config.MenuMode == MenuPointerDisplayMode.Pointer;
+
+    private string ActivePreset => m_config.MenuMode == MenuPointerDisplayMode.Pointer ? m_config.MenuSaberPreset : m_config.CurrentSaber;
 
     public void ApplyZRotationOffset()
     {
@@ -65,17 +70,39 @@ public class MenuSaberManager : IDisposable
         m_rightSaber.SetColor(right);
     }
 
-    public void SetActive(bool active, bool editorOpen = false)
+    public void SetActive(bool configOpen, bool editorOpen = false)
     {
-        bool panelOpen = active;
-        active = active || m_config.ActiveInMenu;
+        bool panelOpen = configOpen;
+        bool shouldShow = ShouldShowMenuSabers;
 
-        if (Helpers.Helpers.GetIsFpfc())
+        bool active;
+        string presetToUse;
+
+        if (editorOpen)
         {
-            if (panelOpen && !editorOpen)
-                EnterStaticDisplay();
-            else
-                ExitStaticDisplay();
+            // During editing, always show the saber being edited in hand, regardless of MenuMode
+            string editingPreset = MenuStateHandler.CurrentEditingPreset;
+            if (string.IsNullOrEmpty(editingPreset))
+                editingPreset = ActivePreset;
+            if (string.IsNullOrEmpty(editingPreset))
+                editingPreset = m_config.CurrentSaber;
+            active = true;
+            presetToUse = editingPreset;
+            // Editor controls its own preview anchors for FPFC, so ensure static display is exited
+            ExitStaticDisplay();
+        }
+        else
+        {
+            active = shouldShow;
+            presetToUse = ActivePreset;
+
+            if (Helpers.Helpers.GetIsFpfc())
+            {
+                if (shouldShow && panelOpen && !editorOpen)
+                    EnterStaticDisplay();
+                else
+                    ExitStaticDisplay();
+            }
         }
 
         m_menuPointers.SetPointerVisibility(!active);
@@ -88,8 +115,14 @@ public class MenuSaberManager : IDisposable
         
         SetColor(colorLeft, colorRight);
         
-        m_leftSaber.SetPreset(m_config.CurrentSaber);
-        m_rightSaber.SetPreset(m_config.CurrentSaber);
+        if (active)
+        {
+            if (!string.IsNullOrEmpty(presetToUse))
+            {
+                m_leftSaber.SetPreset(presetToUse);
+                m_rightSaber.SetPreset(presetToUse);
+            }
+        }
     }
 
     private void EnterStaticDisplay()
@@ -134,8 +167,43 @@ public class MenuSaberManager : IDisposable
             : (selectedColorScheme.saberAColor, selectedColorScheme.saberBColor);
         
         SetColor(colorLeft, colorRight);
-        m_leftSaber.SetPreset(presetName);
-        m_rightSaber.SetPreset(presetName);
+        // Only push gameplay preset to menu sabers if menu is in Saber mode
+        if (m_config.MenuMode == MenuPointerDisplayMode.Saber)
+        {
+            m_leftSaber.SetPreset(presetName);
+            m_rightSaber.SetPreset(presetName);
+        }
+        else if (m_config.MenuMode == MenuPointerDisplayMode.Pointer)
+        {
+            // Ensure menu preset is still applied (gameplay change should not affect menu)
+            string menuPreset = m_config.MenuSaberPreset;
+            m_leftSaber.SetPreset(menuPreset);
+            m_rightSaber.SetPreset(menuPreset);
+        }
+    }
+
+    public void UpdateMenuPreset(string presetName)
+    {
+        var selectedColorScheme = m_colorSchemesSettings.GetOverrideColorScheme();
+        var (colorLeft, colorRight) = selectedColorScheme is null ? (defaultColorLeft, defaultColorRight)
+            : (selectedColorScheme.saberAColor, selectedColorScheme.saberBColor);
+        
+        SetColor(colorLeft, colorRight);
+        if (m_config.MenuMode == MenuPointerDisplayMode.Pointer)
+        {
+            m_leftSaber.SetPreset(presetName);
+            m_rightSaber.SetPreset(presetName);
+        }
+    }
+
+    public void Refresh()
+    {
+        SetActive(MenuStateHandler.IsConfigOpen, MenuStateHandler.IsEditorOpen);
+    }
+
+    public void RefreshVisibility()
+    {
+        SetActive(MenuStateHandler.IsConfigOpen, MenuStateHandler.IsEditorOpen);
     }
 
     public void NotifyColorSchemeUpdated()

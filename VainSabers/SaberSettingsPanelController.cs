@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -199,14 +200,24 @@ internal class SaberSettingsPanelComponent : UIComponent
             int dotPresetIdx = dotPresetNames.IndexOf(m_config.MenuPointerDotPreset);
             if (dotPresetIdx < 0) dotPresetIdx = dotPresetNames.IndexOf("menupointer-dot");
             if (dotPresetIdx < 0) dotPresetIdx = 0;
-            var dotPresetField = content.AddChild<FieldComponent>()
+            var dotPresetRow = content.AddChild<FieldComponent>()
                 .WithPreferredHeight(4).WithLabel("Dot Preset")
-                .SetComponent<DropdownComponent>();
-            dotPresetField.SetOptions(dotPresetNames, dotPresetIdx);
-            dotPresetField.OnSelectionChanged += idx =>
+                .SetComponent<DropdownWithEditComponent>();
+            dotPresetRow.SetOptions(dotPresetNames, dotPresetIdx);
+            dotPresetRow.OnSelectionChanged += idx =>
             {
                 if (idx >= 0 && idx < dotPresetNames.Count)
                     m_config.MenuPointerDotPreset = dotPresetNames[idx];
+            };
+            dotPresetRow.OnEditClicked += () =>
+            {
+                string preset = dotPresetRow.SelectedValue ?? m_config.MenuPointerDotPreset;
+                if (string.IsNullOrEmpty(preset)) return;
+                // Check read-only (.vainsaber)
+                var profile = ConfigUtil.GetSaberProfile(preset);
+                if (profile.EndsWith(".vainsaber", StringComparison.OrdinalIgnoreCase)) return;
+                MenuStateHandler.SetEditingPreset(preset);
+                MenuStateHandler.SetEditorOpen(true);
             };
         }
 

@@ -5,11 +5,20 @@
         <toggle-setting text="Enable VainSabers" value="modEnabled" pref-width="50" apply-on-change="true" hover-hint="Enables and disables VainSabers" />
         <button text="Refresh presets" on-click="UpdatePresetDropdown"/>
         
-        <dropdown-list-setting id="PresetDropdown" text="Saber Config" value="SelectedPreset" choices="PresetNames"
-                               bind-value="true" apply-on-change="true"/>
+        <!-- frick bsml -->
+
+        <dropdown-list-setting text="Menu Display" value="menuMode" choices="menuModeChoices" bind-value="true" apply-on-change="true" hover-hint="How sabers appear in menu: Vanilla, Same as gameplay, Separate menu preset"/>
+
+        <horizontal horizontal-fit="PreferredSize" spacing="1">
+            <dropdown-list-setting id="SaberPresetDropdown" text="Gameplay Saber" value="SelectedPreset" choices="PresetNames" bind-value="true" apply-on-change="true" pref-width="55"/>
+            <button id="EditSaberButton" text="Edit" on-click="EditSaberPreset" pref-width="20"/>
+        </horizontal>
+        <horizontal id="MenuPresetContainer" horizontal-fit="PreferredSize" spacing="1">
+            <dropdown-list-setting id="MenuPresetDropdown" text="Menu Saber" value="SelectedMenuPreset" choices="MenuPresetNames" bind-value="true" apply-on-change="true" pref-width="55"/>
+            <button id="EditMenuButton" text="Edit" on-click="EditMenuPreset" pref-width="20"/>
+        </horizontal>
+
         <button on-click="CreateNewPreset" text="Create New Preset"/>
-        <button id="EditorButton" on-click="ToggleEditor" text="Toggle Editor"/>
         <button on-click="ToggleSettingsPanel" text="Settings"/>
-        <toggle-setting text="Always show in menu" value="showInMenu" pref-width="50" apply-on-change="true" hover-hint="yeah" />
     </vertical>
 </bg>
