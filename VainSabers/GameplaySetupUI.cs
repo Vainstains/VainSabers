@@ -113,19 +113,52 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         if (SaberPresetDropdown != null)
         {
             SaberPresetDropdown.Values = PresetNames;
+            // Fix: find active preset and switch dropdown to right index after sorted insert
+            int idx = PresetNames.FindIndex(o => o.ToString() == m_config.CurrentSaber);
+            if (idx >= 0)
+            {
+                try { SaberPresetDropdown.Value = PresetNames[idx]; } catch {}
+            }
             SaberPresetDropdown.UpdateChoices();
+            // Ensure UI reflects correct value even if UpdateChoices resets it
+            if (idx >= 0)
+            {
+                try { SaberPresetDropdown.Value = PresetNames[idx]; } catch {}
+            }
         }
         
         if (PresetDropDown != null)
         {
             PresetDropDown.Values = PresetNames;
+            int idx = PresetNames.FindIndex(o => o.ToString() == m_config.CurrentSaber);
+            if (idx >= 0)
+            {
+                try { PresetDropDown.Value = PresetNames[idx]; } catch {}
+            }
             PresetDropDown.UpdateChoices();
+            if (idx >= 0)
+            {
+                try { PresetDropDown.Value = PresetNames[idx]; } catch {}
+            }
         }
         if (MenuPresetDropdown != null)
         {
             MenuPresetDropdown.Values = MenuPresetNames;
+            int idx = MenuPresetNames.FindIndex(o => o.ToString() == m_config.MenuSaberPreset);
+            if (idx >= 0)
+            {
+                try { MenuPresetDropdown.Value = MenuPresetNames[idx]; } catch {}
+            }
             MenuPresetDropdown.UpdateChoices();
+            if (idx >= 0)
+            {
+                try { MenuPresetDropdown.Value = MenuPresetNames[idx]; } catch {}
+            }
         }
+
+        // Also notify BSML binding for SelectedPreset/MenuPreset so text matches
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedPreset)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedMenuPreset)));
 
         UpdateEditorButtons();
         UpdateMenuPresetVisibility();
@@ -276,7 +309,7 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         }
         
         string presetPath = Path.Combine(Config.ConfigUtil.ConfigDir, $"{presetName}.json");
-        File.WriteAllText(presetPath, "{\"version\":1,\"parts\":[]}");
+        File.WriteAllText(presetPath, "{\"version\":2,\"parts\":[]}");
         
         Plugin.Log.Info($"Created new empty preset: {presetName} at {presetPath}");
         

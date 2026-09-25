@@ -54,7 +54,7 @@ public class MenuSaberManager : IDisposable
         return blurSaber;
     }
 
-    private bool ShouldShowMenuSabers => m_config.MenuMode == MenuPointerDisplayMode.Saber || m_config.MenuMode == MenuPointerDisplayMode.Pointer;
+    private bool ShouldShowMenuSabers => m_config.Enabled && (m_config.MenuMode == MenuPointerDisplayMode.Saber || m_config.MenuMode == MenuPointerDisplayMode.Pointer);
 
     private string ActivePreset => m_config.MenuMode == MenuPointerDisplayMode.Pointer ? m_config.MenuSaberPreset : m_config.CurrentSaber;
 

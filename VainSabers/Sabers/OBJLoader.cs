@@ -7,6 +7,10 @@ using VainSabers.Config;
 
 namespace VainSabers.Sabers
 {
+    // welp turns out version 1 presets (pre-0.0.5) messed up the z axis for obj
+    // loading, and i never noticed because I tested with symmetrical models.
+    // oh well.
+    
     internal class ObjMeshData
     {
         public Vector3[] Positions = Array.Empty<Vector3>();
@@ -20,14 +24,14 @@ namespace VainSabers.Sabers
     {
         private static readonly NumberFormatInfo Invariant = CultureInfo.InvariantCulture.NumberFormat;
 
-        public static ObjMeshData Load(string? fileName, string? embeddedBase64, string cacheKey)
+        public static ObjMeshData Load(string? fileName, string? embeddedBase64, string cacheKey, int presetVersion = 2)
         {
             if (!string.IsNullOrEmpty(embeddedBase64))
             {
                 try
                 {
                     var text = Encoding.UTF8.GetString(Convert.FromBase64String(embeddedBase64!));
-                    return Parse(text, cacheKey);
+                    return Parse(text, cacheKey, presetVersion);
                 }
                 catch (Exception ex)
                 {
@@ -54,11 +58,12 @@ namespace VainSabers.Sabers
                 return new ObjMeshData();
             }
 
-            return Parse(text2, cacheKey);
+            return Parse(text2, cacheKey, presetVersion);
         }
 
-        public static ObjMeshData Parse(string text, string cacheKey)
+        public static ObjMeshData Parse(string text, string cacheKey, int presetVersion = 2)
         {
+            bool isV1 = presetVersion <= 1;
             var positions = new List<Vector3>();
             var uvs = new List<Vector2>();
             var normals = new List<Vector3>();
@@ -82,6 +87,7 @@ namespace VainSabers.Sabers
                             && TryFloat(parts[2], out var vy)
                             && TryFloat(parts[3], out var vz))
                         {
+                            if (!isV1) vz = -vz;
                             positions.Add(new Vector3(vx, vy, vz));
                         }
                         break;
@@ -95,6 +101,7 @@ namespace VainSabers.Sabers
                             && TryFloat(parts[2], out var ny)
                             && TryFloat(parts[3], out var nz))
                         {
+                            if (!isV1) nz = -nz;
                             normals.Add(new Vector3(nx, ny, nz).normalized);
                         }
                         break;
@@ -126,6 +133,10 @@ namespace VainSabers.Sabers
             var outTriangles = new List<int>();
             var missingNormals = normals.Count == 0;
 
+            Plugin.Log.Info($"OBJ Parse: presetVersion={presetVersion} isV1={isV1} faces={faces.Count} positions={positions.Count} normals={normals.Count} cacheKey={cacheKey}");
+            if (positions.Count > 0)
+                Plugin.Log.Info($"OBJ first vertex raw: {positions[0]} isV1={isV1} -> will {(isV1 ? "negate Z" : "keep Z")}");
+
             foreach (var face in faces)
             {
                 int baseIdx = outPositions.Count;
@@ -144,9 +155,18 @@ namespace VainSabers.Sabers
                 }
                 for (int i = 1; i < face.Count - 1; i++)
                 {
-                    outTriangles.Add(baseIdx);
-                    outTriangles.Add(baseIdx + i);
-                    outTriangles.Add(baseIdx + i + 1);
+                    if (isV1)
+                    {
+                        outTriangles.Add(baseIdx);
+                        outTriangles.Add(baseIdx + i);
+                        outTriangles.Add(baseIdx + i + 1);
+                    }
+                    else
+                    {
+                        outTriangles.Add(baseIdx);
+                        outTriangles.Add(baseIdx + i + 1);
+                        outTriangles.Add(baseIdx + i);
+                    }
                 }
             }
 

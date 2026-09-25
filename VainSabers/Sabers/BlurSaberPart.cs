@@ -282,28 +282,39 @@ public enum GeometryType
             public string? Key;
         }
 
-        internal static ObjMeshData LoadObjData(string? fileName, string? embeddedBase64, ref AssetKeyCache keyCache)
+        internal static ObjMeshData LoadObjData(string? fileName, string? embeddedBase64, ref AssetKeyCache keyCache, int presetVersion = 2)
         {
+            Plugin.Log.Info($"LoadObjData: file={fileName} presetVersion={presetVersion} hasB64={!string.IsNullOrEmpty(embeddedBase64)}");
             if (string.IsNullOrEmpty(fileName) && string.IsNullOrEmpty(embeddedBase64))
                 return new ObjMeshData();
 
             if (!string.IsNullOrEmpty(embeddedBase64))
             {
                 var cacheKey = ResolveAssetKey(embeddedBase64, ref keyCache);
-                if (cacheKey.Length > 0 && s_loadedObjs.TryGetValue(cacheKey, out var cached))
+                string versionedKey = cacheKey + "|v" + presetVersion;
+                if (cacheKey.Length > 0 && s_loadedObjs.TryGetValue(versionedKey, out var cached))
+                {
+                    Plugin.Log.Info($"LoadObjData: cache hit embedded {versionedKey}");
                     return cached;
+                }
 
-                var data = OBJLoader.Load(fileName, embeddedBase64, cacheKey);
+                var data = OBJLoader.Load(fileName, embeddedBase64, versionedKey, presetVersion);
+                Plugin.Log.Info($"LoadObjData: loaded embedded {fileName} v{presetVersion} -> {data.Positions.Length} verts, first={ (data.Positions.Length>0? data.Positions[0].ToString() : "none")}");
                 if (data.Positions.Length > 0)
-                    s_loadedObjs[cacheKey] = data;
+                    s_loadedObjs[versionedKey] = data;
                 return data;
             }
 
-            var fileKey = fileName + "|" + System.IO.File.GetLastWriteTimeUtc(System.IO.Path.Combine(ConfigUtil.ConfigDir, fileName!)).Ticks;
+            var baseFileKey = fileName + "|" + System.IO.File.GetLastWriteTimeUtc(System.IO.Path.Combine(ConfigUtil.ConfigDir, fileName!)).Ticks;
+            string fileKey = baseFileKey + "|v" + presetVersion;
             if (s_loadedObjs.TryGetValue(fileKey, out var cachedFile))
+            {
+                Plugin.Log.Info($"LoadObjData: cache hit file {fileKey}");
                 return cachedFile;
+            }
 
-            var fileData = OBJLoader.Load(fileName, embeddedBase64, fileKey);
+            var fileData = OBJLoader.Load(fileName, embeddedBase64, fileKey, presetVersion);
+            Plugin.Log.Info($"LoadObjData: loaded file {fileName} v{presetVersion} -> {fileData.Positions.Length} verts, first={(fileData.Positions.Length>0? fileData.Positions[0].ToString() : "none")}");
             if (fileData.Positions.Length > 0)
                 s_loadedObjs[fileKey] = fileData;
             return fileData;
@@ -432,7 +443,8 @@ public enum GeometryType
         private int ComputeVertexObjHash()
         {
             var h = new HashCode();
-            var objData = LoadObjData(ObjFileName, ObjBase64, ref m_objKey);
+            int presetVer = m_saberData != null ? m_saberData.PresetVersion : 2;
+            var objData = LoadObjData(ObjFileName, ObjBase64, ref m_objKey, presetVer);
             h.Add(objData.CacheKey);
             h.Add(ObjScale);
             h.Add(StartColor.r); h.Add(StartColor.g); h.Add(StartColor.b);
@@ -721,7 +733,8 @@ public enum GeometryType
         private void EnsureVertexObjMesh()
         {
             if (GeometryHandling != GeometryType.Obj) return;
-            var objData = LoadObjData(ObjFileName, ObjBase64, ref m_objKey);
+            int presetVer = m_saberData != null ? m_saberData.PresetVersion : 2;
+            var objData = LoadObjData(ObjFileName, ObjBase64, ref m_objKey, presetVer);
             if (objData.Positions.Length == 0) return;
             // compute bounds for shader
             Vector3 bMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
@@ -1016,7 +1029,8 @@ public enum GeometryType
                 if (m_vertexTubeMesh != null) { DestroyImmediate(m_vertexTubeMesh); m_vertexTubeMesh = null; }
                 if (m_vertexSpriteMesh != null) { DestroyImmediate(m_vertexSpriteMesh); m_vertexSpriteMesh = null; }
 
-                var objData = LoadObjData(ObjFileName, ObjBase64, ref m_objKey);
+                int presetVer2 = m_saberData != null ? m_saberData.PresetVersion : 2;
+                var objData = LoadObjData(ObjFileName, ObjBase64, ref m_objKey, presetVer2);
                 if (objData.Positions.Length == 0)
                 {
                     if (m_vertexObjMesh != null) { DestroyImmediate(m_vertexObjMesh); m_vertexObjMesh = null; }

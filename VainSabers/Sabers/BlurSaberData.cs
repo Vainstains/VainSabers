@@ -14,6 +14,8 @@ public class BlurSaberData : MonoBehaviour
 {
     private const int CurrentVersion = 2;
 
+    public int PresetVersion { get; private set; } = CurrentVersion;
+
     private static readonly JsonSerializerSettings PresetJsonSettings = new()
     {
         Formatting = Formatting.Indented,
@@ -368,6 +370,9 @@ public class BlurSaberData : MonoBehaviour
                 Plugin.Log.Warn($"Rejected preset {path}: file version {preset.Version} is newer than supported version {CurrentVersion}");
                 return false;
             }
+
+            PresetVersion = preset.Version;
+            Plugin.Log.Info($"ImportFromJson: path={path} jsonVersion={preset.Version} -> PresetVersion set to {PresetVersion}");
 
             RemoveAllComponents();
 
@@ -979,6 +984,7 @@ public class BlurSaberData : MonoBehaviour
     private void ImportFromLegacyTxt(string path)
     {
         string[] lines = File.ReadAllLines(path);
+        PresetVersion = 1;
         RemoveAllComponents();
 
         BlurSaberPart currentPart = null!;

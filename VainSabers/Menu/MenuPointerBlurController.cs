@@ -14,10 +14,10 @@ namespace VainSabers.Menu
     public class MenuPointerBlurController : IInitializable, ITickable, IDisposable, ILateTickable
     {
         internal static PluginConfig? StaticConfig;
-        internal static bool ShouldHideLaser => StaticConfig != null && StaticConfig.LaserMode != LaserMode.Vanilla;
-        internal static bool ShouldHidePointer => StaticConfig != null && StaticConfig.PointerMode != PointerMode.Vanilla;
+        internal static bool ShouldHideLaser => StaticConfig != null && StaticConfig.Enabled && StaticConfig.LaserMode != LaserMode.Vanilla;
+        internal static bool ShouldHidePointer => StaticConfig != null && StaticConfig.Enabled && StaticConfig.PointerMode != PointerMode.Vanilla;
         internal static bool ShouldHideAny => ShouldHideLaser || ShouldHidePointer;
-        internal static bool IsAnyBlurEnabled => StaticConfig != null && (StaticConfig.LaserMode == LaserMode.VainSabers || StaticConfig.PointerMode == PointerMode.VainSabers);
+        internal static bool IsAnyBlurEnabled => StaticConfig != null && StaticConfig.Enabled && (StaticConfig.LaserMode == LaserMode.VainSabers || StaticConfig.PointerMode == PointerMode.VainSabers);
 
         private readonly PluginConfig m_config;
         private readonly ColorSchemesSettings m_colorSchemesSettings;
@@ -382,6 +382,13 @@ namespace VainSabers.Menu
             EnsureSetsUpToDate();
             if (m_leftSet == null || m_rightSet == null) return;
 
+            if (!m_config.Enabled)
+            {
+                SetBlurActive(false);
+                RestoreOriginalPointers();
+                return;
+            }
+
             bool laserVanilla = m_config.LaserMode == LaserMode.Vanilla;
             bool pointerVanilla = m_config.PointerMode == PointerMode.Vanilla;
             bool bothVanilla = laserVanilla && pointerVanilla;
@@ -588,8 +595,8 @@ namespace VainSabers.Menu
         private void SyncOriginalVisibility()
         {
             if (m_vrPointer == null) return;
-            bool laserShouldBeVisible = m_config.LaserMode == LaserMode.Vanilla;
-            bool pointerShouldBeVisible = m_config.PointerMode == PointerMode.Vanilla;
+            bool laserShouldBeVisible = !m_config.Enabled || m_config.LaserMode == LaserMode.Vanilla;
+            bool pointerShouldBeVisible = !m_config.Enabled || m_config.PointerMode == PointerMode.Vanilla;
 
             bool needSync = Time.time - m_lastHideTime > 0.25f;
             if (!needSync)
@@ -610,8 +617,8 @@ namespace VainSabers.Menu
         private void HideOriginalPointers()
         {
             if (m_vrPointer == null) return;
-            bool laserShouldBeVisible = m_config.LaserMode == LaserMode.Vanilla;
-            bool pointerShouldBeVisible = m_config.PointerMode == PointerMode.Vanilla;
+            bool laserShouldBeVisible = !m_config.Enabled || m_config.LaserMode == LaserMode.Vanilla;
+            bool pointerShouldBeVisible = !m_config.Enabled || m_config.PointerMode == PointerMode.Vanilla;
             
             if (!laserShouldBeVisible)
             {

@@ -729,19 +729,19 @@ class SaberEditorComponent : UIComponent
 
         m_partPanel.Content.AddSubHeader("Position");
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.001f).WithSensitivityCoef(0.1f)
+            .WithLabel("X").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.00025f).WithSensitivityCoef(0.1f)
             .WithTint(RedColor)
             .WithValue(referencePart.Position.x).OnValueChanged += val =>
             ApplyToBothParts(part => 
             part.Position = part.Position with { x = val });
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.001f).WithSensitivityCoef(0.1f)
+            .WithLabel("Y").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.00025f).WithSensitivityCoef(0.1f)
             .WithTint(GreenColor)
             .WithValue(referencePart.Position.y).OnValueChanged += val =>
             ApplyToBothParts(part => 
             part.Position = part.Position with { y = val });
         m_partPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
-            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.001f).WithSensitivityCoef(0.1f)
+            .WithLabel("Z").SetComponent<NumberInputComponent>().WithMinMaxStep(-1f, 1f, 0.00025f).WithSensitivityCoef(0.1f)
             .WithTint(BlueColor)
             .WithValue(referencePart.Position.z).OnValueChanged += val =>
             ApplyToBothParts(part =>     
@@ -1253,12 +1253,12 @@ class SaberEditorComponent : UIComponent
         m_geometryPanel.Content.AddSubHeader("Sprite Size");
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Width (X)").SetComponent<NumberInputComponent>()
-            .WithMinMaxStep(0.005f, 0.5f, 0.001f).WithSensitivityCoef(0.2f)
+            .WithMinMaxStep(0.001f, 0.5f, 0.001f).WithSensitivityCoef(0.2f)
             .WithValue(referencePart.SizeX).OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.SizeX = val);
         m_geometryPanel.Content.AddChild<FieldComponent>().WithPreferredHeight(4)
             .WithLabel("Height (Y)").SetComponent<NumberInputComponent>()
-            .WithMinMaxStep(0.005f, 0.5f, 0.001f).WithSensitivityCoef(0.2f)
+            .WithMinMaxStep(0.001f, 0.5f, 0.001f).WithSensitivityCoef(0.2f)
             .WithValue(referencePart.SizeY).OnValueChanged += val =>
             ApplyToBothResolvedParts(part => part.SizeY = val);
 
