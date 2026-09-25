@@ -284,7 +284,6 @@ public enum GeometryType
 
         internal static ObjMeshData LoadObjData(string? fileName, string? embeddedBase64, ref AssetKeyCache keyCache, int presetVersion = 2)
         {
-            Plugin.Log.Info($"LoadObjData: file={fileName} presetVersion={presetVersion} hasB64={!string.IsNullOrEmpty(embeddedBase64)}");
             if (string.IsNullOrEmpty(fileName) && string.IsNullOrEmpty(embeddedBase64))
                 return new ObjMeshData();
 
@@ -294,12 +293,10 @@ public enum GeometryType
                 string versionedKey = cacheKey + "|v" + presetVersion;
                 if (cacheKey.Length > 0 && s_loadedObjs.TryGetValue(versionedKey, out var cached))
                 {
-                    Plugin.Log.Info($"LoadObjData: cache hit embedded {versionedKey}");
                     return cached;
                 }
 
                 var data = OBJLoader.Load(fileName, embeddedBase64, versionedKey, presetVersion);
-                Plugin.Log.Info($"LoadObjData: loaded embedded {fileName} v{presetVersion} -> {data.Positions.Length} verts, first={ (data.Positions.Length>0? data.Positions[0].ToString() : "none")}");
                 if (data.Positions.Length > 0)
                     s_loadedObjs[versionedKey] = data;
                 return data;
@@ -309,12 +306,10 @@ public enum GeometryType
             string fileKey = baseFileKey + "|v" + presetVersion;
             if (s_loadedObjs.TryGetValue(fileKey, out var cachedFile))
             {
-                Plugin.Log.Info($"LoadObjData: cache hit file {fileKey}");
                 return cachedFile;
             }
 
             var fileData = OBJLoader.Load(fileName, embeddedBase64, fileKey, presetVersion);
-            Plugin.Log.Info($"LoadObjData: loaded file {fileName} v{presetVersion} -> {fileData.Positions.Length} verts, first={(fileData.Positions.Length>0? fileData.Positions[0].ToString() : "none")}");
             if (fileData.Positions.Length > 0)
                 s_loadedObjs[fileKey] = fileData;
             return fileData;

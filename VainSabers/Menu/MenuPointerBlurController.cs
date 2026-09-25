@@ -14,10 +14,10 @@ namespace VainSabers.Menu
     public class MenuPointerBlurController : IInitializable, ITickable, IDisposable, ILateTickable
     {
         internal static PluginConfig? StaticConfig;
-        internal static bool ShouldHideLaser => StaticConfig != null && StaticConfig.Enabled && StaticConfig.LaserMode != LaserMode.Vanilla;
-        internal static bool ShouldHidePointer => StaticConfig != null && StaticConfig.Enabled && StaticConfig.PointerMode != PointerMode.Vanilla;
+        internal static bool ShouldHideLaser => StaticConfig != null && StaticConfig.Enabled && !Helpers.Helpers.GetIsFpfc() && StaticConfig.LaserMode != LaserMode.Vanilla;
+        internal static bool ShouldHidePointer => StaticConfig != null && StaticConfig.Enabled && !Helpers.Helpers.GetIsFpfc() && StaticConfig.PointerMode != PointerMode.Vanilla;
         internal static bool ShouldHideAny => ShouldHideLaser || ShouldHidePointer;
-        internal static bool IsAnyBlurEnabled => StaticConfig != null && StaticConfig.Enabled && (StaticConfig.LaserMode == LaserMode.VainSabers || StaticConfig.PointerMode == PointerMode.VainSabers);
+        internal static bool IsAnyBlurEnabled => StaticConfig != null && StaticConfig.Enabled && !Helpers.Helpers.GetIsFpfc() && (StaticConfig.LaserMode == LaserMode.VainSabers || StaticConfig.PointerMode == PointerMode.VainSabers);
 
         private readonly PluginConfig m_config;
         private readonly ColorSchemesSettings m_colorSchemesSettings;
@@ -382,7 +382,7 @@ namespace VainSabers.Menu
             EnsureSetsUpToDate();
             if (m_leftSet == null || m_rightSet == null) return;
 
-            if (!m_config.Enabled)
+            if (!m_config.Enabled || Helpers.Helpers.GetIsFpfc())
             {
                 SetBlurActive(false);
                 RestoreOriginalPointers();

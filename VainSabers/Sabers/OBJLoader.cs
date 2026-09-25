@@ -133,10 +133,6 @@ namespace VainSabers.Sabers
             var outTriangles = new List<int>();
             var missingNormals = normals.Count == 0;
 
-            Plugin.Log.Info($"OBJ Parse: presetVersion={presetVersion} isV1={isV1} faces={faces.Count} positions={positions.Count} normals={normals.Count} cacheKey={cacheKey}");
-            if (positions.Count > 0)
-                Plugin.Log.Info($"OBJ first vertex raw: {positions[0]} isV1={isV1} -> will {(isV1 ? "negate Z" : "keep Z")}");
-
             foreach (var face in faces)
             {
                 int baseIdx = outPositions.Count;
