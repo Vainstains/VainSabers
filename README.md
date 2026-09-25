@@ -1,6 +1,6 @@
 VainSabers is a blursaber mod for beat saber, like ReeSabers but worse.
 
-![image](/images/Screenshot%202026-07-27%20224604.png)
+![image](/images/vainsabers-cover.png)
 
 This is somewhat buggy in its current state. It works well once you get it going and all configured.
 
