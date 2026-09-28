@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Drawing;
 using UnityEngine;
 using VainSabers.Config;
 using VainSabers.Menu;
