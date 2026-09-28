@@ -1003,6 +1003,8 @@ class SaberEditorComponent : UIComponent
         RebuildTrailPanel();
     }
 
+    private const int max_Anims = 4;
+
     private void BuildAnimatorsSection(BlurSaberPart referencePart)
     {
         m_partPanel.Content.AddSubHeader("Animators");
@@ -1019,6 +1021,8 @@ class SaberEditorComponent : UIComponent
         addBtn.Color = new Color(0.1f, 0.6f, 0.2f, 1.0f);
         addBtn.OnClick += () =>
         {
+            // one line looks better, anything past 4 is laggy anyways.
+            if (referencePart.Animators.Count >= max_Anims){ Plugin.Log.Info("yo you dont need that much"); return;}
             var typeIndex = typeDropdown.SelectedIndex < 0 ? 0 : typeDropdown.SelectedIndex;
             if (typeIndex >= types.Count) return;
             var created = (BlurPartAnimationModulator)Activator.CreateInstance(types[typeIndex])!;
