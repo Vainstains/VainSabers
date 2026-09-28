@@ -57,8 +57,7 @@ internal class MenuStateHandler : MonoBehaviour
     {
         if (s_modPanelState.SettingsOpen && (s_modPanelState.EditorOpen))
         {
-            Plugin.Log.Info("no no");
-            return;
+            SetSettingsOpen(false);
         }
         s_modPanelState.EditorOpen = !s_modPanelState.EditorOpen;
         Plugin.Log.Info($"Toggling saber editor state: {s_modPanelState.EditorOpen}");
@@ -69,9 +68,18 @@ internal class MenuStateHandler : MonoBehaviour
     {
         if (open && (s_modPanelState.EditorOpen || s_modPanelState.SettingsOpen))
         {
-            Plugin.Log.Info("no no");
-            return;
+            SetSettingsOpen(false);
         }
+        if (s_modPanelState.EditorOpen == open)
+            return;
+        s_modPanelState.EditorOpen = open;
+        Plugin.Log.Info($"Setting saber editor state: {s_modPanelState.EditorOpen}");
+        ModPanelStateChanged?.Invoke(s_modPanelState);
+    }
+
+    // im crying
+    public static void SetEditorDotOpen(bool open)
+    {
         if (s_modPanelState.EditorOpen == open)
             return;
         s_modPanelState.EditorOpen = open;
@@ -90,7 +98,7 @@ internal class MenuStateHandler : MonoBehaviour
         if (!s_modPanelState.SettingsOpen &&
             s_modPanelState.EditorOpen)
         {
-            Plugin.Log.Info("no no");
+            Plugin.Log.Info("no n togglke settingso");
             return;
         }
 
@@ -103,7 +111,7 @@ internal class MenuStateHandler : MonoBehaviour
     {
         if (open && s_modPanelState.EditorOpen)
         {
-            Plugin.Log.Info("no no");
+            Plugin.Log.Info("no settings");
             return;
         }
 
