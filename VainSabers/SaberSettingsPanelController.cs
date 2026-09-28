@@ -217,7 +217,8 @@ internal class SaberSettingsPanelComponent : UIComponent
                 var profile = ConfigUtil.GetSaberProfile(preset);
                 if (profile.EndsWith(".vainsaber", StringComparison.OrdinalIgnoreCase)) return;
                 MenuStateHandler.SetEditingPreset(preset);
-                MenuStateHandler.SetEditorOpen(true);
+                MenuStateHandler.SetEditorDotOpen(true);
+                MenuStateHandler.SetSettingsOpen(false);
             };
         }
 
