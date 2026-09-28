@@ -6,10 +6,17 @@ using VainSabers.Sabers;
 
 namespace VainSabers;
 
+public enum EditorReturnDestination
+{
+    Menu,
+    Settings
+}
+
 internal class MenuStateHandler : MonoBehaviour
 {
     public struct ModPanelState
     {
+        public EditorReturnDestination Destination = EditorReturnDestination.Menu;
         public bool EditorOpen = false;
         public bool ConfigOpen = false;
         public bool SettingsOpen = false;
@@ -53,38 +60,33 @@ internal class MenuStateHandler : MonoBehaviour
         ModPanelStateChanged?.Invoke(s_modPanelState);
     }
 
-    public static void ToggleEditorOpen()
+    // split this into two methods why the hell was it ever one in the first place
+    public static void OpenEditor(EditorReturnDestination? destination)
     {
-        if (s_modPanelState.SettingsOpen && (s_modPanelState.EditorOpen))
+        if (destination.HasValue)
+            s_modPanelState.Destination = destination.Value;
+        if (s_modPanelState.EditorOpen || s_modPanelState.SettingsOpen)
         {
             SetSettingsOpen(false);
         }
-        s_modPanelState.EditorOpen = !s_modPanelState.EditorOpen;
-        Plugin.Log.Info($"Toggling saber editor state: {s_modPanelState.EditorOpen}");
+        if (s_modPanelState.EditorOpen)
+            return;
+        s_modPanelState.EditorOpen = true;
+        Plugin.Log.Info($"Opening saber editor");
         ModPanelStateChanged?.Invoke(s_modPanelState);
     }
 
-    public static void SetEditorOpen(bool open)
+    public static void CloseEditor()
     {
-        if (open && (s_modPanelState.EditorOpen || s_modPanelState.SettingsOpen))
+        s_modPanelState.EditorOpen = false;
+        Plugin.Log.Info($"Closing saber editor");
+        ModPanelStateChanged?.Invoke(s_modPanelState);
+
+        if (s_modPanelState.Destination == EditorReturnDestination.Settings)
         {
-            SetSettingsOpen(false);
+            Plugin.Log.Info("Returning to settings");
+            SetSettingsOpen(true);
         }
-        if (s_modPanelState.EditorOpen == open)
-            return;
-        s_modPanelState.EditorOpen = open;
-        Plugin.Log.Info($"Setting saber editor state: {s_modPanelState.EditorOpen}");
-        ModPanelStateChanged?.Invoke(s_modPanelState);
-    }
-
-    // im crying
-    public static void SetEditorDotOpen(bool open)
-    {
-        if (s_modPanelState.EditorOpen == open)
-            return;
-        s_modPanelState.EditorOpen = open;
-        Plugin.Log.Info($"Setting saber editor state: {s_modPanelState.EditorOpen}");
-        ModPanelStateChanged?.Invoke(s_modPanelState);
     }
 
     public static void SetEditingPreset(string preset)

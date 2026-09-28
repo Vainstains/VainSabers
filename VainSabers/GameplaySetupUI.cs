@@ -255,7 +255,7 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         if (IsPresetReadOnly(m_config.CurrentSaber))
             return;
         MenuStateHandler.SetEditingPreset(m_config.CurrentSaber);
-        MenuStateHandler.SetEditorOpen(true);
+        MenuStateHandler.OpenEditor(EditorReturnDestination.Menu);
     }
 
     [UIAction("EditMenuPreset")]
@@ -266,10 +266,9 @@ public class GameplaySetupUI : IInitializable, IDisposable, INotifyPropertyChang
         if (IsPresetReadOnly(m_config.MenuSaberPreset))
             return;
         MenuStateHandler.SetEditingPreset(m_config.MenuSaberPreset);
-        MenuStateHandler.SetEditorOpen(true);
+        
+        MenuStateHandler.OpenEditor(EditorReturnDestination.Menu);
     }
-
-    public void ToggleEditor() => MenuStateHandler.SetEditorOpen(true);
 
     public void ToggleSettingsPanel() => MenuStateHandler.ToggleSettingsOpen();
 

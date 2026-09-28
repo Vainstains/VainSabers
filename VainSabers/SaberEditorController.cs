@@ -53,13 +53,13 @@ internal class SaberEditorController : MonoBehaviour
         if (!BlurSaberData.IsSupportedVersion(profilePath))
         {
             Plugin.Log.Warn($"Cannot open editor: preset '{editingPreset}' is from a newer version of VainSabers");
-            MenuStateHandler.SetEditorOpen(false);
+            MenuStateHandler.CloseEditor();
             return;
         }
         if (profilePath.EndsWith(".vainsaber", StringComparison.OrdinalIgnoreCase))
         {
             Plugin.Log.Warn($"Cannot open editor: preset '{editingPreset}' is a read-only .vainsaber export");
-            MenuStateHandler.SetEditorOpen(false);
+            MenuStateHandler.CloseEditor();
             return;
         }
         
@@ -93,13 +93,13 @@ internal class SaberEditorController : MonoBehaviour
                 MenuStateHandler.Sabers.right.SetPreset(editingPreset);
                 MenuStateHandler.Sabers.left.SetPreset(editingPreset);
             }
-            MenuStateHandler.SetEditorOpen(false);
+            MenuStateHandler.CloseEditor();
         };
         editor.OnRevert += () =>
         {
             Plugin.Log.Info("Reverting...");
-            MenuStateHandler.SetEditorOpen(false);
-            MenuStateHandler.SetEditorOpen(true);
+            MenuStateHandler.CloseEditor();
+            MenuStateHandler.OpenEditor(null);
         };
         editor.OnExit += () =>
         {
@@ -109,7 +109,7 @@ internal class SaberEditorController : MonoBehaviour
                 MenuStateHandler.Sabers.right.SetPreset(editingPreset);
                 MenuStateHandler.Sabers.left.SetPreset(editingPreset);
             }
-            MenuStateHandler.SetEditorOpen(false);
+            MenuStateHandler.CloseEditor();
         };
         editor.OnExport += () =>
         {
@@ -133,7 +133,7 @@ internal class SaberEditorController : MonoBehaviour
             if (config.CurrentSaber == editingPreset) config.CurrentSaber = "";
             if (config.MenuSaberPreset == editingPreset) config.MenuSaberPreset = "";
             MenuStateHandler.NotifyPresetListChanged();
-            MenuStateHandler.SetEditorOpen(false);
+            MenuStateHandler.CloseEditor();
         };
         editor.OnRename += newName =>
         {
