@@ -699,7 +699,7 @@ public enum GeometryType
                         else t = ringCount > 1 ? (float)r / (ringCount - 1f) : 0f;
                         return Mathf.Lerp(StartOpacity, EndOpacity, t);
                     },
-                    r => 0f);
+                    r => 0f, markEndCaps: EnableEndCaps);
             }
 
             m_vertexLastRingVerts = ringVerts;
@@ -748,6 +748,8 @@ public enum GeometryType
         {
             if (m_movementHistoryProvider == null || m_saberData == null) return;
             var localPose = transform.GetPose().TransformPose(m_movementHistoryProvider.transform.worldToLocalMatrix);
+            bool fadeRearCap = TryGetRearCap(out float capPosition, out float rearCap) && m_saberData.IsLowestRearCap(capPosition);
+            m_propertyBlock.SetFloat("_VertexRearCap", fadeRearCap ? rearCap : 0f);
             var samples = SampleBlurPoses();
             var localPoseMat = localPose.AsMatrix();
             var wtl = transform.worldToLocalMatrix;
@@ -759,6 +761,25 @@ public enum GeometryType
                 m_vertexHistFwd[i] = sample.forward;
                 m_vertexHistUp[i] = sample.up;
             }
+        }
+
+        internal bool TryGetRearCap(out float position, out float selector)
+        {
+            position = 0f;
+            selector = 0f;
+            if (!isActiveAndEnabled || GeometryHandling != GeometryType.Simple || !EnableEndCaps || !ShouldRenderOnCurrentSaber())
+                return false;
+
+            float originZ = transform.localPosition.z;
+            float forwardZ = (transform.localRotation * Vector3.forward).z;
+            float startZ = originZ - StartRadius * 0.25f * EndCapExtension * forwardZ;
+            float endZ = originZ + (Length + EndRadius * 0.25f * EndCapExtension) * forwardZ;
+            position = Mathf.Min(startZ, endZ);
+            if (position >= -0.002f || Mathf.Approximately(startZ, endZ))
+                return false;
+
+            selector = startZ < endZ ? -1f : 1f;
+            return true;
         }
 
         private void Start()
@@ -943,7 +964,6 @@ public enum GeometryType
                 m_propertyBlock.SetVectorArray("_HistFwd", m_vertexHistFwd);
                 m_propertyBlock.SetVectorArray("_HistUp", m_vertexHistUp);
                 m_propertyBlock.SetFloat("_VertexBlurFade", BlurFadeFactor);
-                m_propertyBlock.SetFloat("_VertexIsMenuPointer", m_saberData.IsMenuPointer ? 1f : 0f);
                 m_propertyBlock.SetFloat("_VertexHueShift", m_modulatableParams.HueShift);
                 var cc = m_saberData != null ? m_saberData.CustomColor : Color.white;
                 m_propertyBlock.SetVector("_VertexCustomColor", new Vector4(cc.r, cc.g, cc.b, 1f));

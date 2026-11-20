@@ -218,7 +218,6 @@ namespace VainSabers.Menu
             Color saberColor = isLeft ? colorLeft : colorRight;
 
             set.laserData = set.laserRoot.AddInitComponent<BlurSaberData>(m_config);
-            set.laserData.IsMenuPointer = true;
             set.laserData.IsLeftSaber = isLeft;
             set.laserData.CustomColor = saberColor;
 
@@ -242,7 +241,6 @@ namespace VainSabers.Menu
             set.dotSaberRoot.transform.rotation = Quaternion.identity;
 
             set.dotSaber = set.dotSaberRoot.AddInitComponent<BlurSaber>(set.hitTrackerGO.transform, m_config);
-            set.dotSaber.Data.IsMenuPointer = true;
             string dotPreset = string.IsNullOrEmpty(m_config.MenuPointerDotPreset) ? "menupointer-dot" : m_config.MenuPointerDotPreset;
             set.dotSaber.SetPreset(dotPreset);
             // For menu pointers: use custom trails if present, but suppress default trails when no custom trails

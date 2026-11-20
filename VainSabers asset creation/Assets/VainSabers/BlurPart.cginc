@@ -7,7 +7,7 @@ float4 _HistPos[GPU_HIST_COUNT];
 float4 _HistFwd[GPU_HIST_COUNT];
 float4 _HistUp[GPU_HIST_COUNT];
 float _VertexBlurFade;
-float _VertexIsMenuPointer;
+float _VertexRearCap;
 float _VertexHueShift;
 float3 _VertexCustomColor;
 float _VertexGlowMul;
@@ -34,14 +34,14 @@ struct appdata_t {
     float4 color  : COLOR;
     float2 uv : TEXCOORD0;
     float4 dataC : TEXCOORD1;    // tube: x=customWeight y=opacity  sprite/obj: x=customWeight y=opacity
-    float2 dataD : TEXCOORD2;    // x marks the OBJ sweep mesh
+    float2 dataD : TEXCOORD2;    // x marks the OBJ sweep mesh, y identifies a tube end cap
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
 struct v2f {
     float4 vertex   : SV_POSITION;
     float2 uv       : TEXCOORD0;
-    float3 motionDir : TEXCOORD1;
+    float3 motionDir : TEXCOORD1; // sprite motion direction or tube cap flag and travel
     float3 normal   : TEXCOORD2;
     float4 color : TEXCOORD3;
     float3 worldPos  : TEXCOORD4;
@@ -480,6 +480,8 @@ v2f vert (appdata_t v)
     o.worldPos = worldPos;
     o.bladeDir = float4(worldBlade, opacity);
     o.exposure = float3(tSample, travel * max(0.0, _VertexBlurFade), ringT);
+    float rearCap = abs(_VertexRearCap) > 0.5 && abs(v.dataD.y - _VertexRearCap) < 0.5 ? 1.0 : 0.0;
+    o.motionDir = float3(rearCap, travel, 0.0);
     return o;
 #endif
 }
@@ -528,33 +530,33 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float coverage = rsqrt(1.0 + 1.8 * projectedTravel);
     float edgeWidth = lerp(0.19, 0.40, saturate(projectedTravel * 0.18));
     float pixelWidth = fwidth(age);
+    float shutter = smoothstep(0.0, max(edgeWidth, pixelWidth), min(1.4 * age, 1.0 - age));
+
+#if defined(_GEOMETRY_OBJ)
+    float leadingWidth = clamp(0.42 / (1.0 + projectedTravel), 0.023, 0.16);
+    float leading = smoothstep(-0.25 * pixelWidth, max(leadingWidth, 1.35 * pixelWidth), age);
+    float trailing = smoothstep(0.0, max(edgeWidth, pixelWidth), 1.0 - age);
+    shutter = leading * trailing;
+    float nearModel = 1.0 - smoothstep(leadingWidth, max(0.10, 4.0 * leadingWidth), age);
+    coverage = lerp(coverage, max(coverage, 0.24), nearModel * blurMix);
+#endif
+    shutter *= 1.0 - 0.55 * age * age;
+    coverage *= shutter;
 
 #if defined(_GEOMETRY_SPRITE)
-    float shutter = smoothstep(0.0, max(edgeWidth, pixelWidth), min(1.4 * age, 1.0 - age));
     float2 border = min(vertStage.uv, 1.0 - vertStage.uv);
     float2 endWidth = max(float2(0.085, 0.085), fwidth(vertStage.uv));
     float2 endFade = smoothstep(0.0, endWidth, border);
     coverage *= endFade.x * endFade.y;
 #else
-    // Keep the leading fade narrow as the sweep grows, so it stays joined to the current pose.
-    float leadingWidth = clamp(0.42 / (1.0 + projectedTravel), 0.023, 0.16);
-    float leading = smoothstep(-0.25 * pixelWidth, max(leadingWidth, 1.35 * pixelWidth), age);
-    float trailing = smoothstep(0.0, max(edgeWidth, pixelWidth), 1.0 - age);
-    float pointerShutter = smoothstep(0.0, max(edgeWidth, pixelWidth), min(1.4 * age, 1.0 - age));
-    float shutter = lerp(leading * trailing, pointerShutter, _VertexIsMenuPointer);
-    float nearBlade = 1.0 - smoothstep(leadingWidth, max(0.10, 4.0 * leadingWidth), age);
-    coverage = lerp(coverage, max(coverage, 0.24), nearBlade * blurMix * (1.0 - _VertexIsMenuPointer));
-
-    float along = saturate(vertStage.exposure.z);
+    float along = vertStage.exposure.z;
     float pixelLength = fwidth(along);
     float endWidth = lerp(0.07, 0.16, saturate(projectedTravel * 0.18));
     coverage *= smoothstep(0.0, max(endWidth * 0.45, pixelLength), along)
                 * smoothstep(0.0, max(endWidth, pixelLength), 1.0 - along);
 #endif
-    coverage *= shutter * (1.0 - 0.55 * age * age);
-
 #if defined(_GEOMETRY_OBJ)
-    float exposureCoverage = motionSurface > 0.5 ? coverage * blurMix : lerp(1.0, 0.64, blurMix);
+    float exposureCoverage = motionSurface > 0.5 ? coverage * blurMix : lerp(1.0, 0.24, blurMix);
 #else
     float exposureCoverage = lerp(1.0, coverage, blurMix);
 #endif
@@ -572,6 +574,14 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     commonVars.rimFactor = 1.0 + tex2D(_RimPowerGradient, gradientUV).r * lerp(1.0, 0.40, blurMix);
     commonVars.glowStrength = _Glow * vertStage.color.a + tex2D(_GlowAddendGradient, gradientUV).r;
     float baseOpacity = saturate(vertStage.bladeDir.w);
+#if !defined(_GEOMETRY_SPRITE) && !defined(_GEOMETRY_OBJ)
+    if (vertStage.motionDir.x > 0.5)
+    {
+        float capFade = 1.0 - smoothstep(0.10, 0.80, vertStage.motionDir.y);
+        clip(capFade - 1e-4);
+        baseOpacity *= capFade;
+    }
+#endif
     float opacity = baseOpacity * sqrt(baseOpacity) * exposureCoverage;
     commonVars.alpha = saturate(opacity * tex2D(_OpacityMultiplierGradient, gradientUV).r);
 
