@@ -44,7 +44,7 @@ struct v2f {
 #if defined(_GEOMETRY_SPRITE)
     float3 motionDir : TEXCOORD1;
 #elif !defined(_GEOMETRY_OBJ)
-    float2 bladeContact : TEXCOORD1; // geometric travel in blade widths, forward-blade weight
+    float2 bladeSweep : TEXCOORD1; // geometric travel in blade widths, continuous sweep weight
 #endif
     float3 normal   : TEXCOORD2;
     float4 color : TEXCOORD3;
@@ -167,6 +167,20 @@ void SampleHistory(float age, out float3 pos, out float3 fwd, out float3 up)
     pos = lerp(_HistPos[newer].xyz, _HistPos[older].xyz, weight);
     fwd = NormalizeOr(lerp(_HistFwd[newer].xyz, _HistFwd[older].xyz, weight), _HistFwd[newer].xyz);
     up = NormalizeOr(lerp(_HistUp[newer].xyz, _HistUp[older].xyz, weight), _HistUp[newer].xyz);
+}
+
+// Bound the middle control point in the direction of travel. The sweep can still
+// curve around the hand, but cannot double back across its own screen footprint.
+float3 OrderedSweepOffset(float3 chord, float3 midpoint, float3 axis, float age)
+{
+    float3 halfChord = 0.5 * chord;
+    float3 bend = 2.0 * (midpoint - halfChord);
+    float bendLimit = 0.35 * length(chord);
+    bend *= min(1.0, bendLimit * rsqrt(max(dot(bend, bend), 1e-8)));
+    float lateralLimit = 0.4 * max(0.0, dot(chord, axis));
+    float lateralBend = dot(bend, axis);
+    bend += axis * (clamp(lateralBend, -lateralLimit, lateralLimit) - lateralBend);
+    return age * chord + (2.0 * age * (1.0 - age)) * bend;
 }
 
 v2f vert (appdata_t v)
@@ -441,28 +455,52 @@ v2f vert (appdata_t v)
     float sweepAmount = smoothstep(0.05, 0.75, travel);
 
     float3 currentOffset = signVal * cosTheta * fUp0 + sinTheta * fRight0;
-    float3 averageOffset = signVal * cosTheta * avgUp + sinTheta * avgRight;
-    float3 offsetDir = NormalizeOr(lerp(currentOffset, averageOffset, sweepAmount), currentOffset);
-    // Parameterize the visible width along the same axis as the exposure.
-    // This keeps the mesh and the fade aligned on fast, oblique swings.
     float3 sweepDir = projectedDistance > 1e-4 ? sweep / projectedDistance : avgRight;
-    float tSample = saturate(0.5 + 0.5 * dot(offsetDir, sweepDir));
     float saberZ = _VertexBladeAxis.x + zPos * _VertexBladeAxis.y;
-    float bladeContact = _VertexBladeAxis.z * smoothstep(0.025, 0.05, saberZ);
-    // The sweep can pass between two ring vertices, skipping the current pose on coarse meshes.
-    float radialProjection = length(float2(dot(avgUp, sweepDir), dot(avgRight, sweepDir)));
-    float firstAge = 0.5 * (1.0 - saturate(radialProjection * v.dataD.x));
-    firstAge *= bladeContact * sweepAmount;
-    tSample = saturate((tSample - firstAge) / (1.0 - firstAge));
+    float sweepWeight = _VertexBladeAxis.z * smoothstep(0.025, 0.05, saberZ) * sweepAmount;
+    float3 offsetDir = currentOffset;
+    float3 sFwd = fFwd0;
+    float3 ringCenter = firstCenter;
+    float tSample = 0.5;
+    float sweepTravel = 0.0;
 
-    float3 sPos, sFwd, sUp;
-    float transverseFraction = saturate(transverseDistance / max(length(motionVec), 1e-4));
-    float historySpan = transverseFraction * sweepAmount;
-    SampleHistory(tSample * historySpan, sPos, sFwd, sUp);
-    float3 sRight = NormalizeOr(cross(sUp, sFwd), avgRight);
-    sUp = cross(sFwd, sRight);
+    if (sweepWeight < 1.0)
+    {
+        float3 averageOffset = signVal * cosTheta * avgUp + sinTheta * avgRight;
+        offsetDir = NormalizeOr(lerp(currentOffset, averageOffset, sweepAmount), currentOffset);
+        tSample = saturate(0.5 + 0.5 * dot(offsetDir, sweepDir));
+        float transverseFraction = saturate(transverseDistance / max(length(motionVec), 1e-4));
+        float3 sPos, sUp;
+        SampleHistory(tSample * transverseFraction * sweepAmount, sPos, sFwd, sUp);
+        float3 sRight = NormalizeOr(cross(sUp, sFwd), avgRight);
+        sUp = cross(sFwd, sRight);
+        ringCenter = sPos + sFwd * zPos + sRight * offX + sUp * offY;
+    }
 
-    float3 ringCenter = sPos + sFwd * zPos + sRight * offX + sUp * offY;
+    if (sweepWeight > 0.0)
+    {
+        // Use the same coordinate for the geometry and exposure. Remove the
+        // angular spacing of the ring so sparse meshes reach both endpoints.
+        float support = length(float2(dot(fUp0, sweepDir), dot(fRight0, sweepDir)));
+        float age = saturate(0.5 + 0.5 * dot(currentOffset, sweepDir) / max(support * v.dataD.x, 1e-4));
+        float3 midPos, midFwd, midUp;
+        SampleHistory(0.5, midPos, midFwd, midUp);
+        float3 midRight = NormalizeOr(cross(midUp, midFwd), fRight0);
+        midUp = cross(midFwd, midRight);
+        float3 midCenter = midPos + midFwd * zPos + midRight * offX + midUp * offY;
+        float span = saturate(projectedDistance / max(length(motionVec), 1e-4));
+        float3 chord = sweep + (motionVec - sweep) * span;
+        float3 midpoint = midCenter - firstCenter;
+        float3 midpointAcross = sweepDir * dot(midpoint, sweepDir);
+        midpoint = lerp(midpointAcross, midpoint, span);
+        float3 curvedCenter = firstCenter + OrderedSweepOffset(chord, midpoint, sweepDir, age);
+        ringCenter = lerp(ringCenter, curvedCenter, sweepWeight);
+        offsetDir = NormalizeOr(lerp(offsetDir, currentOffset, sweepWeight), currentOffset);
+        sFwd = NormalizeOr(lerp(sFwd, lerp(fFwd0, lFwd0, age * span), sweepWeight), fFwd0);
+        tSample = lerp(tSample, age, sweepWeight);
+        sweepTravel = travel;
+    }
+
     float3 vertexPos = ringCenter + offsetDir * (isZeroFlag > 0.5 ? 0 : radiusAbs);
 
     float3 normal = signVal * offsetDir;
@@ -499,7 +537,7 @@ v2f vert (appdata_t v)
     o.worldPos = worldPos;
     o.bladeDir = float4(worldBlade, opacity);
     o.exposure = float3(tSample, travel * max(0.0, _VertexBlurFade), ringT);
-    o.bladeContact = float2(travel * historySpan, bladeContact);
+    o.bladeSweep = float2(sweepTravel, sweepWeight);
     return o;
 #endif
 }
@@ -549,14 +587,7 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float edgeWidth = lerp(0.19, 0.40, saturate(projectedTravel * 0.18));
     float pixelWidth = fwidth(age);
     float fadeWidth = max(edgeWidth, pixelWidth);
-    float leadingAge = 1.4 * age;
-#if !defined(_GEOMETRY_OBJ) && !defined(_GEOMETRY_SPRITE)
-    // Keep the fade next to the live blade within roughly one blade width as the sweep grows.
-    float contactWidth = min(edgeWidth, 1.4 / (1.0 + vertStage.bladeContact.x));
-    float leadingWidth = lerp(edgeWidth, contactWidth, vertStage.bladeContact.y);
-    leadingAge *= fadeWidth / max(leadingWidth, pixelWidth);
-#endif
-    float shutter = smoothstep(0.0, fadeWidth, min(leadingAge, 1.0 - age));
+    float shutter = smoothstep(0.0, fadeWidth, min(1.4 * age, 1.0 - age));
 
 #if defined(_GEOMETRY_OBJ)
     float leadingWidth = clamp(0.42 / (1.0 + projectedTravel), 0.023, 0.16);
@@ -568,6 +599,15 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
 #endif
     shutter *= 1.0 - 0.55 * age * age;
     coverage *= shutter;
+
+#if !defined(_GEOMETRY_OBJ) && !defined(_GEOMETRY_SPRITE)
+    float footprint = rcp(1.0 + vertStage.bladeSweep.x);
+    float frontWidth = max(1.5 * pixelWidth, min(0.30, 1.4 * footprint));
+    float rearWidth = max(2.0 * pixelWidth, max(0.34, 2.0 * footprint));
+    float exposure = smoothstep(0.0, frontWidth, age) * (1.0 - smoothstep(1.0 - rearWidth, 1.0, age));
+    float sweepCoverage = exposure * rsqrt(1.0 + 2.4 * projectedTravel);
+    coverage = lerp(coverage, sweepCoverage, vertStage.bladeSweep.y);
+#endif
 
 #if defined(_GEOMETRY_SPRITE)
     float2 border = min(vertStage.uv, 1.0 - vertStage.uv);
