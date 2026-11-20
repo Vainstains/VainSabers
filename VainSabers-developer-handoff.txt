@@ -8,10 +8,8 @@ A swing toward the camera could make the blade almost disappear in the middle. T
 
 At high speeds, the history window could include both directions of a reversal, creating a second, sharp wedge. The fix uses the latest continuous segment, caps extreme sweep distance, and resamples that segment into the existing pose buffer. The default blade ribbon also fades in across the overlap window in both its color and glow passes.
 
-The grip used to leave its own transparent sweep. The shader now holds geometry behind the grip at the current pose and feathers any blade sweep that would extend through the grip plane.
-
 OBJ vertices now use both position and rotation from each sampled pose. The shader measures the translation and angular motion visible on screen, then feathers the resulting sweep along both visible axes. Shared positions use the same sample age at normal and UV seams.
 
-I verified stationary, sideways, head-on, fast, and reversing swings in Unity with Direct3D 11. The head-on center matched the stationary blade in the controlled render, the duplicate wedge disappeared on reversal, and the blade sweep stayed above the grip plane. A test OBJ stayed sharp at rest and in depth-only motion, then developed soft edges during both lateral translation and rotation. The Release build targets Beat Saber 1.40.8. In-headset behavior, VR frame timing, and a direct ReeSabers comparison still need testing.
+I verified stationary, sideways, head-on, fast, and reversing swings in Unity with Direct3D 11. The head-on center matched the stationary blade in the controlled render, and the duplicate wedge disappeared on reversal. A test OBJ stayed sharp at rest and in depth-only motion, then developed soft edges during both lateral translation and rotation. The Release build targets Beat Saber 1.40.8. In-headset behavior, VR frame timing, and a direct ReeSabers comparison still need testing.
 
 The changes are in BlurPart.cginc, BlurSaberPart.cs, BlurMotionHistory.cs, and the blade ribbon code and shader. After applying the changes, rebuild vs_assets with BuildAssetBundles.bat, then rebuild the mod to embed the shaders in VainSabers.dll.

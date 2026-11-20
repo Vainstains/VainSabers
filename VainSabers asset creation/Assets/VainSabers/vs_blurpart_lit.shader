@@ -8,7 +8,6 @@
         _Smoothness ("Smoothness", Range(0,1)) = 0
         _ColorBoost ("RGB Multiplier", Range(0,4)) = 1
         _Glow ("Glow", Range(0,1)) = 0.5
-        [HideInInspector] _GripBlurPlane ("Grip Blur Plane", Vector) = (0,0,0,1)
         _DepthOffset("Depth Offset", Float) = 0.0
         _ColorTex ("Color", 2D) = "white" {}
         _GlowTex ("Glow Texture", 2D) = "white" {}

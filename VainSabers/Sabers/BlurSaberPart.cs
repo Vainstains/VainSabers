@@ -33,7 +33,6 @@ public enum GeometryType
         }
 
         private const int SampleCount = 8;
-        private static readonly int GripBlurPlaneId = Shader.PropertyToID("_GripBlurPlane");
         private readonly Pose[] m_poseSamples = new Pose[SampleCount];
         private int RingCount =>
             GeometryHandling == GeometryType.Advanced
@@ -764,15 +763,6 @@ public enum GeometryType
             var samples = SampleBlurPoses();
             var localPoseMat = localPose.AsMatrix();
             var wtl = transform.worldToLocalMatrix;
-            var gripPlane = new Vector4(0f, 0f, 0f, 1f);
-            if (m_saberData.KeepGripUnblurred)
-            {
-                Vector3 grip = wtl.MultiplyPoint3x4(samples[0].position);
-                Vector3 bladeDirection = transform.localToWorldMatrix.transpose.MultiplyVector(samples[0].forward).normalized;
-                gripPlane = new Vector4(bladeDirection.x, bladeDirection.y, bladeDirection.z,
-                    -Vector3.Dot(bladeDirection, grip));
-            }
-            m_propertyBlock.SetVector(GripBlurPlaneId, gripPlane);
             for (int i = 0; i < samples.Length; i++)
             {
                 var combined = wtl * samples[i].AsMatrix() * localPoseMat;

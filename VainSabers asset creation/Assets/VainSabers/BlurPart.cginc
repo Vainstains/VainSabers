@@ -7,7 +7,6 @@ float4 _HistPos[GPU_HIST_COUNT];
 float4 _HistFwd[GPU_HIST_COUNT];
 float4 _HistUp[GPU_HIST_COUNT];
 float _VertexBlurFade;
-float4 _GripBlurPlane;
 float _VertexHueShift;
 float3 _VertexCustomColor;
 float _VertexGlowMul;
@@ -151,19 +150,6 @@ float3 ProjectOnViewPlane(float3 motion, float3 view)
     return motion - view * dot(motion, view);
 }
 
-float3 LimitGripSweep(float3 currentPos, float3 sweptPos, out float bladeWeight, out float visibility)
-{
-    float currentDistance = dot(_GripBlurPlane.xyz, currentPos) + _GripBlurPlane.w;
-    // Keep the handle at the current pose and ease into the sweep on the blade side.
-    bladeWeight = smoothstep(0.0, 0.025, currentDistance);
-    float3 position = lerp(currentPos, sweptPos, bladeWeight);
-    float distance = dot(_GripBlurPlane.xyz, position) + _GripBlurPlane.w;
-    // Feather the part of a moving blade that would cross the guard plane.
-    float edgeWidth = clamp(currentDistance, 1e-4, 0.022);
-    visibility = lerp(1.0, smoothstep(0.0, edgeWidth, distance), bladeWeight);
-    return position + _GripBlurPlane.xyz * max(0.0, min(0.0, currentDistance) - distance);
-}
-
 // The CPU provides evenly timed poses. Interpolate here so nearby vertices
 // cannot snap to different poses at the same history bin boundary.
 void SampleHistory(float age, out float3 pos, out float3 fwd, out float3 up)
@@ -248,14 +234,12 @@ v2f vert (appdata_t v)
     float3 sPos, sFwd, sUp;
     SampleHistory(tSample, sPos, sFwd, sUp);
 
-    float3 currentPos = fPos0 + fRight0 * localX + fUp0 * localY;
-    float bladeWeight, gripVisibility;
-    float3 vertexPos = LimitGripSweep(currentPos, sPos + offset, bladeWeight, gripVisibility);
+    float3 vertexPos = sPos + offset; // CPU style: sample pos + bent offset (keeps shape rigid)
 
     // FIX normals: geometric normal is bentPlane * sign, not constant
-    float3 localNormal = lerp(fFwd0, bentPlane, bladeWeight) * signVal;
+    float3 localNormal = bentPlane * signVal;
     float3 worldNormal = UnityObjectToWorldNormal(localNormal);
-    float3 worldBlade = UnityObjectToWorldNormal(lerp(fFwd0, sFwd, bladeWeight));
+    float3 worldBlade = UnityObjectToWorldNormal(sFwd);
 
     o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
     o.vertex.z += _DepthOffset;
@@ -265,8 +249,8 @@ v2f vert (appdata_t v)
     o.color = outColor;
     float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
     o.worldPos = worldPos;
-    o.bladeDir = float4(worldBlade, opacity * gripVisibility);
-    o.exposure = float3(tSample, travel * bladeWeight, 0.0);
+    o.bladeDir = float4(worldBlade, opacity);
+    o.exposure = float3(tSample, travel, 0.0);
     return o;
 
 #elif defined(_GEOMETRY_OBJ)
@@ -349,20 +333,15 @@ v2f vert (appdata_t v)
     float3 sRight = NormalizeOr(cross(sUp, sFwd), avgRight);
     sUp = cross(sFwd, sRight);
 
-    float3 currentPos = fPos0 + fRight0 * localPos.x + fUp0 * localPos.y + fFwd0 * localPos.z;
-    float3 sweptPos = sPos + sRight * localPos.x + sUp * localPos.y + sFwd * localPos.z;
-    float bladeWeight, gripVisibility;
-    float3 vertexPos = LimitGripSweep(currentPos, sweptPos, bladeWeight, gripVisibility);
+    float3 vertexPos = sPos + sRight * localPos.x + sUp * localPos.y + sFwd * localPos.z;
 
     // FIX normals: rotate localNormal by sample basis (sRight/up/fwd)
     float3 localNormalRotated = localNormal.x * sRight + localNormal.y * sUp + localNormal.z * sFwd;
-    float3 currentNormal = localNormal.x * fRight0 + localNormal.y * fUp0 + localNormal.z * fFwd0;
-    localNormalRotated = lerp(currentNormal, localNormalRotated, bladeWeight);
     float lnRotLen = length(localNormalRotated);
     if (lnRotLen > 1e-6) localNormalRotated /= lnRotLen;
 
     float3 worldNormal = UnityObjectToWorldNormal(localNormalRotated);
-    float3 worldBlade = UnityObjectToWorldNormal(lerp(fFwd0, sFwd, bladeWeight));
+    float3 worldBlade = UnityObjectToWorldNormal(sFwd);
 
     o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
     o.vertex.z += _DepthOffset;
@@ -371,8 +350,8 @@ v2f vert (appdata_t v)
     o.color = outColor;
     float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
     o.worldPos = worldPos;
-    o.bladeDir = float4(worldBlade, opacity * gripVisibility);
-    o.exposure = float3(tSample, travel * bladeWeight * max(0.0, _VertexBlurFade), crossCoord);
+    o.bladeDir = float4(worldBlade, opacity);
+    o.exposure = float3(tSample, travel * max(0.0, _VertexBlurFade), crossCoord);
     return o;
 
 #else
@@ -452,16 +431,12 @@ v2f vert (appdata_t v)
     sUp = cross(sFwd, sRight);
 
     float3 ringCenter = sPos + sFwd * zPos + sRight * offX + sUp * offY;
-    float radius = isZeroFlag > 0.5 ? 0.0 : radiusAbs;
-    float bladeWeight, gripVisibility;
-    float3 vertexPos = LimitGripSweep(firstCenter + currentOffset * radius,
-                                     ringCenter + offsetDir * radius, bladeWeight, gripVisibility);
+    float3 vertexPos = ringCenter + offsetDir * (isZeroFlag > 0.5 ? 0 : radiusAbs);
 
-    float3 normal = signVal * lerp(currentOffset, offsetDir, bladeWeight);
+    float3 normal = signVal * offsetDir;
 
     if (_VertexEnableRoundedNormals > 0.5)
     {
-        float3 roundAxis = lerp(fFwd0, avgFwd, bladeWeight);
         float3 adj = 0;
         if (isZeroFlag > 0.5)
         {
@@ -471,17 +446,17 @@ v2f vert (appdata_t v)
             float v1 = 0.12 * sign(t) * pow(abs(t), 9);
             float t2 = t*0.99;
             float v2 = sign(t2) * pow(abs(t2), 171);
-            adj = roundAxis * (2*(v1+v2));
+            adj = avgFwd * (2*(v1+v2));
         }
         else
         {
-            adj = roundAxis * (-radiusSlope);
+            adj = avgFwd * (-radiusSlope);
         }
         normal += adj;
     }
 
     float3 worldNormal = UnityObjectToWorldNormal(normal);
-    float3 worldBlade = UnityObjectToWorldNormal(lerp(fFwd0, sFwd, bladeWeight));
+    float3 worldBlade = UnityObjectToWorldNormal(sFwd);
 
     o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
     o.vertex.z += _DepthOffset;
@@ -490,8 +465,8 @@ v2f vert (appdata_t v)
     o.color = outColor;
     float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
     o.worldPos = worldPos;
-    o.bladeDir = float4(worldBlade, opacity * gripVisibility);
-    o.exposure = float3(tSample, travel * bladeWeight * max(0.0, _VertexBlurFade), ringT);
+    o.bladeDir = float4(worldBlade, opacity);
+    o.exposure = float3(tSample, travel * max(0.0, _VertexBlurFade), ringT);
     return o;
 #endif
 }

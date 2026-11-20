@@ -47,7 +47,6 @@ public class MenuSaberManager : IDisposable
     {
         var saberObj = new GameObject("BlurSaber");
         var blurSaber = saberObj.AddInitComponent<BlurSaber>(parent, m_config);
-        blurSaber.Data.KeepGripUnblurred = true;
         blurSaber.Data.IsLeftSaber = isLeft;
         blurSaber.ApplyZRotationOffset();
         bool shouldShow = ShouldShowMenuSabers;
