@@ -32,9 +32,8 @@ public enum GeometryType
             RightOnly
         }
 
-        private const int SampleCount = 16;
-        private Pose[] m_poseSamples = new Pose[SampleCount];
-        private Pose[] m_coarsePoseSamples = new Pose[8];
+        private const int SampleCount = 8;
+        private readonly Pose[] m_poseSamples = new Pose[SampleCount];
         private int RingCount =>
             GeometryHandling == GeometryType.Advanced
                 ? RingParams.Count
@@ -220,6 +219,7 @@ public enum GeometryType
         private bool m_vertexTubeDirty = true;
         private int m_vertexLastRingVerts = -1;
         private int m_vertexLastRingCount = -1;
+        private float m_vertexRingSupport;
         private Mesh? m_vertexSpriteMesh;
         private bool m_vertexSpriteDirty = true;
         private int m_vertexSpriteHash = 0;
@@ -390,7 +390,7 @@ public enum GeometryType
             );
         }
 
-        private bool ShouldRenderOnCurrentSaber()
+        internal bool ShouldRenderOnCurrentSaber()
         {
             if (Side == SaberSide.Both)
                 return true;
@@ -704,6 +704,7 @@ public enum GeometryType
 
             m_vertexLastRingVerts = ringVerts;
             m_vertexLastRingCount = ringCount;
+            m_vertexRingSupport = Mathf.Cos(Mathf.PI / ringVerts);
             m_vertexTubeDirty = false;
         }
 
@@ -761,16 +762,31 @@ public enum GeometryType
         {
             if (m_movementHistoryProvider == null || m_saberData == null) return;
             var localPose = transform.GetPose().TransformPose(m_movementHistoryProvider.transform.worldToLocalMatrix);
-            var samples = InterpolateData(BlurTime);
+            if (GeometryHandling is GeometryType.Simple or GeometryType.Advanced)
+            {
+                float start = localPose.position.z;
+                float axis = localPose.forward.z;
+                float rear = 0f;
+                if (m_saberData.AnchorBlurEnds && GeometryHandling == GeometryType.Simple && EnableEndCaps &&
+                    Mathf.Abs(axis) > 0.15f && Length > 0f)
+                {
+                    float end = start + axis * Length;
+                    if (Mathf.Abs(Mathf.Min(start, end) - m_saberData.GetRearTubeEnd()) < 0.0005f)
+                        rear = axis > 0f ? -1f : 1f;
+                }
+                m_propertyBlock.SetVector("_VertexBladeAxis", new Vector4(start, axis,
+                    m_saberData.AnchorBlurEnds ? m_vertexRingSupport : 0f, rear));
+            }
+            var samples = SampleBlurPoses();
             var localPoseMat = localPose.AsMatrix();
             var wtl = transform.worldToLocalMatrix;
             for (int i = 0; i < samples.Length; i++)
             {
                 var combined = wtl * samples[i].AsMatrix() * localPoseMat;
-                samples[i] = PoseHelpers.TransformPoseFromMatrix(combined);
-                m_vertexHistPos[i] = new Vector4(samples[i].position.x, samples[i].position.y, samples[i].position.z, 1f);
-                m_vertexHistFwd[i] = new Vector4(samples[i].forward.x, samples[i].forward.y, samples[i].forward.z, 0f);
-                m_vertexHistUp[i] = new Vector4(samples[i].up.x, samples[i].up.y, samples[i].up.z, 0f);
+                var sample = PoseHelpers.TransformPoseFromMatrix(combined);
+                m_vertexHistPos[i] = sample.position;
+                m_vertexHistFwd[i] = sample.forward;
+                m_vertexHistUp[i] = sample.up;
             }
         }
 
@@ -953,7 +969,6 @@ public enum GeometryType
                 m_propertyBlock.SetVectorArray("_HistPos", m_vertexHistPos);
                 m_propertyBlock.SetVectorArray("_HistFwd", m_vertexHistFwd);
                 m_propertyBlock.SetVectorArray("_HistUp", m_vertexHistUp);
-                m_propertyBlock.SetInt("_HistCount", SampleCount);
                 m_propertyBlock.SetFloat("_VertexBlurFade", BlurFadeFactor);
                 m_propertyBlock.SetFloat("_VertexHueShift", m_modulatableParams.HueShift);
                 var cc = m_saberData != null ? m_saberData.CustomColor : Color.white;
@@ -1138,8 +1153,8 @@ public enum GeometryType
             float targetFactor = Mathf.Clamp01(Mathf.InverseLerp(0.1f, 4f, m_smoothedMotion));
             targetFactor = targetFactor * targetFactor * (3f - 2f * targetFactor);
 
-            float smoothRate = dt * (targetFactor > m_motionFactor ? 5f : 1.2f);
-            m_motionFactor = Mathf.MoveTowards(m_motionFactor, targetFactor, smoothRate);
+            float response = targetFactor > m_motionFactor ? 85f : 35f;
+            m_motionFactor = Mathf.Lerp(m_motionFactor, targetFactor, 1f - Mathf.Exp(-response * dt));
         }
 
         private void EnsureRuntimeMaterial(ref Material? runtimeMaterial, Material baseMaterial)
@@ -1202,7 +1217,7 @@ public enum GeometryType
                     .GetPose()
                     .TransformPose(m_movementHistoryProvider.transform.worldToLocalMatrix);
 
-            var samples = InterpolateData(BlurTime);
+            var samples = SampleBlurPoses();
             
             var localPoseMat = localPose.AsMatrix();
             var wtl = transform.worldToLocalMatrix;
@@ -1412,62 +1427,13 @@ public enum GeometryType
             m_blurObj.RefreshMesh();
         }
         
-        private Pose[] InterpolateData(float maxTime)
+        private Pose[] SampleBlurPoses()
         {
-            maxTime *= m_motionFactor;
-            maxTime = Mathf.Min(maxTime, 0.025f);
-
-            const float smoothing = 1f;
-            int coarseCount = m_coarsePoseSamples.Length;
-            m_movementHistoryProvider.SampleNonAlloc(coarseCount, maxTime, m_coarsePoseSamples);
-
-            if (smoothing > 0.001f)
-            {
-                for (int i = 1; i < coarseCount - 1; i++)
-                {
-                    var prev = m_coarsePoseSamples[i - 1];
-                    var curr = m_coarsePoseSamples[i];
-                    var next = m_coarsePoseSamples[i + 1];
-
-                    var smoothedPos = Vector3.Lerp(curr.position, (prev.position + curr.position + next.position) / 3f, smoothing);
-                    var smoothedFwd = Vector3.Slerp(curr.forward, (prev.forward + curr.forward + next.forward).normalized, smoothing);
-                    var smoothedUp = Vector3.Slerp(curr.up, (prev.up + curr.up + next.up).normalized, smoothing);
-
-                    m_coarsePoseSamples[i] = new Pose(smoothedPos, Quaternion.LookRotation(smoothedFwd, smoothedUp));
-                }
-            }
-
-            RefinePoses(m_coarsePoseSamples, m_poseSamples);
-
+            float duration = Mathf.Clamp(BlurTime * m_motionFactor, 0f, 0.025f);
+            m_movementHistoryProvider.SampleNonAlloc(SampleCount, duration, m_poseSamples);
+            if (duration > 0.0001f)
+                BlurMotionHistory.LimitSweep(m_poseSamples);
             return m_poseSamples;
-        }
-
-        private static void RefinePoses(Pose[] coarse, Pose[] refined)
-        {
-            int coarseLen = coarse.Length;
-            int refinedLen = refined.Length;
-            
-            for (int i = 0; i < coarseLen; i++)
-            {
-                int evenIdx = 2 * i;
-                if (evenIdx < refinedLen)
-                    refined[evenIdx] = coarse[i];
-                if (evenIdx + 1 < refinedLen && i < coarseLen - 1)
-                    refined[evenIdx + 1] = coarse[i].LerpTo(coarse[i + 1], 0.5f);
-            }
-            
-            if (refinedLen % 2 == 0 && coarseLen * 2 == refinedLen)
-            {
-                refined[refinedLen - 1] = coarse[coarseLen - 1];
-            }
-            
-            for (int i = 1; i < coarseLen - 1; i++)
-            {
-                int idx = 2 * i;
-                if (idx <= 0 || idx >= refinedLen - 1) continue;
-                var midpointAverage = refined[idx - 1].LerpTo(refined[idx + 1], 0.5f);
-                refined[idx] = refined[idx].LerpTo(midpointAverage, 0.5f);
-            }
         }
 
         private Vector2 ApplyAtlasUV(Vector2 uv)

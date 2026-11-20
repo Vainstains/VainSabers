@@ -36,7 +36,7 @@ Shader "VainSabers/Blur Part"
                 discard;
                 return 0;
 #else
-                // UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 SaberFragVariables vars = GetCommonSaberVars(i);
                 if(vars.alpha > 0.999)
                     return 1; // color ignored, depth written
@@ -76,6 +76,7 @@ Shader "VainSabers/Blur Part"
             ZWrite Off
             ZTest LEqual
             ColorMask A
+            Blend One OneMinusSrcAlpha
             CGPROGRAM
             // #pragma multi_compile_instancing
             #pragma fragment frag
