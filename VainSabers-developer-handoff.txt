@@ -1,21 +1,13 @@
-VainSabers motion blur fixes for Beat Saber 1.40.8
+VainSabers temporal motion blur for Beat Saber 1.40.8
 
-Hi, I put together a patch for the motion blur based on VainSabers commit 6f85587.
+The previous renderer moved individual vertices through the pose history. On some swings, that folded the transparent mesh across itself. It could also leave a dark band next to the current blade, especially on low-sided meshes.
 
-The old blur stepped between recorded poses, and the shader could make a sideways swing look almost solid. The new shader interpolates between adjacent poses and fades the sides and tip. It uses eight poses instead of sixteen and runs in the existing saber rendering passes.
+The replacement uses a separate camera-facing strip for each moving part. Each cross-section widens to cover the visible sideways movement. The renderer reads the pose history and stops at the first significant reversal in the projected motion. The fragment shader computes when the moving cross-section enters and leaves each pixel, then integrates a smooth shutter over that interval. Opacity drops toward the oldest edge and the two ends of the strip. The strip can reach the current blade independently of the number of sides on the original mesh.
 
-A swing toward the camera could make the blade almost disappear in the middle. The tube shader now measures motion across the blade’s projected width. When that motion is near zero, it keeps the blade close to its current pose and preserves its base opacity.
+Tube blades, sprites, and OBJ parts use the same exposure calculation. The original mesh and textures render at rest and fade as the lateral sweep takes over. OBJ strips use the mesh bounds and broad albedo. Movement mostly in depth keeps the source mesh visible. The mod still uses eight stored poses, the existing rendering passes, and a maximum exposure setting of 25 ms. The dedicated menu laser and standard ribbon trail retain their existing renderers.
 
-At high speeds, the history window could include both directions of a reversal, creating a second, sharp wedge. The fix uses the latest continuous segment, caps extreme sweep distance, and resamples that segment into the existing pose buffer.
+The implementation approximates the three-dimensional trajectory with continuous motion along its projected interval. OBJ cross-sections come from the model bounds.
 
-A fast swing could leave a gap between the current blade and its blur. The newest end of the sweep faded over a fraction of its length, so the nearly invisible region grew as the sweep got wider. On low-sided meshes, the radial vertices could also skip the newest pose when the swing direction fell between them. The tube shader now limits the leading fade to about one blade width and compensates for the ring's vertex spacing so the sweep reaches the live blade. The blur setting is capped at 25 ms.
+Unity tests on Direct3D 11 covered fast movement, an oblique reversal, a depth swing, and resting geometry. The segmented blade and Wii Remote blade kept visible contact on both four-sided and 21-sided meshes. I also rendered the embedded Wii Remote OBJ and texture, a sprite, and the menu pointer preset. Headset rendering and VR frame timings still need testing.
 
-An oblique swing could still produce bright bands inside the blur. The 3D history filter could keep a path that doubled back in screen space. Mapping successive ring vertices to that path drew parts of the transparent blade more than once. The new blade renderer builds a quadratic sweep from the newest, middle, and oldest retained poses. It bounds the middle control point along the direction of travel so each cross-section progresses in one direction. Geometry and opacity share the same position along the sweep, with separate fades at the live edge and the older edge. The renderer reuses the existing saber mesh and passes.
-
-OBJ blur now uses a continuous swept surface built from the mesh bounds. It follows interpolated positions and rotations, and uses a soft opacity profile and the model's broad albedo. A single textured mesh renders at the current pose. The sweep and the mesh share the existing shader passes.
-
-During a fast OBJ swing, only the soft sweep is visible. The textured pose fades back in as lateral motion slows.
-
-I verified the reworked sweep in Unity with Direct3D 11 on the segmented and Wii Remote presets, including four-sided blade meshes. In the 900p comparison with the two-layer segmented preset, the extra brightness peak disappeared. The visible blur still extended 165 pixels from the blade, compared with 172 pixels before the change. Stationary and head-on renders matched the previous build. The Release build targets Beat Saber 1.40.8. In-headset behavior, VR frame timing, and a direct ReeSabers comparison still need testing.
-
-The rendering changes are in BlurPart.cginc, BlurSaberPart.cs, BlurMotionHistory.cs, and BlurTube.cs. In the asset creation project, rebuild vs_assets with Tools > Build AssetBundles in Unity. Then rebuild the mod to embed the shaders in VainSabers.dll.
+The main implementation is in TemporalExposure.cginc. BlurPart.cginc connects it to the lit and unlit saber shaders, and BlurTube.cs creates the exposure strips. In the asset creation project, rebuild vs_assets with Tools > Build AssetBundles in Unity before rebuilding VainSabers.dll.

@@ -33,9 +33,10 @@ namespace VainSabers.Sabers
             int vertsX = divisionsX + 1;
             int vertsY = divisionsY + 1;
             int frontVertCount = vertsX * vertsY;
-            int vertCount = doubleSided ? frontVertCount * 2 : frontVertCount;
+            int surfaceCount = doubleSided ? frontVertCount * 2 : frontVertCount;
+            int vertCount = surfaceCount + 4;
             int cellCount = divisionsX * divisionsY;
-            int indexCount = cellCount * 6 * (doubleSided ? 2 : 1);
+            int indexCount = cellCount * 6 * (doubleSided ? 2 : 1) + 12;
 
             var mesh = new Mesh
             {
@@ -112,6 +113,26 @@ namespace VainSabers.Sabers
                 }
             }
 
+            bool vertical = sizeY >= sizeX;
+            Vector3 axis = vertical ? Vector3.up : Vector3.right;
+            float halfLength = vertical ? halfY : halfX;
+            float radius = vertical ? halfX : halfY;
+            for (int row = 0; row < 2; row++)
+            for (int edge = 0; edge < 2; edge++)
+            {
+                vertices[surfaceCount + row * 2 + edge] = new BlurVertex
+                {
+                    position = axis * ((2 * row - 1) * halfLength),
+                    normal = axis,
+                    tangent = new Vector4(radius, 0f, 0f, 0f),
+                    color = vertCol,
+                    uv = new Vector2(edge, row),
+                    bladeDir = new Vector4(customWeight, opacity, 0f, 0f),
+                    uv2 = Vector2.one
+                };
+            }
+            WriteStripQuad(indices, ref t, surfaceCount, surfaceCount + 1, surfaceCount + 2, surfaceCount + 3);
+
             mesh.SetVertexBufferParams(vertCount,
                 new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
                 new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),
@@ -131,17 +152,16 @@ namespace VainSabers.Sabers
             float opacity, out Bounds modelBounds)
         {
             const int LengthSections = 16;
-            const int ExposureSections = 12;
             int sourceCount = data.Positions.Length;
-            int rowSize = ExposureSections + 1;
-            int blurVertCount = (LengthSections + 1) * rowSize;
+            const int RowSize = 2;
+            int blurVertCount = (LengthSections + 1) * RowSize;
             int vertCount = sourceCount + blurVertCount;
             var mesh = new Mesh
             {
                 indexFormat = vertCount > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16
             };
             var vertices = new BlurVertex[vertCount];
-            var indices = new int[LengthSections * ExposureSections * 12 + data.Triangles.Length];
+            var indices = new int[LengthSections * 12 + data.Triangles.Length];
             Color vertCol = new Color(color.r, color.g, color.b, glow);
             var materialParams = new Vector4(customWeight, opacity, 0f, 0f);
             modelBounds = new Bounds(sourceCount > 0 ? data.Positions[0] : Vector3.zero, Vector3.zero);
@@ -170,35 +190,23 @@ namespace VainSabers.Sabers
             {
                 float along = (float)row / LengthSections;
                 Vector3 center = modelBounds.center + lengthAxis * ((2f * along - 1f) * extents[axis]);
-                for (int column = 0; column <= ExposureSections; column++)
+                for (int column = 0; column < RowSize; column++)
                 {
-                    int v = sourceCount + row * rowSize + column;
+                    int v = sourceCount + row * RowSize + column;
                     vertices[v] = new BlurVertex
                     {
                         position = center,
                         normal = lengthAxis,
                         tangent = crossExtents,
                         color = vertCol,
-                        uv = new Vector2((float)column / ExposureSections, along),
+                        uv = new Vector2(column, along),
                         bladeDir = materialParams,
                         uv2 = Vector2.one
                     };
 
-                    if (row == LengthSections || column == ExposureSections) continue;
-                    int next = v + rowSize;
-                    // The sweep faces the viewer from either swing direction.
-                    indices[index++] = v;
-                    indices[index++] = next;
-                    indices[index++] = v + 1;
-                    indices[index++] = v + 1;
-                    indices[index++] = next;
-                    indices[index++] = next + 1;
-                    indices[index++] = v;
-                    indices[index++] = v + 1;
-                    indices[index++] = next;
-                    indices[index++] = v + 1;
-                    indices[index++] = next + 1;
-                    indices[index++] = next;
+                    if (row == LengthSections || column == 1) continue;
+                    int next = v + RowSize;
+                    WriteStripQuad(indices, ref index, v, v + 1, next, next + 1);
                 }
             }
 
@@ -224,12 +232,14 @@ namespace VainSabers.Sabers
             System.Func<int, float> getZPos, System.Func<int, float> getOffX, System.Func<int, float> getOffY,
             System.Func<int, float> getRadius, System.Func<int, float> getRadiusSlope, System.Func<int, bool> getIsZero,
             System.Func<int, float> getRingT, System.Func<int, Color> getColor, System.Func<int, float> getGlow,
-            System.Func<int, float> getCustomWeight, System.Func<int, float> getOpacity, System.Func<int, float> getUvOffset)
+            System.Func<int, float> getCustomWeight, System.Func<int, float> getOpacity,
+            System.Func<int, float> getUvOffset, bool temporalExposure)
         {
             int vertsPerRing = ringVerts + 1;
-            int vertCount = vertsPerRing * ringCount;
+            int surfaceCount = vertsPerRing * ringCount;
+            int vertCount = surfaceCount + (temporalExposure ? 2 * ringCount : 0);
             int stripCount = System.Math.Max(ringCount - 1, 0);
-            int indexCount = ringVerts * stripCount * 6;
+            int indexCount = stripCount * (ringVerts * 6 + (temporalExposure ? 12 : 0));
 
             var mesh = new Mesh
             {
@@ -254,7 +264,6 @@ namespace VainSabers.Sabers
                 }
             }
 
-            float ringSupport = Mathf.Cos(Mathf.PI / ringVerts);
             int vIdx = 0;
             for (int r = 0; r < ringCount; r++)
             {
@@ -289,7 +298,19 @@ namespace VainSabers.Sabers
                     vert.color = vertCol;
                     vert.uv = new Vector2(u, v_);
                     vert.bladeDir = new Vector4(cw, op, 0f, 0f);
-                    vert.uv2 = new Vector2(ringSupport, 0f);
+                }
+
+                if (temporalExposure)
+                {
+                    int left = surfaceCount + 2 * r;
+                    var edge = vertices[r * vertsPerRing];
+                    edge.uv.x = 0f;
+                    edge.uv2 = Vector2.one;
+                    vertices[left] = edge;
+                    edge.uv.x = 1f;
+                    vertices[left + 1] = edge;
+                    if (r < ringCount - 1)
+                        WriteStripQuad(indices, ref t, left, left + 1, left + 2, left + 3);
                 }
             }
 
@@ -306,6 +327,23 @@ namespace VainSabers.Sabers
             mesh.SetTriangles(indices, 0, false);
             mesh.bounds = BlurBounds.Giant;
             return mesh;
+        }
+
+        private static void WriteStripQuad(int[] indices, ref int index, int a, int b, int c, int d)
+        {
+            // Each side uses the same vertices. Back-face culling selects one side per eye.
+            indices[index++] = a;
+            indices[index++] = c;
+            indices[index++] = b;
+            indices[index++] = b;
+            indices[index++] = c;
+            indices[index++] = d;
+            indices[index++] = a;
+            indices[index++] = b;
+            indices[index++] = c;
+            indices[index++] = b;
+            indices[index++] = d;
+            indices[index++] = c;
         }
     }
 

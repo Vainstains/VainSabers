@@ -572,7 +572,7 @@ public enum GeometryType
                     r => RingParams[r].Glow,
                     r => RingParams[r].CustomWeight,
                     r => RingParams[r].Opacity,
-                    r => RingParams[r].UvOffset);
+                    r => RingParams[r].UvOffset, UseTemporalExposure);
             }
             else
             {
@@ -699,7 +699,7 @@ public enum GeometryType
                         else t = ringCount > 1 ? (float)r / (ringCount - 1f) : 0f;
                         return Mathf.Lerp(StartOpacity, EndOpacity, t);
                     },
-                    r => 0f);
+                    r => 0f, UseTemporalExposure);
             }
 
             m_vertexLastRingVerts = ringVerts;
@@ -721,7 +721,8 @@ public enum GeometryType
             }
             int divX = Mathf.Max(1, DivisionsX);
             int divY = Mathf.Max(1, DivisionsY);
-            m_vertexSpriteMesh = GpuBlurMeshBuilder.BuildGpuSprite(divX, divY, DoubleSided, SizeX, SizeY, StartColor, StartGlow, StartCustomColorWeight, StartOpacity);
+            m_vertexSpriteMesh = GpuBlurMeshBuilder.BuildGpuSprite(divX, divY, DoubleSided, SizeX, SizeY,
+                StartColor, StartGlow, StartCustomColorWeight, StartOpacity);
             m_vertexSpriteDirty = false;
         }
 
@@ -744,15 +745,14 @@ public enum GeometryType
             m_lastObjCacheKey = objData.CacheKey;
         }
 
+        private bool UseTemporalExposure => m_saberData?.UseTemporalExposure == true;
+
         private void SampleGpuHistory()
         {
             if (m_movementHistoryProvider == null || m_saberData == null) return;
             var localPose = transform.GetPose().TransformPose(m_movementHistoryProvider.transform.worldToLocalMatrix);
-            if (m_saberData.KeepBladeBlurConnected && GeometryHandling is GeometryType.Simple or GeometryType.Advanced)
-            {
-                // Map each ring to the saber's forward axis, including reversed blade parts.
-                m_propertyBlock.SetVector("_VertexBladeAxis", new Vector4(localPose.position.z, localPose.forward.z, 1f, 0f));
-            }
+            m_propertyBlock.SetVector("_VertexBladeAxis",
+                new Vector4(localPose.position.z, localPose.forward.z, UseTemporalExposure ? 1f : 0f, 0f));
             var samples = SampleBlurPoses();
             var localPoseMat = localPose.AsMatrix();
             var wtl = transform.worldToLocalMatrix;
@@ -957,7 +957,7 @@ public enum GeometryType
                 m_propertyBlock.SetFloat("_VertexLength", Length);
                 m_propertyBlock.SetFloat("_VertexGeometry", 0f);
                 // sprite/obj specific uniforms
-                m_propertyBlock.SetVector("_VertexSpriteSize", new Vector4(SizeX, SizeY, 0f, 0f));
+                m_propertyBlock.SetVector("_VertexSpriteSize", new Vector4(SizeX, SizeY, DoubleSided ? 1f : 0f, 0f));
                 m_propertyBlock.SetFloat("_VertexObjScale", ObjScale);
                 m_propertyBlock.SetVector("_VertexObjBoundsMin", m_objBoundsMin);
                 m_propertyBlock.SetVector("_VertexObjBoundsMax", m_objBoundsMax);

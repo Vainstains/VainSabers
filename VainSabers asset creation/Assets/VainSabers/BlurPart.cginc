@@ -21,7 +21,7 @@ float3 _VertexBladeAxis;
 float _VainSaberBlurSoftness;
 
 // new uniforms for sprite/obj GPU path
-float2 _VertexSpriteSize; // x=SizeX y=SizeY
+float3 _VertexSpriteSize; // width, height, double sided
 float _VertexObjScale;
 float3 _VertexObjBoundsMin;
 float3 _VertexObjBoundsMax;
@@ -34,23 +34,19 @@ struct appdata_t {
     float4 color  : COLOR;
     float2 uv : TEXCOORD0;
     float4 dataC : TEXCOORD1;    // tube: x=customWeight y=opacity  sprite/obj: x=customWeight y=opacity
-    float2 dataD : TEXCOORD2;    // x: tube ring support or OBJ sweep mesh flag
+    float2 dataD : TEXCOORD2;    // x marks the exposure strip
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
 struct v2f {
     float4 vertex   : SV_POSITION;
     float2 uv       : TEXCOORD0;
-#if defined(_GEOMETRY_SPRITE)
-    float3 motionDir : TEXCOORD1;
-#elif !defined(_GEOMETRY_OBJ)
-    float2 bladeSweep : TEXCOORD1; // geometric travel in blade widths, continuous sweep weight
-#endif
     float3 normal   : TEXCOORD2;
     float4 color : TEXCOORD3;
     float3 worldPos  : TEXCOORD4;
     float4 bladeDir : TEXCOORD5;
     float3 exposure : TEXCOORD6; // age, travel in widths, position along the sweep
+    float4 shutter : TEXCOORD7; // lateral coordinate, signed travel, aperture radius, weight
     UNITY_VERTEX_OUTPUT_STEREO
 };
 
@@ -169,18 +165,22 @@ void SampleHistory(float age, out float3 pos, out float3 fwd, out float3 up)
     up = NormalizeOr(lerp(_HistUp[newer].xyz, _HistUp[older].xyz, weight), _HistUp[newer].xyz);
 }
 
-// Bound the middle control point in the direction of travel. The sweep can still
-// curve around the hand, but cannot double back across its own screen footprint.
-float3 OrderedSweepOffset(float3 chord, float3 midpoint, float3 axis, float age)
+#include "TemporalExposure.cginc"
+
+void WriteExposureStrip(inout v2f o, ExposurePath path, float radius, float2 uv,
+                        float4 color, float opacity, float3 forward)
 {
-    float3 halfChord = 0.5 * chord;
-    float3 bend = 2.0 * (midpoint - halfChord);
-    float bendLimit = 0.35 * length(chord);
-    bend *= min(1.0, bendLimit * rsqrt(max(dot(bend, bend), 1e-8)));
-    float lateralLimit = 0.4 * max(0.0, dot(chord, axis));
-    float lateralBend = dot(bend, axis);
-    bend += axis * (clamp(lateralBend, -lateralLimit, lateralLimit) - lateralBend);
-    return age * chord + (2.0 * age * (1.0 - age)) * bend;
+    float across;
+    float3 position = ExposureStripPosition(path, radius, uv.x, across);
+    o.vertex = UnityObjectToClipPos(float4(position, 1.0));
+    o.vertex.z += _DepthOffset;
+    o.worldPos = mul(unity_ObjectToWorld, float4(position, 1.0)).xyz;
+    o.normal = UnityObjectToWorldNormal(path.view);
+    o.bladeDir = float4(UnityObjectToWorldNormal(forward), opacity);
+    o.color = color;
+    o.uv = float2(0.5, uv.y);
+    o.exposure = float3(0.0, abs(path.distance) / max(2.0 * radius, 0.006), uv.y);
+    o.shutter = float4(across, path.distance, max(radius, 0.0001), path.weight);
 }
 
 v2f vert (appdata_t v)
@@ -212,64 +212,31 @@ v2f vert (appdata_t v)
     float3 fUp0 = _HistUp[0].xyz; fUp0 = length(fUp0) > 1e-6 ? normalize(fUp0) : float3(0,1,0);
     float3 fRight0 = cross(fUp0, fFwd0); fRight0 = length(fRight0) > 1e-6 ? normalize(fRight0) : float3(1,0,0);
     
-    float3 lPos0 = _HistPos[GPU_HIST_COUNT - 1].xyz;
-    float3 lFwd0 = _HistFwd[GPU_HIST_COUNT - 1].xyz; lFwd0 = length(lFwd0) > 1e-6 ? normalize(lFwd0) : float3(0,0,1);
-    float3 lUp0 = _HistUp[GPU_HIST_COUNT - 1].xyz; lUp0 = length(lUp0) > 1e-6 ? normalize(lUp0) : float3(0,1,0);
-    float3 lRight0 = cross(lUp0, lFwd0); lRight0 = length(lRight0) > 1e-6 ? normalize(lRight0) : float3(1,0,0);
-    
-    float3 sumFwd = fFwd0 + lFwd0;
-    float3 sumUp = fUp0 + lUp0;
-    float3 sumRight = fRight0 + lRight0;
-    float3 avgFwd = length(sumFwd) > 1e-6 ? normalize(sumFwd) : fFwd0;
-    float3 avgUp = length(sumUp) > 1e-6 ? normalize(sumUp) : fUp0;
-    float3 avgRight = length(sumRight) > 1e-6 ? normalize(sumRight) : fRight0;
-
-    float3 motionVec = lPos0 - fPos0;
-    float dst = length(motionVec);
-    float3 motionDir = dst > 1e-4 ? motionVec / dst : avgRight;
-    float softness = saturate(_VainSaberBlurSoftness);
-    float bendAmount = saturate(dst * 0.5 * max(0.0, _VertexBlurFade) * softness);
-    // Align the sprite axis to the motion without flipping it when the swing reverses.
-    float3 alignedMotion = dot(avgRight, motionDir) < 0.0 ? -motionDir : motionDir;
-    float3 bentRight = NormalizeOr(lerp(avgRight, alignedMotion, bendAmount), avgRight);
-    float3 bentUp = NormalizeOr(avgUp - bentRight * dot(avgUp, bentRight), avgUp);
-    float3 bentPlane = NormalizeOr(cross(bentRight, bentUp), avgFwd);
-
-    float halfX = _VertexSpriteSize.x * 0.5;
-    float halfY = _VertexSpriteSize.y * 0.5;
-    // avoid zero size
-    halfX = max(halfX, 1e-4);
-    halfY = max(halfY, 1e-4);
-    float dR = dot(bentRight, motionDir);
-    float dU = dot(bentUp, motionDir);
-    float maxAbs = halfX * abs(dR) + halfY * abs(dU);
-    maxAbs = max(maxAbs, 1e-4);
-    float3 offset = bentRight * localX + bentUp * localY;
-    float dotVal = dot(offset, motionDir);
-    float travel = dst * max(0.0, _VertexBlurFade) / max(2.0 * maxAbs, 0.004);
-    float tSample = (dotVal + maxAbs) / (2.0 * maxAbs);
-    tSample = saturate(tSample);
-
-    float3 sPos, sFwd, sUp;
-    SampleHistory(tSample, sPos, sFwd, sUp);
-
-    float3 vertexPos = sPos + offset; // CPU style: sample pos + bent offset (keeps shape rigid)
-
-    // FIX normals: geometric normal is bentPlane * sign, not constant
-    float3 localNormal = bentPlane * signVal;
-    float3 worldNormal = UnityObjectToWorldNormal(localNormal);
-    float3 worldBlade = UnityObjectToWorldNormal(sFwd);
-
-    o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
-    o.vertex.z += _DepthOffset;
-    o.uv = baseUv;
-    o.motionDir = UnityObjectToWorldDir(motionDir);
-    o.normal = worldNormal;
-    o.color = outColor;
-    float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
-    o.worldPos = worldPos;
-    o.bladeDir = float4(worldBlade, opacity);
-    o.exposure = float3(tSample, travel, 0.0);
+    bool vertical = _VertexSpriteSize.y >= _VertexSpriteSize.x;
+    float3 axis = vertical ? float3(0, 1, 0) : float3(1, 0, 0);
+    float radius = 0.5 * min(_VertexSpriteSize.x, _VertexSpriteSize.y);
+    float halfLength = 0.5 * max(_VertexSpriteSize.x, _VertexSpriteSize.y);
+    if (v.dataD.x > 0.5)
+    {
+        ExposurePath path = GetExposurePath(v.vertex.xyz, axis, radius, 0.0);
+        if (_VertexSpriteSize.z < 0.5 && dot(path.view, fFwd0) < 0.0)
+            path.weight = 0.0;
+        WriteExposureStrip(o, path, radius, baseUv, outColor, opacity, fFwd0);
+        o.uv = vertical ? float2(0.5, 1.0 - baseUv.y) : float2(baseUv.y, 0.5);
+    }
+    else
+    {
+        ExposurePath path = GetExposurePath(float3(0, 0, 0), axis, radius, halfLength);
+        float3 position = fPos0 + fRight0 * localX + fUp0 * localY;
+        o.vertex = UnityObjectToClipPos(float4(position, 1.0));
+        o.vertex.z += _DepthOffset;
+        o.worldPos = mul(unity_ObjectToWorld, float4(position, 1.0)).xyz;
+        o.normal = UnityObjectToWorldNormal(fFwd0 * signVal);
+        o.bladeDir = float4(UnityObjectToWorldNormal(fFwd0), opacity);
+        o.color = outColor;
+        o.uv = baseUv;
+        o.shutter = float4(0.0, 0.0, -1.0, path.weight);
+    }
     return o;
 
 #elif defined(_GEOMETRY_OBJ)
@@ -295,101 +262,44 @@ v2f vert (appdata_t v)
     float3 fUp0 = _HistUp[0].xyz; fUp0 = length(fUp0) > 1e-6 ? normalize(fUp0) : float3(0,1,0);
     float3 fRight0 = cross(fUp0, fFwd0); fRight0 = length(fRight0) > 1e-6 ? normalize(fRight0) : float3(1,0,0);
     
-    float3 lPos0 = _HistPos[GPU_HIST_COUNT - 1].xyz;
-    float3 lFwd0 = _HistFwd[GPU_HIST_COUNT - 1].xyz; lFwd0 = length(lFwd0) > 1e-6 ? normalize(lFwd0) : float3(0,0,1);
-    float3 lUp0 = _HistUp[GPU_HIST_COUNT - 1].xyz; lUp0 = length(lUp0) > 1e-6 ? normalize(lUp0) : float3(0,1,0);
-    float3 lRight0 = cross(lUp0, lFwd0); lRight0 = length(lRight0) > 1e-6 ? normalize(lRight0) : float3(1,0,0);
-    
     float3 boundsMin = _VertexObjBoundsMin * _VertexObjScale;
     float3 boundsMax = _VertexObjBoundsMax * _VertexObjScale;
     float3 center = 0.5 * (boundsMin + boundsMax);
     float3 extent = 0.5 * abs(boundsMax - boundsMin);
-    float3 currentCenter = fPos0 + fRight0 * center.x + fUp0 * center.y + fFwd0 * center.z;
-    float3 previousCenter = lPos0 + lRight0 * center.x + lUp0 * center.y + lFwd0 * center.z;
-    float3 view = ViewDirectionInPart(currentCenter, fUp0);
-
-    // Use one exposure strength for the entire object, including pure rotation.
-    float3 motion = ProjectOnViewPlane(previousCenter - currentCenter, view);
-    float3 rightMotion = ProjectOnViewPlane(lRight0 - fRight0, view) * extent.x;
-    float3 upMotion = ProjectOnViewPlane(lUp0 - fUp0, view) * extent.y;
-    float3 forwardMotion = ProjectOnViewPlane(lFwd0 - fFwd0, view) * extent.z;
-    if (dot(rightMotion, rightMotion) > dot(motion, motion)) motion = rightMotion;
-    if (dot(upMotion, upMotion) > dot(motion, motion)) motion = upMotion;
-    if (dot(forwardMotion, forwardMotion) > dot(motion, motion)) motion = forwardMotion;
-
-    float3 longAxis = extent.z >= max(extent.x, extent.y) ? fFwd0 + lFwd0
-                    : (extent.x > extent.y ? fRight0 + lRight0 : fUp0 + lUp0);
-    float3 modelSide = cross(view, NormalizeOr(longAxis, fFwd0));
-    float modelSideSq = dot(modelSide, modelSide);
-    modelSide *= rsqrt(max(modelSideSq, 1e-8));
-    motion = lerp(motion, modelSide * dot(motion, modelSide), smoothstep(0.0, 0.01, modelSideSq));
-
-    float3 axis = NormalizeOr(motion, fRight0);
-    float3 localAxis = float3(dot(axis, fRight0), dot(axis, fUp0), dot(axis, fFwd0));
-    float width = max(2.0 * dot(abs(localAxis), extent), 0.004);
-    float travel = length(motion) / width * max(0.0, _VertexBlurFade);
-    float3 vertexPos = fPos0 + fRight0 * localPos.x + fUp0 * localPos.y + fFwd0 * localPos.z;
-    float3 normal = localNormal.x * fRight0 + localNormal.y * fUp0 + localNormal.z * fFwd0;
-    float3 modelForward = fFwd0;
-    float age = 0.0;
-    float along = -1.0; // The actual OBJ surface stays at the current pose.
-
+    bool longZ = extent.z >= max(extent.x, extent.y);
+    float3 axis = longZ ? float3(0, 0, 1)
+                : (extent.x > extent.y ? float3(1, 0, 0) : float3(0, 1, 0));
+    float halfLength = dot(axis, extent);
+    float3 crossExtent = extent * (1.0 - axis);
+    float radius = max(crossExtent.x, max(crossExtent.y, crossExtent.z));
     if (v.dataD.x > 0.5)
     {
-        if (travel * saturate(_VainSaberBlurSoftness) < 0.035)
-        {
-            o.vertex = float4(0.0, 0.0, 0.0, -1.0);
-            return o;
-        }
-
-        float3 lengthAxis = v.polar;
-        float3 oldPos = lPos0 + lRight0 * localPos.x + lUp0 * localPos.y + lFwd0 * localPos.z;
-        float3 averageAxis = NormalizeOr(
-            (fRight0 + lRight0) * lengthAxis.x + (fUp0 + lUp0) * lengthAxis.y
-            + (fFwd0 + lFwd0) * lengthAxis.z, fFwd0);
-        float3 side = cross(view, averageAxis);
-        float sideLengthSq = dot(side, side);
-        side *= rsqrt(max(1e-8, sideLengthSq));
-        float3 screenMotion = ProjectOnViewPlane(oldPos - vertexPos, view);
-        float3 lateralMotion = lerp(screenMotion, side * dot(screenMotion, side),
-                                    smoothstep(0.0, 0.01, sideLengthSq));
-        float distance = length(lateralMotion);
-        float3 sweepDir = NormalizeOr(lateralMotion, fRight0);
-        float3 localSide = float3(dot(sweepDir, fRight0), dot(sweepDir, fUp0), dot(sweepDir, fFwd0));
-        float radius = length(localSide * v.meta.xyz * _VertexObjScale);
-        travel = distance * max(0.0, _VertexBlurFade) / max(2.0 * radius, 0.006);
-        age = v.uv.x;
-        along = v.uv.y;
-        float3 sPos, sFwd, sUp;
-        SampleHistory(age, sPos, sFwd, sUp);
-        float3 sRight = NormalizeOr(cross(sUp, sFwd), fRight0);
-        sUp = cross(sFwd, sRight);
-        vertexPos = sPos + sRight * localPos.x + sUp * localPos.y + sFwd * localPos.z
-                  + sweepDir * radius * (2.0 * age - 1.0);
-        normal = view;
-        modelForward = sFwd;
-
+        ExposurePath path = GetExposurePath(localPos, axis, radius, 0.0);
+        float3 localSide = float3(dot(path.side, fRight0), dot(path.side, fUp0), dot(path.side, fFwd0));
+        radius = length(localSide * crossExtent);
         if (_ColorTexEnabled > 0.5)
         {
-            // Give the sweep the model's albedo without copying its surface detail.
             float2 tintUV = ApplyAtlas(float2(0.5, 0.5), _ColorTexAtlasCount, _ColorTexAtlasSpeedFlip);
             float mip = any(_ColorTexAtlasCount > 1.5) ? 2.0 : 7.0;
             outColor.rgb *= tex2Dlod(_ColorTex, float4(tintUV, 0, mip)).rgb;
         }
+        WriteExposureStrip(o, path, radius, baseUv, outColor, opacity, fFwd0);
     }
-
-    float3 worldNormal = UnityObjectToWorldNormal(normal);
-    float3 worldBlade = UnityObjectToWorldNormal(modelForward);
-
-    o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
-    o.vertex.z += _DepthOffset;
-    o.uv = baseUv;
-    o.normal = worldNormal;
-    o.color = outColor;
-    float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
-    o.worldPos = worldPos;
-    o.bladeDir = float4(worldBlade, opacity);
-    o.exposure = float3(age, travel, along);
+    else
+    {
+        ExposurePath path = GetExposurePath(center, axis, radius, halfLength);
+        float3 position = fPos0 + fRight0 * localPos.x + fUp0 * localPos.y + fFwd0 * localPos.z;
+        float3 normal = localNormal.x * fRight0 + localNormal.y * fUp0 + localNormal.z * fFwd0;
+        o.vertex = UnityObjectToClipPos(float4(position, 1.0));
+        o.vertex.z += _DepthOffset;
+        o.worldPos = mul(unity_ObjectToWorld, float4(position, 1.0)).xyz;
+        o.normal = UnityObjectToWorldNormal(normal);
+        o.bladeDir = float4(UnityObjectToWorldNormal(fFwd0), opacity);
+        o.color = outColor;
+        o.uv = baseUv;
+        o.exposure.z = -1.0;
+        o.shutter = float4(0.0, 0.0, -1.0, path.weight);
+    }
     return o;
 
 #else
@@ -426,79 +336,63 @@ v2f vert (appdata_t v)
     float3 lRight0 = cross(lUp0, lFwd0); lRight0 = length(lRight0) > 1e-6 ? normalize(lRight0) : float3(1,0,0);
     
     float3 firstCenter = fPos0 + fFwd0 * zPos + fRight0 * offX + fUp0 * offY;
-    float3 lastCenter = lPos0 + lFwd0 * zPos + lRight0 * offX + lUp0 * offY;
-
-    float3 motionVec = lastCenter - firstCenter;
-
-    float3 sumFwd = fFwd0 + lFwd0;
-    float3 sumUp = fUp0 + lUp0;
-    float3 sumRight = fRight0 + lRight0;
-    float3 avgFwd = length(sumFwd) > 1e-6 ? normalize(sumFwd) : fFwd0;
-    float3 avgUp = length(sumUp) > 1e-6 ? normalize(sumUp) : fUp0;
-    float3 avgRight = length(sumRight) > 1e-6 ? normalize(sumRight) : fRight0;
-
-    float3 transverseMotion = motionVec - avgFwd * dot(motionVec, avgFwd);
-    float transverseDistance = length(transverseMotion);
-    // Apparent travel along the blade mostly overlaps its current silhouette.
-    // Use lateral travel to spread the tube and keep its middle dense on a depth swing.
-    float3 view = ViewDirectionInPart(firstCenter, avgUp);
-    float3 screenSide = cross(view, avgFwd);
-    float sideLengthSq = dot(screenSide, screenSide);
-    screenSide *= rsqrt(max(sideLengthSq, 1e-8));
-    float signedTravel = dot(transverseMotion, screenSide);
-    // When the blade points at the lens, it has no stable long axis in the image.
-    float3 screenMotion = ProjectOnViewPlane(transverseMotion, view);
-    float sideWeight = smoothstep(0.0, 0.01, sideLengthSq);
-    float3 sweep = lerp(screenMotion, screenSide * signedTravel, sideWeight);
-    float projectedDistance = length(sweep);
-    float travel = projectedDistance / max(2.0 * radiusAbs, 0.012);
-    float sweepAmount = smoothstep(0.05, 0.75, travel);
-
     float3 currentOffset = signVal * cosTheta * fUp0 + sinTheta * fRight0;
-    float3 sweepDir = projectedDistance > 1e-4 ? sweep / projectedDistance : avgRight;
-    float saberZ = _VertexBladeAxis.x + zPos * _VertexBladeAxis.y;
-    float sweepWeight = _VertexBladeAxis.z * smoothstep(0.025, 0.05, saberZ) * sweepAmount;
+    float lastZ = _VertexBladeAxis.x + _VertexLength * _VertexBladeAxis.y;
+    bool analyticBlade = _VertexBladeAxis.z > 0.5 && max(_VertexBladeAxis.x, lastZ) > 0.05;
+    bool stripVertex = v.dataD.x > 0.5;
+    if (!analyticBlade && stripVertex)
+    {
+        o.vertex = float4(0.0, 0.0, 0.0, -1.0);
+        return o;
+    }
+    float3 ringCenter = firstCenter;
     float3 offsetDir = currentOffset;
     float3 sFwd = fFwd0;
-    float3 ringCenter = firstCenter;
-    float tSample = 0.5;
-    float sweepTravel = 0.0;
+    float3 avgFwd = fFwd0;
+    float tSample = 0.0;
+    float travel = 0.0;
 
-    if (sweepWeight < 1.0)
+    if (analyticBlade)
     {
+        float radius = isZeroFlag > 0.5 ? 0.0 : radiusAbs;
+        ExposurePath path = GetExposurePath(float3(offX, offY, zPos), float3(0, 0, 1), radiusAbs, 0.0);
+        if (stripVertex)
+        {
+            WriteExposureStrip(o, path, radius, baseUv, outColor, opacity, fFwd0);
+            o.exposure.z = ringT;
+            return o;
+        }
+        o.shutter = float4(0.0, 0.0, -1.0, path.weight);
+    }
+    else
+    {
+        // The menu laser and standalone hilt parts use their original tube renderer.
+        float3 lastCenter = lPos0 + lFwd0 * zPos + lRight0 * offX + lUp0 * offY;
+        float3 motionVec = lastCenter - firstCenter;
+        avgFwd = NormalizeOr(fFwd0 + lFwd0, fFwd0);
+        float3 avgUp = NormalizeOr(fUp0 + lUp0, fUp0);
+        float3 avgRight = NormalizeOr(fRight0 + lRight0, fRight0);
+        float3 transverseMotion = motionVec - avgFwd * dot(motionVec, avgFwd);
+        float3 view = ViewDirectionInPart(firstCenter, avgUp);
+        float3 screenSide = cross(view, avgFwd);
+        float sideLengthSq = dot(screenSide, screenSide);
+        screenSide *= rsqrt(max(sideLengthSq, 1e-8));
+        float3 screenMotion = ProjectOnViewPlane(transverseMotion, view);
+        float3 sweep = lerp(screenMotion, screenSide * dot(transverseMotion, screenSide),
+                            smoothstep(0.0, 0.01, sideLengthSq));
+        float projectedDistance = length(sweep);
+        travel = projectedDistance / max(2.0 * radiusAbs, 0.012);
+        float sweepAmount = smoothstep(0.05, 0.75, travel);
         float3 averageOffset = signVal * cosTheta * avgUp + sinTheta * avgRight;
         offsetDir = NormalizeOr(lerp(currentOffset, averageOffset, sweepAmount), currentOffset);
+        float3 sweepDir = projectedDistance > 1e-4 ? sweep / projectedDistance : avgRight;
         tSample = saturate(0.5 + 0.5 * dot(offsetDir, sweepDir));
-        float transverseFraction = saturate(transverseDistance / max(length(motionVec), 1e-4));
+        float transverseFraction = saturate(length(transverseMotion) / max(length(motionVec), 1e-4));
         float3 sPos, sUp;
         SampleHistory(tSample * transverseFraction * sweepAmount, sPos, sFwd, sUp);
         float3 sRight = NormalizeOr(cross(sUp, sFwd), avgRight);
         sUp = cross(sFwd, sRight);
         ringCenter = sPos + sFwd * zPos + sRight * offX + sUp * offY;
-    }
-
-    if (sweepWeight > 0.0)
-    {
-        // Use the same coordinate for the geometry and exposure. Remove the
-        // angular spacing of the ring so sparse meshes reach both endpoints.
-        float support = length(float2(dot(fUp0, sweepDir), dot(fRight0, sweepDir)));
-        float age = saturate(0.5 + 0.5 * dot(currentOffset, sweepDir) / max(support * v.dataD.x, 1e-4));
-        float3 midPos, midFwd, midUp;
-        SampleHistory(0.5, midPos, midFwd, midUp);
-        float3 midRight = NormalizeOr(cross(midUp, midFwd), fRight0);
-        midUp = cross(midFwd, midRight);
-        float3 midCenter = midPos + midFwd * zPos + midRight * offX + midUp * offY;
-        float span = saturate(projectedDistance / max(length(motionVec), 1e-4));
-        float3 chord = sweep + (motionVec - sweep) * span;
-        float3 midpoint = midCenter - firstCenter;
-        float3 midpointAcross = sweepDir * dot(midpoint, sweepDir);
-        midpoint = lerp(midpointAcross, midpoint, span);
-        float3 curvedCenter = firstCenter + OrderedSweepOffset(chord, midpoint, sweepDir, age);
-        ringCenter = lerp(ringCenter, curvedCenter, sweepWeight);
-        offsetDir = NormalizeOr(lerp(offsetDir, currentOffset, sweepWeight), currentOffset);
-        sFwd = NormalizeOr(lerp(sFwd, lerp(fFwd0, lFwd0, age * span), sweepWeight), fFwd0);
-        tSample = lerp(tSample, age, sweepWeight);
-        sweepTravel = travel;
     }
 
     float3 vertexPos = ringCenter + offsetDir * (isZeroFlag > 0.5 ? 0 : radiusAbs);
@@ -537,7 +431,6 @@ v2f vert (appdata_t v)
     o.worldPos = worldPos;
     o.bladeDir = float4(worldBlade, opacity);
     o.exposure = float3(tSample, travel * max(0.0, _VertexBlurFade), ringT);
-    o.bladeSweep = float2(sweepTravel, sweepWeight);
     return o;
 #endif
 }
@@ -557,6 +450,23 @@ float _RimPerpendicular;
 sampler2D _GlowAddendGradient;
 sampler2D _OpacityMultiplierGradient;
 
+#if !defined(_GEOMETRY_OBJ) && !defined(_GEOMETRY_SPRITE)
+float LegacyTubeExposure(v2f vertStage, float projectedTravel, float blurMix)
+{
+    float age = saturate(vertStage.exposure.x);
+    float coverage = rsqrt(1.0 + 1.8 * projectedTravel);
+    float edgeWidth = lerp(0.19, 0.40, saturate(projectedTravel * 0.18));
+    float shutter = smoothstep(0.0, max(edgeWidth, fwidth(age)), min(1.4 * age, 1.0 - age));
+    float along = vertStage.exposure.z;
+    float pixelLength = fwidth(along);
+    float endWidth = lerp(0.07, 0.16, saturate(projectedTravel * 0.18));
+    coverage *= shutter * (1.0 - 0.55 * age * age)
+              * smoothstep(0.0, max(endWidth * 0.45, pixelLength), along)
+              * smoothstep(0.0, max(endWidth, pixelLength), 1.0 - along);
+    return lerp(1.0, coverage, blurMix);
+}
+#endif
+
 SaberFragVariables GetCommonSaberVars(v2f vertStage)
 {
 #ifdef USING_STEREO_MATRICES
@@ -570,63 +480,28 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float3 Nperp = NormalizeOr(N - blade * dot(N, blade), N);
     float3 Vperp = NormalizeOr(V - blade * dot(V, blade), V);
     float projectedTravel = vertStage.exposure.y * saturate(_VainSaberBlurSoftness);
-#if defined(_GEOMETRY_SPRITE)
-    float3 motionDir = NormalizeOr(vertStage.motionDir, float3(1, 0, 0));
-    float viewMotion = dot(motionDir, V);
-    projectedTravel *= sqrt(saturate(1.0 - viewMotion * viewMotion));
-#endif
     float motionSurface = 0.0;
 #if defined(_GEOMETRY_OBJ)
     motionSurface = step(0.0, vertStage.exposure.z);
-    float blurMix = smoothstep(0.035, 0.57, projectedTravel);
-#else
+#endif
     float blurMix = smoothstep(0.12, 1.4, projectedTravel);
-#endif
-    float age = saturate(vertStage.exposure.x);
-    float coverage = rsqrt(1.0 + 1.8 * projectedTravel);
-    float edgeWidth = lerp(0.19, 0.40, saturate(projectedTravel * 0.18));
-    float pixelWidth = fwidth(age);
-    float fadeWidth = max(edgeWidth, pixelWidth);
-    float shutter = smoothstep(0.0, fadeWidth, min(1.4 * age, 1.0 - age));
-
-#if defined(_GEOMETRY_OBJ)
-    float leadingWidth = clamp(0.42 / (1.0 + projectedTravel), 0.023, 0.16);
-    float leading = smoothstep(-0.25 * pixelWidth, max(leadingWidth, 1.35 * pixelWidth), age);
-    float trailing = smoothstep(0.0, max(edgeWidth, pixelWidth), 1.0 - age);
-    shutter = leading * trailing;
-    float nearModel = 1.0 - smoothstep(leadingWidth, max(0.10, 4.0 * leadingWidth), age);
-    coverage = lerp(coverage, max(coverage, 0.24), nearModel * blurMix);
-#endif
-    shutter *= 1.0 - 0.55 * age * age;
-    coverage *= shutter;
-
+    float exposureCoverage;
+    if (vertStage.shutter.z > 0.0)
+    {
+        float along = vertStage.exposure.z;
+        float edge = max(0.055, 1.5 * fwidth(along));
+        float endFade = smoothstep(0.0, edge, min(along, 1.0 - along));
+        exposureCoverage = ExposureCoverage(vertStage.shutter) * endFade;
+    }
 #if !defined(_GEOMETRY_OBJ) && !defined(_GEOMETRY_SPRITE)
-    float footprint = rcp(1.0 + vertStage.bladeSweep.x);
-    float frontWidth = max(1.5 * pixelWidth, min(0.30, 1.4 * footprint));
-    float rearWidth = max(2.0 * pixelWidth, max(0.34, 2.0 * footprint));
-    float exposure = smoothstep(0.0, frontWidth, age) * (1.0 - smoothstep(1.0 - rearWidth, 1.0, age));
-    float sweepCoverage = exposure * rsqrt(1.0 + 2.4 * projectedTravel);
-    coverage = lerp(coverage, sweepCoverage, vertStage.bladeSweep.y);
+    else if (vertStage.shutter.z == 0.0)
+        exposureCoverage = LegacyTubeExposure(vertStage, projectedTravel, blurMix);
 #endif
+    else
+        exposureCoverage = 1.0 - vertStage.shutter.w;
 
-#if defined(_GEOMETRY_SPRITE)
-    float2 border = min(vertStage.uv, 1.0 - vertStage.uv);
-    float2 endWidth = max(float2(0.085, 0.085), fwidth(vertStage.uv));
-    float2 endFade = smoothstep(0.0, endWidth, border);
-    coverage *= endFade.x * endFade.y;
-#else
-    float along = vertStage.exposure.z;
-    float pixelLength = fwidth(along);
-    float endWidth = lerp(0.07, 0.16, saturate(projectedTravel * 0.18));
-    coverage *= smoothstep(0.0, max(endWidth * 0.45, pixelLength), along)
-                * smoothstep(0.0, max(endWidth, pixelLength), 1.0 - along);
-#endif
-#if defined(_GEOMETRY_OBJ)
-    float exposureCoverage = motionSurface > 0.5 ? coverage * blurMix : 1.0 - smoothstep(0.0, 0.80, blurMix);
-    if (motionSurface < 0.5) clip(exposureCoverage - 1e-4);
-#else
-    float exposureCoverage = lerp(1.0, coverage, blurMix);
-#endif
+    if (vertStage.shutter.z != 0.0)
+        clip(exposureCoverage - 1e-4);
 
     float fresnelFull = 1.0 - saturate(abs(dot(N, V)));
     float fresnelPerp = 1.0 - saturate(dot(Nperp, Vperp));

@@ -26,7 +26,7 @@ public class BlurSaberData : MonoBehaviour
     private PluginConfig? m_config = null;
     public Color CustomColor;
     public float BlurTime => m_config != null ? Mathf.Min(m_config.BlurMS * 0.001f, 0.025f) : 0.025f;
-    internal bool KeepBladeBlurConnected { get; set; }
+    internal bool UseTemporalExposure { get; set; }
     
     private readonly List<BlurSaberPart> m_components = new List<BlurSaberPart>();
     public IReadOnlyList<BlurSaberPart> Components => m_components.AsReadOnly();
