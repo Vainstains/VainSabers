@@ -748,6 +748,11 @@ public enum GeometryType
         {
             if (m_movementHistoryProvider == null || m_saberData == null) return;
             var localPose = transform.GetPose().TransformPose(m_movementHistoryProvider.transform.worldToLocalMatrix);
+            if (m_saberData.KeepBladeBlurConnected && GeometryHandling is GeometryType.Simple or GeometryType.Advanced)
+            {
+                // Map each ring to the saber's forward axis, including reversed blade parts.
+                m_propertyBlock.SetVector("_VertexBladeAxis", new Vector4(localPose.position.z, localPose.forward.z, 1f, 0f));
+            }
             var samples = SampleBlurPoses();
             var localPoseMat = localPose.AsMatrix();
             var wtl = transform.worldToLocalMatrix;

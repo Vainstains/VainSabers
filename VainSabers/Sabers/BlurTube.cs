@@ -254,6 +254,7 @@ namespace VainSabers.Sabers
                 }
             }
 
+            float ringSupport = Mathf.Cos(Mathf.PI / ringVerts);
             int vIdx = 0;
             for (int r = 0; r < ringCount; r++)
             {
@@ -288,7 +289,7 @@ namespace VainSabers.Sabers
                     vert.color = vertCol;
                     vert.uv = new Vector2(u, v_);
                     vert.bladeDir = new Vector4(cw, op, 0f, 0f);
-                    vert.uv2 = new Vector2(0f, 0f);
+                    vert.uv2 = new Vector2(ringSupport, 0f);
                 }
             }
 

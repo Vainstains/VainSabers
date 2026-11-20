@@ -16,6 +16,7 @@ float _VertexLength;
 float _VertexEnabled; // legacy, unused with keywords
 float _VertexGeometry;
 float _VertexManualIsZero;
+float3 _VertexBladeAxis;
 
 float _VainSaberBlurSoftness;
 
@@ -33,14 +34,18 @@ struct appdata_t {
     float4 color  : COLOR;
     float2 uv : TEXCOORD0;
     float4 dataC : TEXCOORD1;    // tube: x=customWeight y=opacity  sprite/obj: x=customWeight y=opacity
-    float2 dataD : TEXCOORD2;    // x marks the OBJ sweep mesh
+    float2 dataD : TEXCOORD2;    // x: tube ring support or OBJ sweep mesh flag
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
 struct v2f {
     float4 vertex   : SV_POSITION;
     float2 uv       : TEXCOORD0;
-    float3 motionDir : TEXCOORD1; // sprite motion direction
+#if defined(_GEOMETRY_SPRITE)
+    float3 motionDir : TEXCOORD1;
+#elif !defined(_GEOMETRY_OBJ)
+    float2 bladeContact : TEXCOORD1; // geometric travel in blade widths, forward-blade weight
+#endif
     float3 normal   : TEXCOORD2;
     float4 color : TEXCOORD3;
     float3 worldPos  : TEXCOORD4;
@@ -442,10 +447,18 @@ v2f vert (appdata_t v)
     // This keeps the mesh and the fade aligned on fast, oblique swings.
     float3 sweepDir = projectedDistance > 1e-4 ? sweep / projectedDistance : avgRight;
     float tSample = saturate(0.5 + 0.5 * dot(offsetDir, sweepDir));
+    float saberZ = _VertexBladeAxis.x + zPos * _VertexBladeAxis.y;
+    float bladeContact = _VertexBladeAxis.z * smoothstep(0.025, 0.05, saberZ);
+    // The sweep can pass between two ring vertices, skipping the current pose on coarse meshes.
+    float radialProjection = length(float2(dot(avgUp, sweepDir), dot(avgRight, sweepDir)));
+    float firstAge = 0.5 * (1.0 - saturate(radialProjection * v.dataD.x));
+    firstAge *= bladeContact * sweepAmount;
+    tSample = saturate((tSample - firstAge) / (1.0 - firstAge));
 
     float3 sPos, sFwd, sUp;
     float transverseFraction = saturate(transverseDistance / max(length(motionVec), 1e-4));
-    SampleHistory(tSample * transverseFraction * sweepAmount, sPos, sFwd, sUp);
+    float historySpan = transverseFraction * sweepAmount;
+    SampleHistory(tSample * historySpan, sPos, sFwd, sUp);
     float3 sRight = NormalizeOr(cross(sUp, sFwd), avgRight);
     sUp = cross(sFwd, sRight);
 
@@ -486,6 +499,7 @@ v2f vert (appdata_t v)
     o.worldPos = worldPos;
     o.bladeDir = float4(worldBlade, opacity);
     o.exposure = float3(tSample, travel * max(0.0, _VertexBlurFade), ringT);
+    o.bladeContact = float2(travel * historySpan, bladeContact);
     return o;
 #endif
 }
@@ -534,7 +548,15 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float coverage = rsqrt(1.0 + 1.8 * projectedTravel);
     float edgeWidth = lerp(0.19, 0.40, saturate(projectedTravel * 0.18));
     float pixelWidth = fwidth(age);
-    float shutter = smoothstep(0.0, max(edgeWidth, pixelWidth), min(1.4 * age, 1.0 - age));
+    float fadeWidth = max(edgeWidth, pixelWidth);
+    float leadingAge = 1.4 * age;
+#if !defined(_GEOMETRY_OBJ) && !defined(_GEOMETRY_SPRITE)
+    // Keep the fade next to the live blade within roughly one blade width as the sweep grows.
+    float contactWidth = min(edgeWidth, 1.4 / (1.0 + vertStage.bladeContact.x));
+    float leadingWidth = lerp(edgeWidth, contactWidth, vertStage.bladeContact.y);
+    leadingAge *= fadeWidth / max(leadingWidth, pixelWidth);
+#endif
+    float shutter = smoothstep(0.0, fadeWidth, min(leadingAge, 1.0 - age));
 
 #if defined(_GEOMETRY_OBJ)
     float leadingWidth = clamp(0.42 / (1.0 + projectedTravel), 0.023, 0.16);
