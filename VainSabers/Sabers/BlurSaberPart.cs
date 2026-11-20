@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using UnityEngine.Rendering;
 using VainSabers.Config;
 using VainSabers.Data;
 using VainSabers.Helpers;
@@ -724,24 +725,8 @@ public enum GeometryType
             m_vertexSpriteDirty = false;
         }
 
-        private void EnsureVertexObjMesh()
+        private void EnsureVertexObjMesh(ObjMeshData objData)
         {
-            if (GeometryHandling != GeometryType.Obj) return;
-            int presetVer = m_saberData != null ? m_saberData.PresetVersion : 2;
-            var objData = LoadObjData(ObjFileName, ObjBase64, ref m_objKey, presetVer);
-            if (objData.Positions.Length == 0) return;
-            // compute bounds for shader
-            Vector3 bMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
-            Vector3 bMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
-            for (int i = 0; i < objData.Positions.Length; i++)
-            {
-                var p = objData.Positions[i];
-                bMin = Vector3.Min(bMin, p);
-                bMax = Vector3.Max(bMax, p);
-            }
-            m_objBoundsMin = bMin;
-            m_objBoundsMax = bMax;
-
             if (CheckVertexObjDirty())
                 m_vertexObjDirty = true;
             if (m_vertexObjMesh != null && !m_vertexObjDirty && m_lastObjCacheKey == objData.CacheKey)
@@ -751,7 +736,10 @@ public enum GeometryType
                 DestroyImmediate(m_vertexObjMesh);
                 m_vertexObjMesh = null;
             }
-            m_vertexObjMesh = GpuBlurMeshBuilder.BuildGpuObj(objData, StartColor, StartGlow, StartCustomColorWeight, StartOpacity);
+            m_vertexObjMesh = GpuBlurMeshBuilder.BuildGpuObj(objData, StartColor, StartGlow, StartCustomColorWeight,
+                StartOpacity, out var bounds);
+            m_objBoundsMin = bounds.min;
+            m_objBoundsMax = bounds.max;
             m_vertexObjDirty = false;
             m_lastObjCacheKey = objData.CacheKey;
         }
@@ -876,6 +864,8 @@ public enum GeometryType
             if (activeMat != null)
             {
                 activeMat.renderQueue = 3600 + RenderQueueOffset;
+                activeMat.SetInt("_GlowDstBlend", (int)(GeometryHandling == GeometryType.Obj
+                    ? BlendMode.OneMinusSrcAlpha : BlendMode.Zero));
 
                 if (DisableGlowPass) activeMat.EnableKeyword("_DISABLE_GLOW_PASS");
                 else activeMat.DisableKeyword("_DISABLE_GLOW_PASS");
@@ -953,6 +943,7 @@ public enum GeometryType
                 m_propertyBlock.SetVectorArray("_HistFwd", m_vertexHistFwd);
                 m_propertyBlock.SetVectorArray("_HistUp", m_vertexHistUp);
                 m_propertyBlock.SetFloat("_VertexBlurFade", BlurFadeFactor);
+                m_propertyBlock.SetFloat("_VertexIsMenuPointer", m_saberData.IsMenuPointer ? 1f : 0f);
                 m_propertyBlock.SetFloat("_VertexHueShift", m_modulatableParams.HueShift);
                 var cc = m_saberData != null ? m_saberData.CustomColor : Color.white;
                 m_propertyBlock.SetVector("_VertexCustomColor", new Vector4(cc.r, cc.g, cc.b, 1f));
@@ -1031,7 +1022,7 @@ public enum GeometryType
                     return;
                 }
 
-                EnsureVertexObjMesh();
+                EnsureVertexObjMesh(objData);
                 ApplyMaterialProps();
                 m_meshFilter.mesh = m_vertexObjMesh;
                 return;

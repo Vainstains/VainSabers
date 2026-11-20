@@ -7,6 +7,7 @@ float4 _HistPos[GPU_HIST_COUNT];
 float4 _HistFwd[GPU_HIST_COUNT];
 float4 _HistUp[GPU_HIST_COUNT];
 float _VertexBlurFade;
+float _VertexIsMenuPointer;
 float _VertexHueShift;
 float3 _VertexCustomColor;
 float _VertexGlowMul;
@@ -33,7 +34,7 @@ struct appdata_t {
     float4 color  : COLOR;
     float2 uv : TEXCOORD0;
     float4 dataC : TEXCOORD1;    // tube: x=customWeight y=opacity  sprite/obj: x=customWeight y=opacity
-    float2 dataD : TEXCOORD2;    // spare
+    float2 dataD : TEXCOORD2;    // x marks the OBJ sweep mesh
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
@@ -45,7 +46,7 @@ struct v2f {
     float4 color : TEXCOORD3;
     float3 worldPos  : TEXCOORD4;
     float4 bladeDir : TEXCOORD5;
-    float3 exposure : TEXCOORD6; // age, travel in widths, coordinate across the other visible axis
+    float3 exposure : TEXCOORD6; // age, travel in widths, position along the sweep
     UNITY_VERTEX_OUTPUT_STEREO
 };
 
@@ -281,67 +282,79 @@ v2f vert (appdata_t v)
     float3 lUp0 = _HistUp[GPU_HIST_COUNT - 1].xyz; lUp0 = length(lUp0) > 1e-6 ? normalize(lUp0) : float3(0,1,0);
     float3 lRight0 = cross(lUp0, lFwd0); lRight0 = length(lRight0) > 1e-6 ? normalize(lRight0) : float3(1,0,0);
     
-    float3 sumFwd = fFwd0 + lFwd0;
-    float3 sumUp = fUp0 + lUp0;
-    float3 sumRight = fRight0 + lRight0;
-    float3 avgFwd = length(sumFwd) > 1e-6 ? normalize(sumFwd) : fFwd0;
-    float3 avgUp = length(sumUp) > 1e-6 ? normalize(sumUp) : fUp0;
-    float3 avgRight = length(sumRight) > 1e-6 ? normalize(sumRight) : fRight0;
-
-    float3 bMin = _VertexObjBoundsMin * _VertexObjScale;
-    float3 bMax = _VertexObjBoundsMax * _VertexObjScale;
-    float3 center = 0.5 * (bMin + bMax);
-    float3 extent = 0.5 * abs(bMax - bMin);
+    float3 boundsMin = _VertexObjBoundsMin * _VertexObjScale;
+    float3 boundsMax = _VertexObjBoundsMax * _VertexObjScale;
+    float3 center = 0.5 * (boundsMin + boundsMax);
+    float3 extent = 0.5 * abs(boundsMax - boundsMin);
     float3 currentCenter = fPos0 + fRight0 * center.x + fUp0 * center.y + fFwd0 * center.z;
-    float3 view = ViewDirectionInPart(currentCenter, avgUp);
-    float3 deltaRight = ProjectOnViewPlane(lRight0 - fRight0, view);
-    float3 deltaUp = ProjectOnViewPlane(lUp0 - fUp0, view);
-    float3 deltaForward = ProjectOnViewPlane(lFwd0 - fFwd0, view);
-    float3 centerMotion = ProjectOnViewPlane(lPos0 - fPos0, view)
-                        + deltaRight * center.x + deltaUp * center.y + deltaForward * center.z;
-    float3 fromCenter = localPos - center;
-    float3 vertexMotion = centerMotion + deltaRight * fromCenter.x
-                        + deltaUp * fromCenter.y + deltaForward * fromCenter.z;
+    float3 previousCenter = lPos0 + lRight0 * center.x + lUp0 * center.y + lFwd0 * center.z;
+    float3 view = ViewDirectionInPart(currentCenter, fUp0);
 
-    // Use a common axis for the whole object, including rotation about a fixed pivot.
-    // Sample ages depend on position so duplicated vertices at OBJ seams stay together.
-    float3 axis = centerMotion;
-    float3 rightMotion = deltaRight * extent.x;
-    float3 upMotion = deltaUp * extent.y;
-    float3 forwardMotion = deltaForward * extent.z;
-    if (dot(rightMotion, rightMotion) > dot(axis, axis)) axis = rightMotion;
-    if (dot(upMotion, upMotion) > dot(axis, axis)) axis = upMotion;
-    if (dot(forwardMotion, forwardMotion) > dot(axis, axis)) axis = forwardMotion;
-    axis = NormalizeOr(axis, avgRight);
+    // Use one exposure strength for the entire object, including pure rotation.
+    float3 motion = ProjectOnViewPlane(previousCenter - currentCenter, view);
+    float3 rightMotion = ProjectOnViewPlane(lRight0 - fRight0, view) * extent.x;
+    float3 upMotion = ProjectOnViewPlane(lUp0 - fUp0, view) * extent.y;
+    float3 forwardMotion = ProjectOnViewPlane(lFwd0 - fFwd0, view) * extent.z;
+    if (dot(rightMotion, rightMotion) > dot(motion, motion)) motion = rightMotion;
+    if (dot(upMotion, upMotion) > dot(motion, motion)) motion = upMotion;
+    if (dot(forwardMotion, forwardMotion) > dot(motion, motion)) motion = forwardMotion;
 
-    float3 localAxis = float3(dot(axis, avgRight), dot(axis, avgUp), dot(axis, avgFwd));
+    float3 axis = NormalizeOr(motion, fRight0);
+    float3 localAxis = float3(dot(axis, fRight0), dot(axis, fUp0), dot(axis, fFwd0));
     float width = max(2.0 * dot(abs(localAxis), extent), 0.004);
-    float3 crossAxis = NormalizeOr(cross(view, axis), avgFwd);
-    float3 localCrossAxis = float3(dot(crossAxis, avgRight), dot(crossAxis, avgUp), dot(crossAxis, avgFwd));
-    float crossWidth = max(2.0 * dot(abs(localCrossAxis), extent), 0.004);
-    float crossCoord = saturate(0.5 + dot(fromCenter, localCrossAxis) / crossWidth);
-    float tSample = saturate(0.5 + dot(fromCenter, localAxis) / width);
-    float motionAlongAxis = dot(vertexMotion, axis);
-    float direction = smoothstep(-0.10 * width, 0.10 * width, motionAlongAxis);
-    tSample = lerp(1.0 - tSample, tSample, direction);
+    float travel = length(motion) / width * max(0.0, _VertexBlurFade);
+    float3 vertexPos = fPos0 + fRight0 * localPos.x + fUp0 * localPos.y + fFwd0 * localPos.z;
+    float3 normal = localNormal.x * fRight0 + localNormal.y * fUp0 + localNormal.z * fFwd0;
+    float3 modelForward = fFwd0;
+    float age = 0.0;
+    float along = -1.0; // The actual OBJ surface stays at the current pose.
 
-    float travel = length(vertexMotion) / width;
-    float sweepAmount = smoothstep(0.05, 0.75, travel);
+    if (v.dataD.x > 0.5)
+    {
+        if (travel * saturate(_VainSaberBlurSoftness) < 0.035)
+        {
+            o.vertex = float4(0.0, 0.0, 0.0, -1.0);
+            return o;
+        }
 
-    float3 sPos, sFwd, sUp;
-    SampleHistory(tSample * sweepAmount, sPos, sFwd, sUp);
-    float3 sRight = NormalizeOr(cross(sUp, sFwd), avgRight);
-    sUp = cross(sFwd, sRight);
+        float3 lengthAxis = v.polar;
+        float3 oldPos = lPos0 + lRight0 * localPos.x + lUp0 * localPos.y + lFwd0 * localPos.z;
+        float3 averageAxis = NormalizeOr(
+            (fRight0 + lRight0) * lengthAxis.x + (fUp0 + lUp0) * lengthAxis.y
+            + (fFwd0 + lFwd0) * lengthAxis.z, fFwd0);
+        float3 side = cross(view, averageAxis);
+        float sideLengthSq = dot(side, side);
+        side *= rsqrt(max(1e-8, sideLengthSq));
+        float3 screenMotion = ProjectOnViewPlane(oldPos - vertexPos, view);
+        float3 lateralMotion = lerp(screenMotion, side * dot(screenMotion, side),
+                                    smoothstep(0.0, 0.01, sideLengthSq));
+        float distance = length(lateralMotion);
+        float3 sweepDir = NormalizeOr(lateralMotion, fRight0);
+        float3 localSide = float3(dot(sweepDir, fRight0), dot(sweepDir, fUp0), dot(sweepDir, fFwd0));
+        float radius = length(localSide * v.meta.xyz * _VertexObjScale);
+        travel = distance * max(0.0, _VertexBlurFade) / max(2.0 * radius, 0.006);
+        age = v.uv.x;
+        along = v.uv.y;
+        float3 sPos, sFwd, sUp;
+        SampleHistory(age, sPos, sFwd, sUp);
+        float3 sRight = NormalizeOr(cross(sUp, sFwd), fRight0);
+        sUp = cross(sFwd, sRight);
+        vertexPos = sPos + sRight * localPos.x + sUp * localPos.y + sFwd * localPos.z
+                  + sweepDir * radius * (2.0 * age - 1.0);
+        normal = view;
+        modelForward = sFwd;
 
-    float3 vertexPos = sPos + sRight * localPos.x + sUp * localPos.y + sFwd * localPos.z;
+        if (_ColorTexEnabled > 0.5)
+        {
+            // Give the sweep the model's albedo without copying its surface detail.
+            float2 tintUV = ApplyAtlas(float2(0.5, 0.5), _ColorTexAtlasCount, _ColorTexAtlasSpeedFlip);
+            float mip = any(_ColorTexAtlasCount > 1.5) ? 2.0 : 7.0;
+            outColor.rgb *= tex2Dlod(_ColorTex, float4(tintUV, 0, mip)).rgb;
+        }
+    }
 
-    // FIX normals: rotate localNormal by sample basis (sRight/up/fwd)
-    float3 localNormalRotated = localNormal.x * sRight + localNormal.y * sUp + localNormal.z * sFwd;
-    float lnRotLen = length(localNormalRotated);
-    if (lnRotLen > 1e-6) localNormalRotated /= lnRotLen;
-
-    float3 worldNormal = UnityObjectToWorldNormal(localNormalRotated);
-    float3 worldBlade = UnityObjectToWorldNormal(sFwd);
+    float3 worldNormal = UnityObjectToWorldNormal(normal);
+    float3 worldBlade = UnityObjectToWorldNormal(modelForward);
 
     o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
     o.vertex.z += _DepthOffset;
@@ -351,7 +364,7 @@ v2f vert (appdata_t v)
     float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
     o.worldPos = worldPos;
     o.bladeDir = float4(worldBlade, opacity);
-    o.exposure = float3(tSample, travel * max(0.0, _VertexBlurFade), crossCoord);
+    o.exposure = float3(age, travel, along);
     return o;
 
 #else
@@ -478,6 +491,7 @@ struct SaberFragVariables {
     float3 viewDir;
     float3 normal;
     float rimFactor;
+    float motionSurface;
 };
 
 sampler2D _RimPowerGradient;
@@ -503,33 +517,46 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float viewMotion = dot(motionDir, V);
     projectedTravel *= sqrt(saturate(1.0 - viewMotion * viewMotion));
 #endif
+    float motionSurface = 0.0;
+#if defined(_GEOMETRY_OBJ)
+    motionSurface = step(0.0, vertStage.exposure.z);
+    float blurMix = smoothstep(0.035, 0.57, projectedTravel);
+#else
     float blurMix = smoothstep(0.12, 1.4, projectedTravel);
+#endif
     float age = saturate(vertStage.exposure.x);
     float coverage = rsqrt(1.0 + 1.8 * projectedTravel);
-
-    // A rounded shutter profile suppresses both hard outlines, with more
-    // exposure near the current pose. Fade the ends of the swept surface too.
     float edgeWidth = lerp(0.19, 0.40, saturate(projectedTravel * 0.18));
     float pixelWidth = fwidth(age);
-    float shutter = smoothstep(0.0, max(edgeWidth, pixelWidth), min(1.4 * age, 1.0 - age));
-    shutter *= 1.0 - 0.55 * age * age;
-    coverage *= shutter;
+
 #if defined(_GEOMETRY_SPRITE)
-        float2 border = min(vertStage.uv, 1.0 - vertStage.uv);
-        float2 endWidth = max(float2(0.085, 0.085), fwidth(vertStage.uv));
-        float2 endFade = smoothstep(0.0, endWidth, border);
-        coverage *= endFade.x * endFade.y;
+    float shutter = smoothstep(0.0, max(edgeWidth, pixelWidth), min(1.4 * age, 1.0 - age));
+    float2 border = min(vertStage.uv, 1.0 - vertStage.uv);
+    float2 endWidth = max(float2(0.085, 0.085), fwidth(vertStage.uv));
+    float2 endFade = smoothstep(0.0, endWidth, border);
+    coverage *= endFade.x * endFade.y;
 #else
-        float along = vertStage.exposure.z;
-        float pixelLength = fwidth(along);
-        float endWidth = lerp(0.07, 0.16, saturate(projectedTravel * 0.18));
-    #if defined(_GEOMETRY_OBJ)
-        float startWidth = endWidth;
-    #else
-        float startWidth = endWidth * 0.45;
-    #endif
-        coverage *= smoothstep(0.0, max(startWidth, pixelLength), along)
-                    * smoothstep(0.0, max(endWidth, pixelLength), 1.0 - along);
+    // Keep the leading fade narrow as the sweep grows, so it stays joined to the current pose.
+    float leadingWidth = clamp(0.42 / (1.0 + projectedTravel), 0.023, 0.16);
+    float leading = smoothstep(-0.25 * pixelWidth, max(leadingWidth, 1.35 * pixelWidth), age);
+    float trailing = smoothstep(0.0, max(edgeWidth, pixelWidth), 1.0 - age);
+    float pointerShutter = smoothstep(0.0, max(edgeWidth, pixelWidth), min(1.4 * age, 1.0 - age));
+    float shutter = lerp(leading * trailing, pointerShutter, _VertexIsMenuPointer);
+    float nearBlade = 1.0 - smoothstep(leadingWidth, max(0.10, 4.0 * leadingWidth), age);
+    coverage = lerp(coverage, max(coverage, 0.24), nearBlade * blurMix * (1.0 - _VertexIsMenuPointer));
+
+    float along = saturate(vertStage.exposure.z);
+    float pixelLength = fwidth(along);
+    float endWidth = lerp(0.07, 0.16, saturate(projectedTravel * 0.18));
+    coverage *= smoothstep(0.0, max(endWidth * 0.45, pixelLength), along)
+                * smoothstep(0.0, max(endWidth, pixelLength), 1.0 - along);
+#endif
+    coverage *= shutter * (1.0 - 0.55 * age * age);
+
+#if defined(_GEOMETRY_OBJ)
+    float exposureCoverage = motionSurface > 0.5 ? coverage * blurMix : lerp(1.0, 0.64, blurMix);
+#else
+    float exposureCoverage = lerp(1.0, coverage, blurMix);
 #endif
 
     float fresnelFull = 1.0 - saturate(abs(dot(N, V)));
@@ -539,18 +566,19 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
 
     SaberFragVariables commonVars;
     commonVars.color = vertStage.color.rgb;
+    commonVars.motionSurface = motionSurface;
     commonVars.viewDir = V;
     commonVars.normal = N;
     commonVars.rimFactor = 1.0 + tex2D(_RimPowerGradient, gradientUV).r * lerp(1.0, 0.40, blurMix);
     commonVars.glowStrength = _Glow * vertStage.color.a + tex2D(_GlowAddendGradient, gradientUV).r;
     float baseOpacity = saturate(vertStage.bladeDir.w);
-    float opacity = baseOpacity * sqrt(baseOpacity) * lerp(1.0, coverage, blurMix);
+    float opacity = baseOpacity * sqrt(baseOpacity) * exposureCoverage;
     commonVars.alpha = saturate(opacity * tex2D(_OpacityMultiplierGradient, gradientUV).r);
 
     float lodBias = min(2.5, 0.65 * sqrt(projectedTravel));
     float2 texUv = vertStage.uv;
 
-    if (_ColorTexEnabled > 0.5)
+    if (motionSurface < 0.5 && _ColorTexEnabled > 0.5)
     {
         float2 uvAtlas = ApplyAtlas(texUv, _ColorTexAtlasCount, _ColorTexAtlasSpeedFlip);
         float4 texCol = tex2Dbias(_ColorTex, float4(uvAtlas, 0, any(_ColorTexAtlasCount > 1.5) ? 0.0 : lodBias));
@@ -558,7 +586,7 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
         commonVars.alpha *= texCol.a;
     }
 
-    if (_GlowTexEnabled > 0.5)
+    if (motionSurface < 0.5 && _GlowTexEnabled > 0.5)
     {
         float2 uvAtlasGlow = ApplyAtlas(texUv, _GlowTexAtlasCount, _GlowTexAtlasSpeedFlip);
         float4 texGlow = tex2Dbias(_GlowTex, float4(uvAtlasGlow, 0, any(_GlowTexAtlasCount > 1.5) ? 0.0 : lodBias));

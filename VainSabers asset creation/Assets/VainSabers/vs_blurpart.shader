@@ -1,4 +1,4 @@
-﻿// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
+// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
 
 Shader "VainSabers/Blur Part"
 {
@@ -6,6 +6,7 @@ Shader "VainSabers/Blur Part"
 	{
 		_Glow ("Glow", Range (0, 1)) = 0
 	    _DepthOffset("Depth Offset", Float) = 0.0
+        [HideInInspector] _GlowDstBlend ("Glow Destination Blend", Float) = 0
 		_ColorTex ("Color", 2D) = "white" {}
 		_GlowTex ("Glow Texture", 2D) = "white" {}
 		_ColorTexAtlasCount ("Color Atlas Count", Vector) = (1,1,0,0)
@@ -76,6 +77,7 @@ Shader "VainSabers/Blur Part"
             ZWrite Off
             ZTest LEqual
             ColorMask A
+            Blend One [_GlowDstBlend]
             CGPROGRAM
             // #pragma multi_compile_instancing
             #pragma fragment frag

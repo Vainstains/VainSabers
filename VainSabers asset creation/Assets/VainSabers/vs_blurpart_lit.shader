@@ -1,4 +1,4 @@
-﻿Shader "VainSabers/vs_blurpart_lit"
+Shader "VainSabers/vs_blurpart_lit"
 {
     Properties
     {
@@ -9,6 +9,7 @@
         _ColorBoost ("RGB Multiplier", Range(0,4)) = 1
         _Glow ("Glow", Range(0,1)) = 0.5
         _DepthOffset("Depth Offset", Float) = 0.0
+        [HideInInspector] _GlowDstBlend ("Glow Destination Blend", Float) = 0
         _ColorTex ("Color", 2D) = "white" {}
         _GlowTex ("Glow Texture", 2D) = "white" {}
         _ColorTexAtlasCount ("Color Atlas Count", Vector) = (1,1,0,0)
@@ -116,6 +117,11 @@
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 SaberFragVariables vars = GetCommonSaberVars(i);
 
+#if defined(_GEOMETRY_OBJ)
+                if (vars.motionSurface > 0.5)
+                    return float4(vars.color, vars.alpha);
+#endif
+
                 float3 N = normalize(vars.normal);
                 float3 V = normalize(vars.viewDir);
                 float3 L = normalize(float3(0,1,0));
@@ -158,6 +164,7 @@
             ZWrite Off
             ZTest LEqual
             ColorMask A
+            Blend One [_GlowDstBlend]
 
             CGPROGRAM
             #pragma fragment frag

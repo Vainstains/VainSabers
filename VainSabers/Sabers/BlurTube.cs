@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using System.Runtime.CompilerServices;
@@ -127,29 +127,83 @@ namespace VainSabers.Sabers
             return mesh;
         }
 
-        public static Mesh BuildGpuObj(ObjMeshData data, Color color, float glow, float customWeight, float opacity)
+        public static Mesh BuildGpuObj(ObjMeshData data, Color color, float glow, float customWeight,
+            float opacity, out Bounds modelBounds)
         {
-            int vertCount = data.Positions.Length;
+            const int LengthSections = 16;
+            const int ExposureSections = 12;
+            int sourceCount = data.Positions.Length;
+            int rowSize = ExposureSections + 1;
+            int blurVertCount = (LengthSections + 1) * rowSize;
+            int vertCount = sourceCount + blurVertCount;
             var mesh = new Mesh
             {
                 indexFormat = vertCount > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16
             };
             var vertices = new BlurVertex[vertCount];
+            var indices = new int[LengthSections * ExposureSections * 12 + data.Triangles.Length];
             Color vertCol = new Color(color.r, color.g, color.b, glow);
-            for (int i = 0; i < vertCount; i++)
+            var materialParams = new Vector4(customWeight, opacity, 0f, 0f);
+            modelBounds = new Bounds(sourceCount > 0 ? data.Positions[0] : Vector3.zero, Vector3.zero);
+            for (int i = 0; i < sourceCount; i++)
             {
                 ref var vert = ref vertices[i];
-                vert.position = data.Positions[i]; // raw, scale applied in shader via _VertexObjScale
-                Vector3 n = data.Normals[i];
-                float len = n.magnitude;
-                if (len > 1e-6f) n /= len; else n = Vector3.forward;
-                vert.normal = n;
-                vert.tangent = new Vector4(0f, 0f, 0f, 0f);
+                vert.position = data.Positions[i];
+                modelBounds.Encapsulate(vert.position);
+                Vector3 normal = data.Normals[i].normalized;
+                vert.normal = normal == Vector3.zero ? Vector3.forward : normal;
                 vert.color = vertCol;
                 vert.uv = data.Uvs[i];
-                vert.bladeDir = new Vector4(customWeight, opacity, 0f, 0f);
-                vert.uv2 = new Vector2(0f, 0f);
+                vert.bladeDir = materialParams;
             }
+
+            Vector3 extents = modelBounds.extents;
+            int axis = extents.x > extents.y ? 0 : 1;
+            if (extents.z >= extents[axis]) axis = 2;
+            Vector3 lengthAxis = Vector3.zero;
+            lengthAxis[axis] = 1f;
+            Vector3 crossExtents = extents;
+            crossExtents[axis] = 0f;
+
+            int index = 0;
+            for (int row = 0; row <= LengthSections; row++)
+            {
+                float along = (float)row / LengthSections;
+                Vector3 center = modelBounds.center + lengthAxis * ((2f * along - 1f) * extents[axis]);
+                for (int column = 0; column <= ExposureSections; column++)
+                {
+                    int v = sourceCount + row * rowSize + column;
+                    vertices[v] = new BlurVertex
+                    {
+                        position = center,
+                        normal = lengthAxis,
+                        tangent = crossExtents,
+                        color = vertCol,
+                        uv = new Vector2((float)column / ExposureSections, along),
+                        bladeDir = materialParams,
+                        uv2 = Vector2.one
+                    };
+
+                    if (row == LengthSections || column == ExposureSections) continue;
+                    int next = v + rowSize;
+                    // The sweep faces the viewer from either swing direction.
+                    indices[index++] = v;
+                    indices[index++] = next;
+                    indices[index++] = v + 1;
+                    indices[index++] = v + 1;
+                    indices[index++] = next;
+                    indices[index++] = next + 1;
+                    indices[index++] = v;
+                    indices[index++] = v + 1;
+                    indices[index++] = next;
+                    indices[index++] = v + 1;
+                    indices[index++] = next + 1;
+                    indices[index++] = next;
+                }
+            }
+
+            // Composite the continuous sweep before the current textured model.
+            Array.Copy(data.Triangles, 0, indices, index, data.Triangles.Length);
             mesh.SetVertexBufferParams(vertCount,
                 new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
                 new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),
@@ -160,7 +214,7 @@ namespace VainSabers.Sabers
                 new VertexAttributeDescriptor(VertexAttribute.TexCoord2, VertexAttributeFormat.Float32, 2)
             );
             mesh.SetVertexBufferData(vertices, 0, 0, vertCount, 0, MeshUpdateFlags.DontRecalculateBounds);
-            mesh.SetTriangles(data.Triangles, 0, false);
+            mesh.SetTriangles(indices, 0, false);
             mesh.bounds = BlurBounds.Giant;
             return mesh;
         }
