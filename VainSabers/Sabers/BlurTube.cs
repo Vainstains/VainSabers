@@ -224,13 +224,10 @@ namespace VainSabers.Sabers
             System.Func<int, float> getZPos, System.Func<int, float> getOffX, System.Func<int, float> getOffY,
             System.Func<int, float> getRadius, System.Func<int, float> getRadiusSlope, System.Func<int, bool> getIsZero,
             System.Func<int, float> getRingT, System.Func<int, Color> getColor, System.Func<int, float> getGlow,
-            System.Func<int, float> getCustomWeight, System.Func<int, float> getOpacity, System.Func<int, float> getUvOffset,
-            bool markEndCaps = false)
+            System.Func<int, float> getCustomWeight, System.Func<int, float> getOpacity, System.Func<int, float> getUvOffset)
         {
-            markEndCaps &= ringCount >= 4;
             int vertsPerRing = ringVerts + 1;
-            int tubeVertCount = vertsPerRing * ringCount;
-            int vertCount = tubeVertCount + (markEndCaps ? 2 * vertsPerRing : 0);
+            int vertCount = vertsPerRing * ringCount;
             int stripCount = System.Math.Max(ringCount - 1, 0);
             int indexCount = ringVerts * stripCount * 6;
 
@@ -246,10 +243,6 @@ namespace VainSabers.Sabers
             {
                 int ringStart = ring * vertsPerRing;
                 int nextRingStart = (ring + 1) * vertsPerRing;
-                if (markEndCaps && ring == 0)
-                    nextRingStart = tubeVertCount;
-                if (markEndCaps && ring == stripCount - 1)
-                    ringStart = tubeVertCount + vertsPerRing;
                 for (int i = 0; i < ringVerts; i++)
                 {
                     int a = ringStart + i;
@@ -276,12 +269,6 @@ namespace VainSabers.Sabers
                 float cw = getCustomWeight(r);
                 float op = getOpacity(r);
                 float uvOff = getUvOffset(r);
-                float cap = 0f;
-                if (markEndCaps)
-                {
-                    if (r == 0) cap = -1f;
-                    else if (r == ringCount - 1) cap = 1f;
-                }
                 float sign = System.Math.Sign(radius) >= 0 ? 1f : -1f;
                 // for isZero raw radius, sign still from raw
                 float absRadius = UnityEngine.Mathf.Abs(radius);
@@ -301,21 +288,7 @@ namespace VainSabers.Sabers
                     vert.color = vertCol;
                     vert.uv = new Vector2(u, v_);
                     vert.bladeDir = new Vector4(cw, op, 0f, 0f);
-                    vert.uv2 = new Vector2(0f, cap);
-                }
-            }
-
-            if (markEndCaps)
-            {
-                // Give the caps independent vertices so their opacity never affects the tube wall.
-                for (int i = 0; i < vertsPerRing; i++)
-                {
-                    ref var start = ref vertices[tubeVertCount + i];
-                    start = vertices[vertsPerRing + i];
-                    start.uv2.y = -1f;
-                    ref var end = ref vertices[tubeVertCount + vertsPerRing + i];
-                    end = vertices[(ringCount - 2) * vertsPerRing + i];
-                    end.uv2.y = 1f;
+                    vert.uv2 = new Vector2(0f, 0f);
                 }
             }
 

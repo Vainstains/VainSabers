@@ -284,7 +284,8 @@ namespace VainSabers.Menu
             p.StartOpacity = 1f;
             p.EndOpacity = 1f;
             p.BlurFactor = Mathf.Clamp01(m_config.MenuPointerLaserBlurFactor);
-            p.BlurFadeFactor = 16f;
+            p.BlurFadeFactor = 0.7f;
+            p.MaxSweepDistance = 0.012f;
             p.EnableEndCaps = true;
             p.EndCapExtension = 0.25f;
             p.BulgeAmount = 0f;

@@ -83,6 +83,7 @@ public enum GeometryType
 
         public float BlurFactor = 1;
         public float BlurFadeFactor = 1;
+        internal float MaxSweepDistance;
 
         private float BlurTime => m_saberData != null ? m_saberData.BlurTime * BlurFactor : 0f;
 
@@ -699,7 +700,7 @@ public enum GeometryType
                         else t = ringCount > 1 ? (float)r / (ringCount - 1f) : 0f;
                         return Mathf.Lerp(StartOpacity, EndOpacity, t);
                     },
-                    r => 0f, markEndCaps: EnableEndCaps);
+                    r => 0f);
             }
 
             m_vertexLastRingVerts = ringVerts;
@@ -748,8 +749,8 @@ public enum GeometryType
         {
             if (m_movementHistoryProvider == null || m_saberData == null) return;
             var localPose = transform.GetPose().TransformPose(m_movementHistoryProvider.transform.worldToLocalMatrix);
-            bool fadeRearCap = TryGetRearCap(out float capPosition, out float rearCap) && m_saberData.IsLowestRearCap(capPosition);
-            m_propertyBlock.SetFloat("_VertexRearCap", fadeRearCap ? rearCap : 0f);
+            bool anchorRearCap = TryGetRearCap(out float capPosition, out float rearCap) && m_saberData.IsLowestRearCap(capPosition);
+            m_propertyBlock.SetFloat("_VertexRearCap", anchorRearCap ? rearCap : 0f);
             var samples = SampleBlurPoses();
             var localPoseMat = localPose.AsMatrix();
             var wtl = transform.worldToLocalMatrix;
@@ -964,6 +965,7 @@ public enum GeometryType
                 m_propertyBlock.SetVectorArray("_HistFwd", m_vertexHistFwd);
                 m_propertyBlock.SetVectorArray("_HistUp", m_vertexHistUp);
                 m_propertyBlock.SetFloat("_VertexBlurFade", BlurFadeFactor);
+                m_propertyBlock.SetFloat("_VertexMaxSweepDistance", MaxSweepDistance);
                 m_propertyBlock.SetFloat("_VertexHueShift", m_modulatableParams.HueShift);
                 var cc = m_saberData != null ? m_saberData.CustomColor : Color.white;
                 m_propertyBlock.SetVector("_VertexCustomColor", new Vector4(cc.r, cc.g, cc.b, 1f));
