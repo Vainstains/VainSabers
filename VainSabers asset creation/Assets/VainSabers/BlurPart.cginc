@@ -7,6 +7,7 @@ float4 _HistPos[GPU_HIST_COUNT];
 float4 _HistFwd[GPU_HIST_COUNT];
 float4 _HistUp[GPU_HIST_COUNT];
 float _VertexBlurFade;
+float4 _GripBlurPlane;
 float _VertexHueShift;
 float3 _VertexCustomColor;
 float _VertexGlowMul;
@@ -45,7 +46,7 @@ struct v2f {
     float4 color : TEXCOORD3;
     float3 worldPos  : TEXCOORD4;
     float4 bladeDir : TEXCOORD5;
-    float3 exposure : TEXCOORD6; // age, travel in blade widths, position along a tube
+    float3 exposure : TEXCOORD6; // age, travel in widths, coordinate across the other visible axis
     UNITY_VERTEX_OUTPUT_STEREO
 };
 
@@ -132,6 +133,37 @@ float3 NormalizeOr(float3 v, float3 fallback)
     return lengthSq > 1e-8 ? v * rsqrt(lengthSq) : fallback;
 }
 
+float3 ViewDirectionInPart(float3 position, float3 fallback)
+{
+#ifdef USING_STEREO_MATRICES
+    float3 cameraPos = 0.5 * (unity_StereoWorldSpaceCameraPos[0] + unity_StereoWorldSpaceCameraPos[1]);
+#else
+    float3 cameraPos = _WorldSpaceCameraPos;
+#endif
+    float3 viewVector = mul(unity_WorldToObject, float4(cameraPos, 1.0)).xyz - position;
+    if (unity_OrthoParams.w > 0.5)
+        viewVector = mul((float3x3)unity_WorldToObject, UNITY_MATRIX_V[2].xyz);
+    return NormalizeOr(viewVector, fallback);
+}
+
+float3 ProjectOnViewPlane(float3 motion, float3 view)
+{
+    return motion - view * dot(motion, view);
+}
+
+float3 LimitGripSweep(float3 currentPos, float3 sweptPos, out float bladeWeight, out float visibility)
+{
+    float currentDistance = dot(_GripBlurPlane.xyz, currentPos) + _GripBlurPlane.w;
+    // Keep the handle at the current pose and ease into the sweep on the blade side.
+    bladeWeight = smoothstep(0.0, 0.025, currentDistance);
+    float3 position = lerp(currentPos, sweptPos, bladeWeight);
+    float distance = dot(_GripBlurPlane.xyz, position) + _GripBlurPlane.w;
+    // Feather the part of a moving blade that would cross the guard plane.
+    float edgeWidth = clamp(currentDistance, 1e-4, 0.022);
+    visibility = lerp(1.0, smoothstep(0.0, edgeWidth, distance), bladeWeight);
+    return position + _GripBlurPlane.xyz * max(0.0, min(0.0, currentDistance) - distance);
+}
+
 // The CPU provides evenly timed poses. Interpolate here so nearby vertices
 // cannot snap to different poses at the same history bin boundary.
 void SampleHistory(float age, out float3 pos, out float3 fwd, out float3 up)
@@ -216,12 +248,14 @@ v2f vert (appdata_t v)
     float3 sPos, sFwd, sUp;
     SampleHistory(tSample, sPos, sFwd, sUp);
 
-    float3 vertexPos = sPos + offset; // CPU style: sample pos + bent offset (keeps shape rigid)
+    float3 currentPos = fPos0 + fRight0 * localX + fUp0 * localY;
+    float bladeWeight, gripVisibility;
+    float3 vertexPos = LimitGripSweep(currentPos, sPos + offset, bladeWeight, gripVisibility);
 
     // FIX normals: geometric normal is bentPlane * sign, not constant
-    float3 localNormal = bentPlane * signVal;
+    float3 localNormal = lerp(fFwd0, bentPlane, bladeWeight) * signVal;
     float3 worldNormal = UnityObjectToWorldNormal(localNormal);
-    float3 worldBlade = UnityObjectToWorldNormal(sFwd);
+    float3 worldBlade = UnityObjectToWorldNormal(lerp(fFwd0, sFwd, bladeWeight));
 
     o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
     o.vertex.z += _DepthOffset;
@@ -231,8 +265,8 @@ v2f vert (appdata_t v)
     o.color = outColor;
     float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
     o.worldPos = worldPos;
-    o.bladeDir = float4(worldBlade, opacity);
-    o.exposure = float3(tSample, travel, 0.0);
+    o.bladeDir = float4(worldBlade, opacity * gripVisibility);
+    o.exposure = float3(tSample, travel * bladeWeight, 0.0);
     return o;
 
 #elif defined(_GEOMETRY_OBJ)
@@ -270,54 +304,75 @@ v2f vert (appdata_t v)
     float3 avgUp = length(sumUp) > 1e-6 ? normalize(sumUp) : fUp0;
     float3 avgRight = length(sumRight) > 1e-6 ? normalize(sumRight) : fRight0;
 
-    float3 motionVec = lPos0 - fPos0;
-    float dst = length(motionVec);
-    float3 motionDir = dst > 1e-4 ? motionVec / dst : avgRight;
-    // compute tSample using avg offset and bounds
-    float3 offsetAvg = avgRight * localPos.x + avgUp * localPos.y + avgFwd * localPos.z;
-    float dR = dot(avgRight, motionDir);
-    float dU = dot(avgUp, motionDir);
-    float dF = dot(avgFwd, motionDir);
-    // min/max dot using bounds
     float3 bMin = _VertexObjBoundsMin * _VertexObjScale;
     float3 bMax = _VertexObjBoundsMax * _VertexObjScale;
-    float minDot = (dR >= 0 ? dR * bMin.x : dR * bMax.x) + (dU >= 0 ? dU * bMin.y : dU * bMax.y) + (dF >= 0 ? dF * bMin.z : dF * bMax.z);
-    float maxDot = (dR >= 0 ? dR * bMax.x : dR * bMin.x) + (dU >= 0 ? dU * bMax.y : dU * bMin.y) + (dF >= 0 ? dF * bMax.z : dF * bMin.z);
-    float range = maxDot - minDot;
-    float travel = dst * max(0.0, _VertexBlurFade) / max(abs(range), 0.004);
-    float tSample;
-    if (abs(range) < 1e-4) tSample = 0.5;
-    else {
-        float dotVal = dot(offsetAvg, motionDir);
-        tSample = (dotVal - minDot) / range;
-        tSample = saturate(tSample);
-    }
+    float3 center = 0.5 * (bMin + bMax);
+    float3 extent = 0.5 * abs(bMax - bMin);
+    float3 currentCenter = fPos0 + fRight0 * center.x + fUp0 * center.y + fFwd0 * center.z;
+    float3 view = ViewDirectionInPart(currentCenter, avgUp);
+    float3 deltaRight = ProjectOnViewPlane(lRight0 - fRight0, view);
+    float3 deltaUp = ProjectOnViewPlane(lUp0 - fUp0, view);
+    float3 deltaForward = ProjectOnViewPlane(lFwd0 - fFwd0, view);
+    float3 centerMotion = ProjectOnViewPlane(lPos0 - fPos0, view)
+                        + deltaRight * center.x + deltaUp * center.y + deltaForward * center.z;
+    float3 fromCenter = localPos - center;
+    float3 vertexMotion = centerMotion + deltaRight * fromCenter.x
+                        + deltaUp * fromCenter.y + deltaForward * fromCenter.z;
+
+    // Use a common axis for the whole object, including rotation about a fixed pivot.
+    // Sample ages depend on position so duplicated vertices at OBJ seams stay together.
+    float3 axis = centerMotion;
+    float3 rightMotion = deltaRight * extent.x;
+    float3 upMotion = deltaUp * extent.y;
+    float3 forwardMotion = deltaForward * extent.z;
+    if (dot(rightMotion, rightMotion) > dot(axis, axis)) axis = rightMotion;
+    if (dot(upMotion, upMotion) > dot(axis, axis)) axis = upMotion;
+    if (dot(forwardMotion, forwardMotion) > dot(axis, axis)) axis = forwardMotion;
+    axis = NormalizeOr(axis, avgRight);
+
+    float3 localAxis = float3(dot(axis, avgRight), dot(axis, avgUp), dot(axis, avgFwd));
+    float width = max(2.0 * dot(abs(localAxis), extent), 0.004);
+    float3 crossAxis = NormalizeOr(cross(view, axis), avgFwd);
+    float3 localCrossAxis = float3(dot(crossAxis, avgRight), dot(crossAxis, avgUp), dot(crossAxis, avgFwd));
+    float crossWidth = max(2.0 * dot(abs(localCrossAxis), extent), 0.004);
+    float crossCoord = saturate(0.5 + dot(fromCenter, localCrossAxis) / crossWidth);
+    float tSample = saturate(0.5 + dot(fromCenter, localAxis) / width);
+    float motionAlongAxis = dot(vertexMotion, axis);
+    float direction = smoothstep(-0.10 * width, 0.10 * width, motionAlongAxis);
+    tSample = lerp(1.0 - tSample, tSample, direction);
+
+    float travel = length(vertexMotion) / width;
+    float sweepAmount = smoothstep(0.05, 0.75, travel);
 
     float3 sPos, sFwd, sUp;
-    SampleHistory(tSample, sPos, sFwd, sUp);
+    SampleHistory(tSample * sweepAmount, sPos, sFwd, sUp);
     float3 sRight = NormalizeOr(cross(sUp, sFwd), avgRight);
     sUp = cross(sFwd, sRight);
 
-    float3 vertexPos = sPos + offsetAvg; // keep CPU style rigid offset
+    float3 currentPos = fPos0 + fRight0 * localPos.x + fUp0 * localPos.y + fFwd0 * localPos.z;
+    float3 sweptPos = sPos + sRight * localPos.x + sUp * localPos.y + sFwd * localPos.z;
+    float bladeWeight, gripVisibility;
+    float3 vertexPos = LimitGripSweep(currentPos, sweptPos, bladeWeight, gripVisibility);
 
     // FIX normals: rotate localNormal by sample basis (sRight/up/fwd)
     float3 localNormalRotated = localNormal.x * sRight + localNormal.y * sUp + localNormal.z * sFwd;
+    float3 currentNormal = localNormal.x * fRight0 + localNormal.y * fUp0 + localNormal.z * fFwd0;
+    localNormalRotated = lerp(currentNormal, localNormalRotated, bladeWeight);
     float lnRotLen = length(localNormalRotated);
     if (lnRotLen > 1e-6) localNormalRotated /= lnRotLen;
 
     float3 worldNormal = UnityObjectToWorldNormal(localNormalRotated);
-    float3 worldBlade = UnityObjectToWorldNormal(sFwd);
+    float3 worldBlade = UnityObjectToWorldNormal(lerp(fFwd0, sFwd, bladeWeight));
 
     o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
     o.vertex.z += _DepthOffset;
     o.uv = baseUv;
-    o.motionDir = UnityObjectToWorldDir(motionDir);
     o.normal = worldNormal;
     o.color = outColor;
     float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
     o.worldPos = worldPos;
-    o.bladeDir = float4(worldBlade, opacity);
-    o.exposure = float3(tSample, travel, 0.0);
+    o.bladeDir = float4(worldBlade, opacity * gripVisibility);
+    o.exposure = float3(tSample, travel * bladeWeight * max(0.0, _VertexBlurFade), crossCoord);
     return o;
 
 #else
@@ -369,21 +424,13 @@ v2f vert (appdata_t v)
     float transverseDistance = length(transverseMotion);
     // Apparent travel along the blade mostly overlaps its current silhouette.
     // Use lateral travel to spread the tube and keep its middle dense on a depth swing.
-#ifdef USING_STEREO_MATRICES
-    float3 cameraPos = 0.5 * (unity_StereoWorldSpaceCameraPos[0] + unity_StereoWorldSpaceCameraPos[1]);
-#else
-    float3 cameraPos = _WorldSpaceCameraPos;
-#endif
-    float3 viewVector = mul(unity_WorldToObject, float4(cameraPos, 1.0)).xyz - firstCenter;
-    if (unity_OrthoParams.w > 0.5)
-        viewVector = mul((float3x3)unity_WorldToObject, UNITY_MATRIX_V[2].xyz);
-    float3 view = NormalizeOr(viewVector, avgUp);
+    float3 view = ViewDirectionInPart(firstCenter, avgUp);
     float3 screenSide = cross(view, avgFwd);
     float sideLengthSq = dot(screenSide, screenSide);
     screenSide *= rsqrt(max(sideLengthSq, 1e-8));
     float signedTravel = dot(transverseMotion, screenSide);
     // When the blade points at the lens, it has no stable long axis in the image.
-    float3 screenMotion = transverseMotion - view * dot(transverseMotion, view);
+    float3 screenMotion = ProjectOnViewPlane(transverseMotion, view);
     float sideWeight = smoothstep(0.0, 0.01, sideLengthSq);
     float3 sweep = lerp(screenMotion, screenSide * signedTravel, sideWeight);
     float projectedDistance = length(sweep);
@@ -405,12 +452,16 @@ v2f vert (appdata_t v)
     sUp = cross(sFwd, sRight);
 
     float3 ringCenter = sPos + sFwd * zPos + sRight * offX + sUp * offY;
-    float3 vertexPos = ringCenter + offsetDir * (isZeroFlag > 0.5 ? 0 : radiusAbs);
+    float radius = isZeroFlag > 0.5 ? 0.0 : radiusAbs;
+    float bladeWeight, gripVisibility;
+    float3 vertexPos = LimitGripSweep(firstCenter + currentOffset * radius,
+                                     ringCenter + offsetDir * radius, bladeWeight, gripVisibility);
 
-    float3 normal = signVal * offsetDir;
+    float3 normal = signVal * lerp(currentOffset, offsetDir, bladeWeight);
 
     if (_VertexEnableRoundedNormals > 0.5)
     {
+        float3 roundAxis = lerp(fFwd0, avgFwd, bladeWeight);
         float3 adj = 0;
         if (isZeroFlag > 0.5)
         {
@@ -420,17 +471,17 @@ v2f vert (appdata_t v)
             float v1 = 0.12 * sign(t) * pow(abs(t), 9);
             float t2 = t*0.99;
             float v2 = sign(t2) * pow(abs(t2), 171);
-            adj = avgFwd * (2*(v1+v2));
+            adj = roundAxis * (2*(v1+v2));
         }
         else
         {
-            adj = avgFwd * (-radiusSlope);
+            adj = roundAxis * (-radiusSlope);
         }
         normal += adj;
     }
 
     float3 worldNormal = UnityObjectToWorldNormal(normal);
-    float3 worldBlade = UnityObjectToWorldNormal(sFwd);
+    float3 worldBlade = UnityObjectToWorldNormal(lerp(fFwd0, sFwd, bladeWeight));
 
     o.vertex = UnityObjectToClipPos(float4(vertexPos,1));
     o.vertex.z += _DepthOffset;
@@ -439,8 +490,8 @@ v2f vert (appdata_t v)
     o.color = outColor;
     float3 worldPos = mul(unity_ObjectToWorld, float4(vertexPos,1)).xyz;
     o.worldPos = worldPos;
-    o.bladeDir = float4(worldBlade, opacity);
-    o.exposure = float3(tSample, travel * max(0.0, _VertexBlurFade), ringT);
+    o.bladeDir = float4(worldBlade, opacity * gripVisibility);
+    o.exposure = float3(tSample, travel * bladeWeight * max(0.0, _VertexBlurFade), ringT);
     return o;
 #endif
 }
@@ -472,7 +523,7 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float3 Nperp = NormalizeOr(N - blade * dot(N, blade), N);
     float3 Vperp = NormalizeOr(V - blade * dot(V, blade), V);
     float projectedTravel = vertStage.exposure.y * saturate(_VainSaberBlurSoftness);
-#if defined(_GEOMETRY_SPRITE) || defined(_GEOMETRY_OBJ)
+#if defined(_GEOMETRY_SPRITE)
     float3 motionDir = NormalizeOr(vertStage.motionDir, float3(1, 0, 0));
     float viewMotion = dot(motionDir, V);
     projectedTravel *= sqrt(saturate(1.0 - viewMotion * viewMotion));
@@ -481,26 +532,29 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     float age = saturate(vertStage.exposure.x);
     float coverage = rsqrt(1.0 + 1.8 * projectedTravel);
 
-#if !defined(_GEOMETRY_OBJ)
     // A rounded shutter profile suppresses both hard outlines, with more
     // exposure near the current pose. Fade the ends of the swept surface too.
     float edgeWidth = lerp(0.19, 0.40, saturate(projectedTravel * 0.18));
     float pixelWidth = fwidth(age);
     float shutter = smoothstep(0.0, max(edgeWidth, pixelWidth), min(1.4 * age, 1.0 - age));
     shutter *= 1.0 - 0.55 * age * age;
-    #if defined(_GEOMETRY_SPRITE)
+    coverage *= shutter;
+#if defined(_GEOMETRY_SPRITE)
         float2 border = min(vertStage.uv, 1.0 - vertStage.uv);
         float2 endWidth = max(float2(0.085, 0.085), fwidth(vertStage.uv));
         float2 endFade = smoothstep(0.0, endWidth, border);
         coverage *= endFade.x * endFade.y;
-    #else
+#else
         float along = vertStage.exposure.z;
         float pixelLength = fwidth(along);
         float endWidth = lerp(0.07, 0.16, saturate(projectedTravel * 0.18));
-        coverage *= smoothstep(0.0, max(endWidth * 0.45, pixelLength), along)
-                    * smoothstep(0.0, max(endWidth, pixelLength), 1.0 - along);
+    #if defined(_GEOMETRY_OBJ)
+        float startWidth = endWidth;
+    #else
+        float startWidth = endWidth * 0.45;
     #endif
-    coverage *= shutter;
+        coverage *= smoothstep(0.0, max(startWidth, pixelLength), along)
+                    * smoothstep(0.0, max(endWidth, pixelLength), 1.0 - along);
 #endif
 
     float fresnelFull = 1.0 - saturate(abs(dot(N, V)));

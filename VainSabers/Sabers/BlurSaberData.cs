@@ -25,6 +25,7 @@ public class BlurSaberData : MonoBehaviour
 
     private PluginConfig? m_config = null;
     public Color CustomColor;
+    internal bool KeepGripUnblurred { get; set; }
     public float BlurTime => m_config != null ? Mathf.Min(m_config.BlurMS * 0.001f, 0.025f) : 0.025f;
     
     private readonly List<BlurSaberPart> m_components = new List<BlurSaberPart>();

@@ -41,6 +41,7 @@ internal class BlurSaberModelController : SaberModelController, IPreSaberModelIn
     private void SetupSaber(string preset)
     {
         m_blurSaber = gameObject.AddInitComponent<BlurSaber>(transform, m_config);
+        m_blurSaber.Data.KeepGripUnblurred = true;
         m_blurSaber.SetPreset(preset);
         
         Shader.SetGlobalFloat("_VainSaberBlurSoftness", m_config.BlurSoftness);
