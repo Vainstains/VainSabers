@@ -78,36 +78,53 @@ ExposurePath GetExposurePath(float3 localCenter, float3 localAxis, float radius,
     return path;
 }
 
+float ExposureFeather(float distance, float radius)
+{
+    float softness = saturate(_VainSaberBlurSoftness);
+    float spread = lerp(0.035, 0.12, softness);
+#if defined(_GEOMETRY_OBJ) || defined(_GEOMETRY_SPRITE)
+    spread *= 0.55;
+#endif
+    return max(0.002, radius * 0.65 + abs(distance) * spread);
+}
+
 float3 ExposureStripPosition(ExposurePath path, float radius, float edge, out float across)
 {
     // Each row stays at its live axial position. Two edges enclose the entire
     // projected interval without building one translucent layer per pose.
-    float padding = radius + max(0.002, radius * 0.25);
+    float padding = radius + 2.2 * ExposureFeather(path.distance, radius) + 0.002;
     across = lerp(min(0.0, path.distance) - padding, max(0.0, path.distance) + padding, edge);
     return path.center + path.side * across;
 }
 
-float ShutterIntegral(float age)
+float IntegratedShutterPrimitive(float age)
 {
-    age = saturate(age);
-    // Integral of the smooth closing shutter 1 - smoothstep(0, 1, age).
-    return age - age * age * age * (1.0 - 0.5 * age);
+    float t = saturate(age);
+    float t2 = t * t;
+    // Second primitive of 1 - smoothstep(0, 1, age), continued linearly past 1.
+    return t2 * (0.5 + t2 * (0.1 * t - 0.25)) + 0.5 * max(0.0, age - 1.0);
 }
 
-float IntegrateExposure(float x, float radius, float speed)
+float FilteredExposure(float x, float aperture, float travel, float feather)
 {
-    float enter = (x - radius) / speed;
-    float leave = (x + radius) / speed;
-    return 2.0 * (ShutterIntegral(leave) - ShutterIntegral(enter));
+    float invTravel = rcp(travel);
+    float low = (x - feather) * invTravel;
+    float high = (x + feather) * invTravel;
+    float r = aperture * invTravel;
+    float upper = IntegratedShutterPrimitive(high + r) - IntegratedShutterPrimitive(high - r);
+    float lower = IntegratedShutterPrimitive(low + r) - IntegratedShutterPrimitive(low - r);
+    return max(0.0, (upper - lower) * (travel / feather));
 }
 
 float ExposureCoverage(float4 profile)
 {
     float x = profile.x * sign(profile.y);
-    float speed = max(abs(profile.y), 0.0001);
-    float sampleOffset = 0.32 * max(fwidth(profile.x), 0.0001);
-    float exposure = 0.5 * (IntegrateExposure(x - sampleOffset, profile.z, speed)
-                          + IntegrateExposure(x + sampleOffset, profile.z, speed));
-    float response = lerp(0.58, 0.76, saturate(_VertexBlurFade * 0.18));
+    float travel = max(abs(profile.y), 0.0001);
+    float feather = max(ExposureFeather(travel, profile.z), 0.65 * fwidth(profile.x));
+    // Filter a narrow core and a wider halo analytically, without sampling the scene.
+    float core = FilteredExposure(x, profile.z, travel, feather);
+    float halo = FilteredExposure(x, profile.z, travel, 2.2 * feather);
+    float exposure = lerp(core, halo, 0.27);
+    float response = lerp(0.52, 0.68, saturate(_VertexBlurFade * 0.18));
     return profile.w * pow(saturate(exposure), response);
 }

@@ -8,6 +8,8 @@ Tube blades, sprites, and OBJ parts use the same exposure calculation. The origi
 
 The implementation approximates the three-dimensional trajectory with continuous motion along its projected interval. OBJ cross-sections come from the model bounds.
 
-Unity tests on Direct3D 11 covered fast movement, an oblique reversal, a depth swing, and resting geometry. The segmented blade and Wii Remote blade kept visible contact on both four-sided and 21-sided meshes. I also rendered the embedded Wii Remote OBJ and texture, a sprite, and the menu pointer preset. Headset rendering and VR frame timings still need testing.
+The exposure now has a soft core and a wider halo. Both come from analytical filters of the same shutter integral. The filter widths grow with visible lateral travel, which softens the edges of a wide swing without adding a scene texture lookup or another rendering pass.
+
+Unity tests on Direct3D 11 covered fast movement, an oblique reversal, a depth swing, and resting geometry. I tested the filtered exposure with vain-ring and vain-seg-inv at Quality 1.0 and the maximum 1.5. In a 900p test frame, the leading fade on vain-ring widened from 2 to 92 pixels. The stationary and depth-swing frames matched the unfiltered version. The earlier integration tests also covered the embedded Wii Remote OBJ and texture, a sprite, and the menu pointer preset. Headset rendering and VR frame timings still need testing.
 
 The main implementation is in TemporalExposure.cginc. BlurPart.cginc connects it to the lit and unlit saber shaders, and BlurTube.cs creates the exposure strips. In the asset creation project, rebuild vs_assets with Tools > Build AssetBundles in Unity before rebuilding VainSabers.dll.

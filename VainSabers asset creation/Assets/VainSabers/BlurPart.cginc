@@ -515,6 +515,10 @@ SaberFragVariables GetCommonSaberVars(v2f vertStage)
     commonVars.normal = N;
     commonVars.rimFactor = 1.0 + tex2D(_RimPowerGradient, gradientUV).r * lerp(1.0, 0.40, blurMix);
     commonVars.glowStrength = _Glow * vertStage.color.a + tex2D(_GlowAddendGradient, gradientUV).r;
+#if !defined(_GEOMETRY_OBJ) && !defined(_GEOMETRY_SPRITE)
+    if (vertStage.shutter.z > 0.0)
+        commonVars.glowStrength *= 1.0 + 0.22 * saturate(_VainSaberBlurSoftness);
+#endif
     float baseOpacity = saturate(vertStage.bladeDir.w);
     float opacity = baseOpacity * sqrt(baseOpacity) * exposureCoverage;
     commonVars.alpha = saturate(opacity * tex2D(_OpacityMultiplierGradient, gradientUV).r);
