@@ -76,7 +76,6 @@ Shader "VainSabers/Blur Part"
             ZWrite Off
             ZTest LEqual
             ColorMask A
-            Blend One OneMinusSrcAlpha
             CGPROGRAM
             // #pragma multi_compile_instancing
             #pragma fragment frag
@@ -93,7 +92,7 @@ Shader "VainSabers/Blur Part"
 #else
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 SaberFragVariables vars = GetCommonSaberVars(i);
-
+                ClipEmptyFanGlow(i, vars.alpha);
                 float glow = vars.glowStrength * vars.alpha;
                 
                 return fixed4(0.0, 0.0, 0.0, glow);

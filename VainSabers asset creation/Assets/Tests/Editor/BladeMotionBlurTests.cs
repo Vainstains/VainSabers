@@ -13,7 +13,8 @@ public class BladeMotionBlurTests
         Across,
         Fast,
         TowardCamera,
-        Reverse
+        Reverse,
+        NearCamera
     }
 
     private const int Size = 720;
@@ -92,7 +93,29 @@ public class BladeMotionBlurTests
         CollectionAssert.AreEqual(still, disabled);
     }
 
-    private Color32[] Render(Swing swing, int sides = 16, bool lit = false, float softness = 1f)
+    [Test]
+    public void HistoryCrossingNearPlaneKeepsFanWithinView()
+    {
+        var pixels = Render(Swing.NearCamera);
+
+        Assert.That(VisibleWidth(pixels, 360), Is.InRange(60, 365));
+        Assert.That(Pixel(pixels, 539, 360).r, Is.GreaterThan(35), "The fan must stay connected to the blade.");
+        Assert.That(Pixel(pixels, 140, 360).r, Is.LessThan(8), "The fan reached the far side of the camera.");
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void OpaqueDarkPresetLayerClearsBloomUnderIt(bool lit)
+    {
+        var open = Render(Swing.Still, lit: lit);
+        var masked = Render(Swing.Still, lit: lit, opaqueGlowMask: true);
+
+        Assert.That(Pixel(open, BladeCenter, 360).a, Is.GreaterThan(60));
+        Assert.That(Pixel(masked, BladeCenter, 360).a, Is.Zero);
+    }
+
+    private Color32[] Render(Swing swing, int sides = 16, bool lit = false, float softness = 1f,
+                             bool opaqueGlowMask = false)
     {
         string shaderPath = lit ? "vs_blurpart_lit.shader" : "vs_blurpart.shader";
         var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/VainSabers/" + shaderPath);
@@ -100,7 +123,11 @@ public class BladeMotionBlurTests
 
         var target = Own(new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear));
         var camera = Own(new GameObject("Motion blur test camera")).AddComponent<Camera>();
-        camera.transform.position = new Vector3(0.14f, 0.55f, -2.15f);
+        camera.transform.position = swing == Swing.NearCamera
+            ? new Vector3(-0.1f, 0.55f, -0.62f)
+            : new Vector3(0.14f, 0.55f, -2.15f);
+        if (swing == Swing.NearCamera)
+            camera.nearClipPlane = 0.06f;
         camera.fieldOfView = 36f;
         camera.clearFlags = CameraClearFlags.SolidColor;
         camera.backgroundColor = new Color(0.015f, 0.02f, 0.028f, 0f);
@@ -124,7 +151,7 @@ public class BladeMotionBlurTests
             material.renderQueue = 3100 + layer;
             material.SetFloat("_Glow", 0.75f);
             material.SetFloat("_VertexBlurFade", inner ? 2f : 5f);
-            material.SetFloat("_VertexGlowMul", 1f);
+            material.SetFloat("_VertexGlowMul", opaqueGlowMask && inner ? 0f : 1f);
             material.SetFloat("_VertexOpacityMul", inner ? 1f : 0.85f);
             material.SetFloat("_VainSaberBlurSoftness", softness);
             material.SetFloat("_VertexLength", 1f);
@@ -165,7 +192,7 @@ public class BladeMotionBlurTests
                 : age;
             var rotation = swing switch
             {
-                Swing.Still => Quaternion.identity,
+                Swing.Still or Swing.NearCamera => Quaternion.identity,
                 Swing.TowardCamera => Quaternion.AngleAxis(age * 37f, Vector3.right),
                 Swing.Slow => Quaternion.AngleAxis(sweep * 0.033f * Mathf.Rad2Deg, Vector3.forward),
                 Swing.Fast => Quaternion.AngleAxis(sweep * 0.68f * Mathf.Rad2Deg, Vector3.forward),
@@ -173,6 +200,8 @@ public class BladeMotionBlurTests
             };
             if (swing == Swing.TowardCamera)
                 positions[i] = new Vector4(0f, -0.08f * age, 0.22f * age);
+            else if (swing == Swing.NearCamera)
+                positions[i] = new Vector4(-0.21f * age, 0f, -0.565f * age);
             forwards[i] = rotation * Vector3.up;
             ups[i] = rotation * Vector3.back;
         }

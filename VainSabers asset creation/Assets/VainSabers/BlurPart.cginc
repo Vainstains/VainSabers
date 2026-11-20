@@ -154,6 +154,11 @@ float ProjectedBladeTravel(float3 coordinates, float3 center, float3 side, float
 {
     float3 centerRay = center - cameraPos;
     float depth = dot(centerRay, cameraForward);
+    bool perspective = unity_OrthoParams.w < 0.5;
+    float nearPlane = _ProjectionParams.y;
+    if (perspective && depth <= nearPlane)
+        return 0.0;
+
     float direction = 0.0;
     float farthest = 0.0;
     [loop]
@@ -165,11 +170,16 @@ float ProjectedBladeTravel(float3 coordinates, float3 center, float3 side, float
                         + cross(up, fwd) * coordinates.x;
         float3 previousRay = previous - cameraPos;
         float previousDepth = dot(previousRay, cameraForward);
-        if (unity_OrthoParams.w < 0.5 && min(depth, previousDepth) <= _ProjectionParams.y)
+        if (perspective && previousDepth <= nearPlane)
             break;
-        float3 delta = unity_OrthoParams.w > 0.5
-            ? previous - center : previousRay * (depth / previousDepth) - centerRay;
-        float across = dot(delta, side);
+        float across = dot(previous - center, side);
+        if (perspective)
+        {
+            // A pose close to the near plane is unreliable as an exposure
+            // endpoint. Bound the perspective scale and fade the pose out.
+            float scale = min(depth / previousDepth, 1.25);
+            across *= scale * smoothstep(nearPlane, nearPlane + 0.22, previousDepth);
+        }
         if (direction == 0.0 && abs(across) > 0.00075)
             direction = sign(across);
         float progress = direction * across;
@@ -177,6 +187,16 @@ float ProjectedBladeTravel(float3 coordinates, float3 center, float3 side, float
         if (progress < farthest - 0.0012)
             break;
         farthest = max(progress, farthest);
+    }
+    if (perspective)
+    {
+        float focalLength = max(abs(UNITY_MATRIX_P._m00), abs(UNITY_MATRIX_P._m11));
+        float limit = min(0.72, 0.85 * depth / max(focalLength, 0.001));
+        float shoulder = 0.22 * limit;
+        float excess = max(0.0, farthest - (limit - shoulder));
+        // Approach the field-of-view limit smoothly, including on narrow FOV cameras.
+        farthest -= excess * excess / max(shoulder + excess, 1e-5);
+        farthest *= smoothstep(nearPlane, nearPlane + 0.24, depth);
     }
     return direction * farthest;
 }
@@ -485,21 +505,23 @@ v2f vert (appdata_t v)
         float3 bladeSide = cross(view, fFwd0);
         float sideLength = length(bladeSide);
         bladeSide /= max(sideLength, 1e-4);
-        float3 cameraForward = NormalizeOr(mul((float3x3)unity_WorldToObject, -UNITY_MATRIX_V[2].xyz), -view);
         float strength = saturate(_VainSaberBlurSoftness * _VertexBlurFade);
-        float signedDistance = 0.0;
-        if (strength > 0.0 && sideLength > 0.035)
-            signedDistance = ProjectedBladeTravel(float3(offX, offY, zPos), firstCenter, bladeSide,
-                                                   localCamera, cameraForward);
-        // Small parallax on a mostly depth-wise swing should not thin the blade.
-        float depthTravel = abs(dot(motionVec, view));
-        float lateralShare = abs(signedDistance) / max(abs(signedDistance) + depthTravel, 1e-4);
-        signedDistance *= smoothstep(0.075, 0.24, lateralShare);
         // A pivot can be nearly stationary at the root while its tip is in
         // full swing. Start feathering the root at the same time as the tip.
         float angularTravel = 0.5 * _VertexLength * length(lFwd0 - fFwd0);
         float movement = max(length(motionVec), angularTravel);
         float blend = smoothstep(0.0008, 0.016, movement * strength) * rearRelease;
+        float signedDistance = 0.0;
+        if (blend > 0.0 && sideLength > 0.035)
+        {
+            float3 cameraForward = NormalizeOr(mul((float3x3)unity_WorldToObject, -UNITY_MATRIX_V[2].xyz), -view);
+            signedDistance = ProjectedBladeTravel(float3(offX, offY, zPos), firstCenter, bladeSide,
+                                                   localCamera, cameraForward);
+        }
+        // Small parallax on a mostly depth-wise swing should not thin the blade.
+        float depthTravel = abs(dot(motionVec, view));
+        float lateralShare = abs(signedDistance) / max(abs(signedDistance) + depthTravel, 1e-4);
+        signedDistance *= smoothstep(0.075, 0.24, lateralShare);
         float radius = max(radiusAbs, 0.002);
         float distance = abs(signedDistance) * blend * smoothstep(0.035, 0.18, sideLength);
         float widths = distance / radius;
@@ -566,6 +588,14 @@ struct SaberFragVariables {
     float3 normal;
     float rimFactor;
 };
+
+void ClipEmptyFanGlow(v2f vertStage, float opacity)
+{
+#if !defined(_GEOMETRY_OBJ) && !defined(_GEOMETRY_SPRITE)
+    if (vertStage.motionDir.x * vertStage.fan.w > 0.01)
+        clip(opacity - 1.0 / 255.0);
+#endif
+}
 
 sampler2D _RimPowerGradient;
 float _RimPerpendicular;
