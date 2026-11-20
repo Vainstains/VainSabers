@@ -1,0 +1,247 @@
+using System.Collections.Generic;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.Rendering;
+
+public class BladeMotionBlurTests
+{
+    public enum Swing
+    {
+        Still,
+        Slow,
+        Across,
+        Fast,
+        TowardCamera,
+        Reverse
+    }
+
+    private const int Size = 720;
+    private const int BladeCenter = 288;
+    private const int TestLayer = 30;
+    private readonly List<Object> owned = new List<Object>();
+
+    [SetUp]
+    public void RequireGraphicsDevice()
+    {
+        Assert.That(SystemInfo.graphicsDeviceType, Is.Not.EqualTo(GraphicsDeviceType.Null),
+            "Run the render tests with graphics enabled.");
+    }
+
+    [TearDown]
+    public void DestroyRenderObjects()
+    {
+        ClearRenderObjects();
+    }
+
+    [Test]
+    public void SwingTowardCameraPreservesCenterFromRootToTip()
+    {
+        var still = Render(Swing.Still);
+        var moving = Render(Swing.TowardCamera);
+        float minimumCoverage = 1f;
+        for (int y = 147; y < 622; y++)
+        {
+            float reference = Pixel(still, BladeCenter, y).r;
+            Assert.That(reference, Is.GreaterThan(240f), "The reference blade must cover the center pixel.");
+            minimumCoverage = Mathf.Min(minimumCoverage, Pixel(moving, BladeCenter, y).r / reference);
+        }
+
+        Assert.That(minimumCoverage, Is.GreaterThan(0.95f));
+    }
+
+    [TestCase(Swing.Slow, 45)]
+    [TestCase(Swing.Across, 20)]
+    [TestCase(Swing.Fast, 18)]
+    [TestCase(Swing.Reverse, 26)]
+    public void MovingFanFeathersBothEdges(Swing swing, int maxStep)
+    {
+        var pixels = Render(swing);
+        foreach (int y in new[] { 225, 295, 400, 585 })
+        {
+            int maximumStep = 0;
+            for (int x = 16; x < 490; x++)
+                maximumStep = Mathf.Max(maximumStep, Mathf.Abs(Pixel(pixels, x, y).r - Pixel(pixels, x - 1, y).r));
+
+            Assert.That(maximumStep, Is.LessThanOrEqualTo(maxStep), $"Sharp luminance change on row {y}");
+            Assert.That(Pixel(pixels, BladeCenter, y).r, Is.GreaterThan(25), $"Gap next to the blade on row {y}");
+        }
+    }
+
+    [TestCase(16, false)]
+    [TestCase(5, false)]
+    [TestCase(16, true)]
+    public void FanWidensTowardTip(int sides, bool lit)
+    {
+        var pixels = Render(Swing.Across, sides, lit);
+        int tip = VisibleWidth(pixels, 220);
+        int middle = VisibleWidth(pixels, 360);
+        int root = VisibleWidth(pixels, 520);
+
+        Assert.That(root, Is.GreaterThan(20));
+        Assert.That(middle, Is.GreaterThan(root));
+        Assert.That(tip, Is.GreaterThan(middle));
+    }
+
+    [Test]
+    public void ZeroSoftnessLeavesTheBladeInItsCurrentPose()
+    {
+        var still = Render(Swing.Still);
+        var disabled = Render(Swing.Fast, softness: 0f);
+
+        CollectionAssert.AreEqual(still, disabled);
+    }
+
+    private Color32[] Render(Swing swing, int sides = 16, bool lit = false, float softness = 1f)
+    {
+        string shaderPath = lit ? "vs_blurpart_lit.shader" : "vs_blurpart.shader";
+        var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/VainSabers/" + shaderPath);
+        Assert.That(shader && shader.isSupported && !ShaderUtil.ShaderHasError(shader), Is.True, shaderPath);
+
+        var target = Own(new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear));
+        var camera = Own(new GameObject("Motion blur test camera")).AddComponent<Camera>();
+        camera.transform.position = new Vector3(0.14f, 0.55f, -2.15f);
+        camera.fieldOfView = 36f;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(0.015f, 0.02f, 0.028f, 0f);
+        camera.targetTexture = target;
+        camera.cullingMask = 1 << TestLayer;
+        var gradient = Own(new Texture2D(128, 1, TextureFormat.RGBA32, false, true));
+        gradient.wrapMode = TextureWrapMode.Clamp;
+        for (int x = 0; x < gradient.width; x++)
+            gradient.SetPixel(x, 0, new Color(1f - 0.68f * Mathf.SmoothStep(0f, 1f, x / 127f), 0f, 0f));
+        gradient.Apply();
+
+        // Opposite winding and different widths exercise layered presets.
+        for (int layer = 0; layer < 2; layer++)
+        {
+            bool inner = layer > 0;
+            var blade = Own(new GameObject("Motion blur test blade"));
+            blade.layer = TestLayer;
+            blade.AddComponent<MeshFilter>().sharedMesh = Own(Tube(sides, inner ? 0.009f : -0.018f));
+            var material = Own(new Material(shader));
+            blade.AddComponent<MeshRenderer>().sharedMaterial = material;
+            material.renderQueue = 3100 + layer;
+            material.SetFloat("_Glow", 0.75f);
+            material.SetFloat("_VertexBlurFade", inner ? 2f : 5f);
+            material.SetFloat("_VertexGlowMul", 1f);
+            material.SetFloat("_VertexOpacityMul", inner ? 1f : 0.85f);
+            material.SetFloat("_VainSaberBlurSoftness", softness);
+            material.SetFloat("_VertexLength", 1f);
+            material.SetVector("_VertexBladeAxis", new Vector4(0f, 1f, Mathf.Cos(Mathf.PI / sides), 0f));
+            material.SetTexture("_OpacityMultiplierGradient", inner ? Texture2D.whiteTexture : gradient);
+            material.SetTexture("_GlowAddendGradient", Texture2D.blackTexture);
+            material.SetTexture("_RimPowerGradient", Texture2D.blackTexture);
+            material.SetVector("_VertexCustomColor", inner ? new Vector4(1f, 0.25f, 0.08f, 1f) : new Vector4(1f, 0.045f, 0.03f, 1f));
+            SetHistory(material, swing);
+        }
+
+        var previousTarget = RenderTexture.active;
+        try
+        {
+            camera.Render();
+            RenderTexture.active = target;
+            var image = Own(new Texture2D(Size, Size, TextureFormat.RGBA32, false, true));
+            image.ReadPixels(new Rect(0, 0, Size, Size), 0, 0);
+            return image.GetPixels32();
+        }
+        finally
+        {
+            RenderTexture.active = previousTarget;
+            ClearRenderObjects();
+        }
+    }
+
+    private static void SetHistory(Material material, Swing swing)
+    {
+        var positions = new Vector4[8];
+        var forwards = new Vector4[8];
+        var ups = new Vector4[8];
+        for (int i = 0; i < positions.Length; i++)
+        {
+            float age = i / (float)(positions.Length - 1);
+            float sweep = swing == Swing.Reverse
+                ? Mathf.Min(age, 0.57f) - 0.9f * Mathf.Max(0f, age - 0.57f)
+                : age;
+            var rotation = swing switch
+            {
+                Swing.Still => Quaternion.identity,
+                Swing.TowardCamera => Quaternion.AngleAxis(age * 37f, Vector3.right),
+                Swing.Slow => Quaternion.AngleAxis(sweep * 0.033f * Mathf.Rad2Deg, Vector3.forward),
+                Swing.Fast => Quaternion.AngleAxis(sweep * 0.68f * Mathf.Rad2Deg, Vector3.forward),
+                _ => Quaternion.AngleAxis(sweep * 0.43f * Mathf.Rad2Deg, Vector3.forward)
+            };
+            if (swing == Swing.TowardCamera)
+                positions[i] = new Vector4(0f, -0.08f * age, 0.22f * age);
+            forwards[i] = rotation * Vector3.up;
+            ups[i] = rotation * Vector3.back;
+        }
+        material.SetVectorArray("_HistPos", positions);
+        material.SetVectorArray("_HistFwd", forwards);
+        material.SetVectorArray("_HistUp", ups);
+    }
+
+    private static Mesh Tube(int sides, float size)
+    {
+        const int rows = 30;
+        var positions = new List<Vector3>();
+        var polar = new List<Vector3>();
+        var meta = new List<Vector4>();
+        var color = new List<Color>();
+        var data = new List<Vector4>();
+        var indices = new List<int>();
+        for (int row = 0; row <= rows; row++)
+        {
+            float along = row / (float)rows;
+            float radius = Mathf.Abs(size) * Mathf.Lerp(1f, 0.33f, along);
+            bool cap = row == 0 || row == rows;
+            for (int col = 0; col <= sides; col++)
+            {
+                float theta = 2f * Mathf.PI * col / sides;
+                positions.Add(new Vector3(along, 0f, 0f));
+                polar.Add(new Vector3(Mathf.Cos(theta), Mathf.Sin(theta), Mathf.Sign(size)));
+                meta.Add(new Vector4(0f, cap ? 1f : 0f, along, radius));
+                color.Add(Color.white);
+                data.Add(new Vector4(1f, 1f, 0f, 0f));
+                if (row == rows || col == sides)
+                    continue;
+                int a = row * (sides + 1) + col;
+                int c = a + sides + 1;
+                indices.AddRange(new[] { a, c, a + 1, a + 1, c, c + 1 });
+            }
+        }
+        var mesh = new Mesh();
+        mesh.SetVertices(positions);
+        mesh.SetNormals(polar);
+        mesh.SetTangents(meta);
+        mesh.SetColors(color);
+        mesh.SetUVs(1, data);
+        mesh.SetTriangles(indices, 0);
+        mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 20f);
+        return mesh;
+    }
+
+    private static Color32 Pixel(Color32[] pixels, int x, int y) => pixels[(Size - 1 - y) * Size + x];
+
+    private static int VisibleWidth(Color32[] pixels, int y)
+    {
+        int count = 0;
+        for (int x = 0; x < Size; x++)
+            if (Pixel(pixels, x, y).r >= 21)
+                count++;
+        return count;
+    }
+
+    private T Own<T>(T obj) where T : Object
+    {
+        owned.Add(obj);
+        return obj;
+    }
+
+    private void ClearRenderObjects()
+    {
+        for (int i = owned.Count - 1; i >= 0; i--)
+            Object.DestroyImmediate(owned[i]);
+        owned.Clear();
+    }
+}

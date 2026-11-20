@@ -1,0 +1,5 @@
+{
+    "name": "VainSabers.MotionBlur.Tests",
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"]
+}
