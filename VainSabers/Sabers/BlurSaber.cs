@@ -158,7 +158,6 @@ internal class BlurSaber : MonoBehaviour
         var bladeGo = new GameObject("DefaultRibbonTrail");
         bladeGo.transform.SetParent(transform, false);
         m_defaultRibbonTrail = bladeGo.AddComponent<SaberRibbonTrail>();
-        m_defaultRibbonTrail.BlurOverlapConfig = m_config;
         m_defaultRibbonTrail.Init(m_historyProvider, bladeData, m_saberTransform);
     }
 

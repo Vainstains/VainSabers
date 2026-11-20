@@ -7,8 +7,6 @@ float4 _HistPos[GPU_HIST_COUNT];
 float4 _HistFwd[GPU_HIST_COUNT];
 float4 _HistUp[GPU_HIST_COUNT];
 float _VertexBlurFade;
-float _VertexRearCap;
-float _VertexMaxSweepDistance;
 float _VertexHueShift;
 float3 _VertexCustomColor;
 float _VertexGlowMul;
@@ -434,18 +432,8 @@ v2f vert (appdata_t v)
     float sideWeight = smoothstep(0.0, 0.01, sideLengthSq);
     float3 sweep = lerp(screenMotion, screenSide * signedTravel, sideWeight);
     float projectedDistance = length(sweep);
-    float motionLimit = _VertexMaxSweepDistance > 0.0
-        ? saturate(_VertexMaxSweepDistance / max(projectedDistance, 1e-4)) : 1.0;
-    float rearWeight = 1.0;
-    if (abs(_VertexRearCap) > 0.5)
-    {
-        float distanceFromRear = (_VertexRearCap > 0.0 ? 1.0 - ringT : ringT) * _VertexLength;
-        float blendDistance = clamp(0.5 * _VertexLength, 0.001, 0.020);
-        rearWeight = smoothstep(0.0, blendDistance, distanceFromRear);
-    }
-    float travel = projectedDistance * motionLimit * rearWeight / max(2.0 * radiusAbs, 0.012);
-    // Anchor the actual rear face and ease back into blur along the adjacent wall.
-    float sweepAmount = smoothstep(0.05, 0.75, travel) * motionLimit * rearWeight;
+    float travel = projectedDistance / max(2.0 * radiusAbs, 0.012);
+    float sweepAmount = smoothstep(0.05, 0.75, travel);
 
     float3 currentOffset = signVal * cosTheta * fUp0 + sinTheta * fRight0;
     float3 averageOffset = signVal * cosTheta * avgUp + sinTheta * avgRight;

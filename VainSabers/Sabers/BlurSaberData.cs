@@ -28,27 +28,8 @@ public class BlurSaberData : MonoBehaviour
     public float BlurTime => m_config != null ? Mathf.Min(m_config.BlurMS * 0.001f, 0.025f) : 0.025f;
     
     private readonly List<BlurSaberPart> m_components = new List<BlurSaberPart>();
-    private int m_rearCapFrame = -1;
-    private float m_lowestRearCap;
     public IReadOnlyList<BlurSaberPart> Components => m_components.AsReadOnly();
     public int ComponentCount => m_components.Count;
-
-    internal bool IsLowestRearCap(float position)
-    {
-        if (m_rearCapFrame != Time.frameCount)
-        {
-            m_rearCapFrame = Time.frameCount;
-            m_lowestRearCap = float.PositiveInfinity;
-            foreach (var part in m_components)
-            {
-                if (part != null && part.TryGetRearCap(out float capPosition, out _))
-                    m_lowestRearCap = Mathf.Min(m_lowestRearCap, capPosition);
-            }
-        }
-
-        // The inner and outer shells of a pommel can end a few millimetres apart.
-        return position <= m_lowestRearCap + 0.005f;
-    }
 
     public bool UseCustomTrails { get; private set; }
     public List<SaberTrailData> TipTrails { get; private set; } = new();

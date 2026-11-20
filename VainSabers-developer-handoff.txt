@@ -6,14 +6,12 @@ The old blur stepped between recorded poses, and the shader could make a sideway
 
 A swing toward the camera could make the blade almost disappear in the middle. The tube shader now measures motion across the blade’s projected width. When that motion is near zero, it keeps the blade close to its current pose and preserves its base opacity.
 
-At high speeds, the history window could include both directions of a reversal, creating a second, sharp wedge. The fix uses the latest continuous segment, caps extreme sweep distance, and resamples that segment into the existing pose buffer. The default blade ribbon also fades in across the overlap window in both its color and glow passes.
+At high speeds, the history window could include both directions of a reversal, creating a second, sharp wedge. The fix uses the latest continuous segment, caps extreme sweep distance, and resamples that segment into the existing pose buffer.
 
 OBJ blur now uses a continuous swept surface built from the mesh bounds. It follows interpolated positions and rotations, and uses a soft opacity profile and the model's broad albedo. A single textured mesh renders at the current pose. The sweep and the mesh share the existing shader passes.
 
 During a fast OBJ swing, only the soft sweep is visible. The textured pose fades back in as lateral motion slows.
 
-The lowest face along the saber's local axis stays anchored to the current pose, with a short transition into the sweep along the adjacent wall. The custom menu laser limits lateral sweep distance so movement leaves a narrow beam.
-
 I verified stationary, sideways, head-on, fast, and reversing swings in Unity with Direct3D 11. The head-on center matched the stationary blade in the controlled render, and the duplicate wedge disappeared on reversal. I also checked the embedded mesh and texture in the supplied Wii Remote preset at rest, in translation, and in rotation. The Release build targets Beat Saber 1.40.8. In-headset behavior, VR frame timing, and a direct ReeSabers comparison still need testing.
 
-The changes are in BlurPart.cginc, BlurSaberPart.cs, BlurMotionHistory.cs, and the blade ribbon code and shader. After applying the changes, rebuild vs_assets with BuildAssetBundles.bat, then rebuild the mod to embed the shaders in VainSabers.dll.
+The changes are in BlurPart.cginc, BlurSaberPart.cs, BlurMotionHistory.cs, and the OBJ mesh builder. After applying the changes, rebuild vs_assets with BuildAssetBundles.bat, then rebuild the mod to embed the shaders in VainSabers.dll.

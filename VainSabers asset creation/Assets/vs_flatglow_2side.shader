@@ -26,15 +26,6 @@ Shader "Unlit/vs_flatglow_2side"
             LOD 100
             Cull Off
             ZWrite Off
-
-            CGINCLUDE
-            float _TrailBlurOverlapAge;
-
-            float TrailHeadFade(float age)
-            {
-                return 1.0 - smoothstep(0.0, max(_TrailBlurOverlapAge, 1e-4), _TrailBlurOverlapAge - age);
-            }
-            ENDCG
     
             // -------- Pass 1: RGB only --------
             Pass
@@ -184,7 +175,7 @@ Shader "Unlit/vs_flatglow_2side"
                 {
                     float3 baseRgb = i.color.rgb;
                     float3 blended = lerp(baseRgb, _CustomColor.rgb, saturate(_CustomBlend));
-                    fixed4 col = fixed4(saturate(blended * _ColorBoost), i.color.a * TrailHeadFade(i.uv.x));
+                    fixed4 col = fixed4(saturate(blended * _ColorBoost), i.color.a);
                     if (_ColorTexEnabled > 0.5)
                     {
                         float2 uvAtlas = ApplyAtlas(i.uv, _ColorTexAtlasCount, _ColorTexAtlasSpeedFlip);
@@ -334,7 +325,7 @@ Shader "Unlit/vs_flatglow_2side"
      
                 fixed4 frag (v2f i) : SV_Target
                 {
-                    float glow = saturate(i.alpha * _GlowBoost) * TrailHeadFade(i.uv.x);
+                    float glow = saturate(i.alpha * _GlowBoost);
                     if (_GlowTexEnabled > 0.5)
                     {
                         float2 uvAtlas = ApplyAtlasGlow(i.uv, _GlowTexAtlasCount, _GlowTexAtlasSpeedFlip);
