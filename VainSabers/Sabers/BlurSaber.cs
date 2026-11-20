@@ -47,6 +47,7 @@ internal class BlurSaber : MonoBehaviour
         m_tracker = gameObject.AddInitComponent<MovementTracker>(target, m_config);
         m_historyProvider = m_tracker;
         m_blurSaberData = gameObject.AddInitComponent<BlurSaberData>(m_config);
+        m_blurSaberData.AnchorBlurEnds = true;
         m_blurSaberData.IsLeftSaber = target.name.Contains("Left", StringComparison.OrdinalIgnoreCase) || target.parent?.name.Contains("Left", StringComparison.OrdinalIgnoreCase) == true;
         m_blurSaberData.TrailsChanged += OnTrailsChanged;
         ApplyZRotationOffset();
@@ -142,7 +143,7 @@ internal class BlurSaber : MonoBehaviour
         var tipGo = new GameObject("DefaultTipTrail");
         tipGo.transform.SetParent(transform, false);
         m_defaultTipTrail = tipGo.AddComponent<SaberTipTrail>();
-        m_defaultTipTrail.Init(m_historyProvider, tipData, m_saberTransform);
+        m_defaultTipTrail.Init(m_historyProvider, tipData, m_saberTransform, m_blurSaberData);
 
         var bladeData = new SaberTrailData(
             position: new float[] { 0f, 0f, 1f },
@@ -158,6 +159,7 @@ internal class BlurSaber : MonoBehaviour
         var bladeGo = new GameObject("DefaultRibbonTrail");
         bladeGo.transform.SetParent(transform, false);
         m_defaultRibbonTrail = bladeGo.AddComponent<SaberRibbonTrail>();
+        m_defaultRibbonTrail.BlurOverlapConfig = m_config;
         m_defaultRibbonTrail.Init(m_historyProvider, bladeData, m_saberTransform);
     }
 
@@ -236,7 +238,7 @@ internal class BlurSaber : MonoBehaviour
             var go = new GameObject($"TipTrail_{i}");
             go.transform.SetParent(transform, false);
             var trail = go.AddComponent<SaberTipTrail>();
-            trail.Init(m_historyProvider, data, m_saberTransform);
+            trail.Init(m_historyProvider, data, m_saberTransform, m_blurSaberData);
             trail.SetGameColor(m_gameColor);
             m_customTipTrails.Add(trail);
         }

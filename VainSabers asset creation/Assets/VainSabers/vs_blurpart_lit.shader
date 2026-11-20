@@ -46,7 +46,7 @@
                 discard;
                 return 0;
 #else
-                // UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 SaberFragVariables vars = GetCommonSaberVars(i);
                 if(vars.alpha > 0.999)
                     return 1; // color ignored, depth written
@@ -175,6 +175,7 @@
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 // Lit parts now glow – same logic as unlit blur part
                 SaberFragVariables vars = GetCommonSaberVars(i);
+                ClipEmptyFanGlow(i, vars.alpha);
                 float glow = vars.glowStrength * vars.alpha;
                 return fixed4(0.0, 0.0, 0.0, glow);
 #endif

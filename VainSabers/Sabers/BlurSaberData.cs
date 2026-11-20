@@ -26,6 +26,48 @@ public class BlurSaberData : MonoBehaviour
     private PluginConfig? m_config = null;
     public Color CustomColor;
     public float BlurTime => m_config != null ? Mathf.Min(m_config.BlurMS * 0.001f, 0.025f) : 0.025f;
+    internal bool AnchorBlurEnds { get; set; }
+    private int m_rearEndFrame = -1;
+    private float m_rearEnd;
+    private float m_bladeEnd;
+    private float m_bladeRadius;
+
+    internal float GetRearTubeEnd()
+    {
+        if (m_rearEndFrame == Time.frameCount)
+            return m_rearEnd;
+
+        m_rearEndFrame = Time.frameCount;
+        m_rearEnd = float.PositiveInfinity;
+        m_bladeEnd = 0f;
+        m_bladeRadius = 0f;
+        foreach (var part in m_components)
+        {
+            if (part == null || !part.isActiveAndEnabled || !part.ShouldRenderOnCurrentSaber() ||
+                part.GeometryHandling != BlurSaberPart.GeometryType.Simple || part.Length <= 0f)
+                continue;
+
+            Transform partTransform = part.transform;
+            float start = partTransform.localPosition.z;
+            float end = start + (partTransform.localRotation * Vector3.forward).z * part.Length;
+            m_rearEnd = Mathf.Min(m_rearEnd, Mathf.Min(start, end));
+            float farEnd = Mathf.Max(start, end);
+            if (part.Length >= 0.4f && farEnd > m_bladeEnd)
+            {
+                m_bladeEnd = farEnd;
+                m_bladeRadius = 0.5f * (part.StartRadius + part.EndRadius);
+            }
+        }
+        return m_rearEnd;
+    }
+
+    internal Vector2 GetTipBlurBounds()
+    {
+        if (!AnchorBlurEnds || m_config == null || m_config.BlurSoftness <= 0f)
+            return Vector2.zero;
+        GetRearTubeEnd();
+        return new Vector2(m_bladeEnd, m_bladeRadius);
+    }
     
     private readonly List<BlurSaberPart> m_components = new List<BlurSaberPart>();
     public IReadOnlyList<BlurSaberPart> Components => m_components.AsReadOnly();

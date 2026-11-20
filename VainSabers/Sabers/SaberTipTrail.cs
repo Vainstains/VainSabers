@@ -10,6 +10,11 @@ internal class SaberTipTrail : MonoBehaviour
     private LineRenderer _lineRenderer = null!;
     private Transform _saber = null!;
     private MovementHistoryProvider _sweepData = null!;
+    private BlurSaberData? m_blurData;
+    private Material m_trailMaterial = null!;
+    private readonly Pose[] m_blurMaskPoses = new Pose[8];
+    private readonly Vector4[] m_blurMaskStarts = new Vector4[3];
+    private readonly Vector4[] m_blurMaskEnds = new Vector4[3];
     
     private int _coarseSampleCount = 24;
     private int _refinedSampleCount = 47;
@@ -41,15 +46,18 @@ internal class SaberTipTrail : MonoBehaviour
     private Color m_gameColor = Color.white;
     private SaberTrailData m_trailData;
 
-    public void Init(MovementHistoryProvider sweepData, SaberTrailData trailData, Transform saberTransform)
+    public void Init(MovementHistoryProvider sweepData, SaberTrailData trailData, Transform saberTransform,
+        BlurSaberData blurData)
     {
         _sweepData = sweepData;
         _saber = saberTransform;
         m_trailData = trailData;
+        m_blurData = blurData;
 
         UpdateSampleCounts(trailData.Length);
         _lineRenderer = gameObject.AddComponent<LineRenderer>();
-        _lineRenderer.material = new Material(VainSabersAssets.VertexGlowShaderUntextured);
+        m_trailMaterial = new Material(VainSabersAssets.VertexGlowShaderUntextured);
+        _lineRenderer.sharedMaterial = m_trailMaterial;
         _lineRenderer.useWorldSpace = true;
         _lineRenderer.positionCount = _refinedSampleCount2;
 
@@ -70,9 +78,9 @@ internal class SaberTipTrail : MonoBehaviour
         _lineRenderer.positionCount = _refinedSampleCount2;
         _lineRenderer.widthMultiplier = trailData.Width;
         _lineRenderer.sortingOrder = 100;
-        _lineRenderer.material.renderQueue = 3600 + trailData.QueueOffset;
-        _lineRenderer.material.SetFloat("_GlowBoost", trailData.Glow);
-        _lineRenderer.material.SetFloat("_DepthOffset", trailData.DepthOffset);
+        m_trailMaterial.renderQueue = 3600 + trailData.QueueOffset;
+        m_trailMaterial.SetFloat("_GlowBoost", trailData.Glow);
+        m_trailMaterial.SetFloat("_DepthOffset", trailData.DepthOffset);
         // Gradient base color – keep legacy Color for fallback but gradient is primary
         m_baseColor = new Color(trailData.Color[0], trailData.Color[1], trailData.Color[2], 1f);
         UpdateFinalColor();
@@ -88,9 +96,9 @@ internal class SaberTipTrail : MonoBehaviour
     {
         Color tonemappedGame = SquarePreserveLuminance(m_gameColor * 0.8f);
         tonemappedGame.a = m_gameColor.a;
-        if (_lineRenderer != null && _lineRenderer.material != null)
+        if (m_trailMaterial != null)
         {
-            _lineRenderer.material.SetColor("_CustomColor", tonemappedGame);
+            m_trailMaterial.SetColor("_CustomColor", tonemappedGame);
         }
         // Keep m_trailColor as fallback solid for when gradient missing
         m_trailColor = m_baseColor;
@@ -186,6 +194,7 @@ internal class SaberTipTrail : MonoBehaviour
         RefinePositions(_refinedPositions, _refinedPositions2);
 
         _lineRenderer.SetPositions(_refinedPositions2);
+        UpdateBlurMask();
 
         float activation = Mathf.Clamp01(m_trailData.MotionActivation);
         if (activation <= 0.001f)
@@ -203,6 +212,40 @@ internal class SaberTipTrail : MonoBehaviour
         }
 
         UpdateGradient(m_opacity * m_trailData.Opacity);
+    }
+
+    private void UpdateBlurMask()
+    {
+        var bounds = m_blurData?.GetTipBlurBounds() ?? Vector2.zero;
+        float duration = m_blurData?.BlurTime ?? 0f;
+        if (bounds.x <= 0.4f || duration <= 0.0001f || m_trailData.Length <= 0)
+        {
+            m_trailMaterial.SetFloat("_TipBlurMaskRadius", 0f);
+            return;
+        }
+
+        _sweepData.SampleNonAlloc(m_blurMaskPoses.Length, duration, m_blurMaskPoses);
+        BlurMotionHistory.LimitSweep(m_blurMaskPoses);
+        var current = m_blurMaskPoses[0];
+        var oldest = m_blurMaskPoses[m_blurMaskPoses.Length - 1];
+        Vector3 currentTip = current.position + current.forward * bounds.x;
+        Vector3 previousTip = oldest.position + oldest.forward * bounds.x;
+        float movement = Vector3.Distance(currentTip, previousTip);
+        float mask = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.015f, 0.07f, movement));
+        m_trailMaterial.SetFloat("_TipBlurMaskRadius", Mathf.Max(0.004f, bounds.y) * mask);
+        if (mask <= 0f)
+            return;
+
+        // Keep the decorative tip outside the central section of the visible blade sweep.
+        for (int i = 0; i < m_blurMaskStarts.Length; i++)
+        {
+            var pose = m_blurMaskPoses[i * (m_blurMaskPoses.Length - 1) / (m_blurMaskStarts.Length - 1)];
+            var axis = pose.forward * bounds.x;
+            m_blurMaskStarts[i] = pose.position + 0.18f * axis;
+            m_blurMaskEnds[i] = pose.position + 0.86f * axis;
+        }
+        m_trailMaterial.SetVectorArray("_TipBlurStarts", m_blurMaskStarts);
+        m_trailMaterial.SetVectorArray("_TipBlurEnds", m_blurMaskEnds);
     }
 
     private float EstimateTipSpeed()
