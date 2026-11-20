@@ -14,7 +14,9 @@ public class BladeMotionBlurTests
         Fast,
         TowardCamera,
         Reverse,
-        NearCamera
+        NearCamera,
+        Diagonal,
+        CrossesLiveAxis
     }
 
     private const int Size = 720;
@@ -101,6 +103,25 @@ public class BladeMotionBlurTests
         Assert.That(VisibleWidth(pixels, 360), Is.InRange(60, 365));
         Assert.That(Pixel(pixels, 539, 360).r, Is.GreaterThan(35), "The fan must stay connected to the blade.");
         Assert.That(Pixel(pixels, 140, 360).r, Is.LessThan(8), "The fan reached the far side of the camera.");
+    }
+
+    [Test]
+    public void DiagonalSwingDepositsLightOnlyWhereTheBladeSwept()
+    {
+        var pixels = Render(Swing.Diagonal);
+
+        Assert.That(VisibleWidth(pixels, 250), Is.GreaterThan(65), "The upper blade should leave a lateral wake.");
+        Assert.That(VisibleWidth(pixels, 585), Is.LessThan(50), "The older blade never reached the lower slice.");
+        Assert.That(Pixel(pixels, 230, 585).r, Is.LessThan(8), "The fan extended below the older blade.");
+    }
+
+    [Test]
+    public void ProjectionReversalKeepsTheMostRecentSide()
+    {
+        var pixels = Render(Swing.CrossesLiveAxis);
+
+        Assert.That(Pixel(pixels, 325, 360).r, Is.GreaterThan(25), "The most recent wake should remain visible.");
+        Assert.That(Pixel(pixels, 246, 360).r, Is.LessThan(8), "Older motion on the opposite side should be excluded.");
     }
 
     [TestCase(false)]
@@ -192,7 +213,7 @@ public class BladeMotionBlurTests
                 : age;
             var rotation = swing switch
             {
-                Swing.Still or Swing.NearCamera => Quaternion.identity,
+                Swing.Still or Swing.NearCamera or Swing.Diagonal or Swing.CrossesLiveAxis => Quaternion.identity,
                 Swing.TowardCamera => Quaternion.AngleAxis(age * 37f, Vector3.right),
                 Swing.Slow => Quaternion.AngleAxis(sweep * 0.033f * Mathf.Rad2Deg, Vector3.forward),
                 Swing.Fast => Quaternion.AngleAxis(sweep * 0.68f * Mathf.Rad2Deg, Vector3.forward),
@@ -202,6 +223,10 @@ public class BladeMotionBlurTests
                 positions[i] = new Vector4(0f, -0.08f * age, 0.22f * age);
             else if (swing == Swing.NearCamera)
                 positions[i] = new Vector4(-0.21f * age, 0f, -0.565f * age);
+            else if (swing == Swing.Diagonal)
+                positions[i] = new Vector4(-0.18f * age, 0.65f * age, -0.10f * age);
+            else if (swing == Swing.CrossesLiveAxis)
+                positions[i].x = 0.32f * Mathf.Min(0.5f, age) - 0.9f * Mathf.Max(0f, age - 0.5f);
             forwards[i] = rotation * Vector3.up;
             ups[i] = rotation * Vector3.back;
         }

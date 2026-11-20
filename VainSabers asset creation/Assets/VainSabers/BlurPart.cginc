@@ -148,17 +148,20 @@ void SampleHistory(float age, out float3 pos, out float3 fwd, out float3 up)
     up = NormalizeOr(lerp(_HistUp[newer].xyz, _HistUp[older].xyz, weight), _HistUp[newer].xyz);
 }
 
-// Measure lateral motion on the current ring's view plane. A point moving
-// straight toward the eye stays in the same place even in perspective.
-float ProjectedBladeTravel(float3 coordinates, float3 center, float3 side, float3 cameraPos, float3 cameraForward)
+// Intersect the visible slice of the live blade with each historical blade.
+// Comparing the same local ring across poses would smear axial motion sideways
+// where the historical blade never occupied that slice of the image.
+float ProjectedBladeTravel(float2 offset, float3 center, float3 view, float3 side,
+                           float3 cameraPos, float3 cameraForward)
 {
-    float3 centerRay = center - cameraPos;
-    float depth = dot(centerRay, cameraForward);
+    float depth = dot(center - cameraPos, cameraForward);
     bool perspective = unity_OrthoParams.w < 0.5;
     float nearPlane = _ProjectionParams.y;
     if (perspective && depth <= nearPlane)
         return 0.0;
 
+    float3 sliceOrigin = perspective ? cameraPos : center;
+    float3 sliceNormal = cross(view, side);
     float direction = 0.0;
     float farthest = 0.0;
     [loop]
@@ -166,13 +169,20 @@ float ProjectedBladeTravel(float3 coordinates, float3 center, float3 side, float
     {
         float3 fwd = _HistFwd[i].xyz;
         float3 up = _HistUp[i].xyz;
-        float3 previous = _HistPos[i].xyz + fwd * coordinates.z + up * coordinates.y
-                        + cross(up, fwd) * coordinates.x;
-        float3 previousRay = previous - cameraPos;
-        float previousDepth = dot(previousRay, cameraForward);
+        float3 previousBase = _HistPos[i].xyz + up * offset.y + cross(up, fwd) * offset.x;
+        float3 previousAxis = fwd * _VertexLength;
+        float crossing = dot(previousAxis, sliceNormal);
+        if (abs(crossing) <= 1e-4)
+            break;
+        float along = dot(sliceOrigin - previousBase, sliceNormal) / crossing;
+        float endpoint = smoothstep(-0.015, 0.025, min(along, 1.0 - along));
+        if (endpoint <= 0.0)
+            break;
+        float3 previous = previousBase + previousAxis * saturate(along);
+        float previousDepth = dot(previous - cameraPos, cameraForward);
         if (perspective && previousDepth <= nearPlane)
             break;
-        float across = dot(previous - center, side);
+        float across = dot(previous - center, side) * endpoint;
         if (perspective)
         {
             // A pose close to the near plane is unreliable as an exposure
@@ -216,11 +226,9 @@ float FanCoverage(float4 fan, float along)
     float leading = SmootherStep((x + 1.0 + feather) / max(1.15 + feather, aa));
     float trailing = SmootherStep((travel + 1.0 + feather - x) / max(1.0 + feather + 0.83 * travel, aa));
     float age = saturate(x / max(travel, 1.0));
-    // Older tip positions occupy less of the live blade's axis during a swing.
-    float tip = 1.0 - 0.14 * age * age * smoothstep(2.0, 15.0, travel);
     float axialAA = fwidth(along);
     float ends = SmootherStep(along / max(0.065, axialAA))
-               * SmootherStep((tip - along) / max(0.09 + 0.08 * age, axialAA));
+               * SmootherStep((1.0 - along) / max(0.09 + 0.08 * age, axialAA));
     ends = lerp(1.0, ends, smoothstep(1.2, 4.0, travel));
     float density = max(0.23, rsqrt(1.0 + 0.48 * travel * max(0.0, _VertexBlurFade)));
     return leading * trailing * ends * density;
@@ -515,7 +523,7 @@ v2f vert (appdata_t v)
         if (blend > 0.0 && sideLength > 0.035)
         {
             float3 cameraForward = NormalizeOr(mul((float3x3)unity_WorldToObject, -UNITY_MATRIX_V[2].xyz), -view);
-            signedDistance = ProjectedBladeTravel(float3(offX, offY, zPos), firstCenter, bladeSide,
+            signedDistance = ProjectedBladeTravel(float2(offX, offY), firstCenter, view, bladeSide,
                                                    localCamera, cameraForward);
         }
         // Small parallax on a mostly depth-wise swing should not thin the blade.
