@@ -1,11 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
+using VainSabers.Config;
 using VainSabers.Data;
 
 namespace VainSabers.Sabers;
 
 public class SaberRibbonTrail : MonoBehaviour
 {
+    internal PluginConfig? BlurOverlapConfig { get; set; }
+
     public int SegmentCount => _segmentCount;
     private int _segmentCount = 30;
     private const int VerticalSubdivisions = 6;
@@ -423,6 +426,10 @@ public class SaberRibbonTrail : MonoBehaviour
         _propBlock.SetVector("_TrailLocalOffset", new Vector4(localOffsetVec.x, localOffsetVec.y, localOffsetVec.z, 0f));
         _propBlock.SetFloat("_TrailBaseFraction", baseFrac);
         _propBlock.SetFloat("_TrailOpacityScale", opacityScale);
+        float overlapAge = 0f;
+        if (BlurOverlapConfig is { BlurSoftness: > 0f } config && m_trailData.Length > 0)
+            overlapAge = Mathf.Min(0.65f, (float)config.BlurMS / m_trailData.Length);
+        _propBlock.SetFloat("_TrailBlurOverlapAge", overlapAge);
         // Noise already set via material, but need to ensure _TrailDuration also for noise
         _meshRenderer.SetPropertyBlock(_propBlock);
     }

@@ -26,10 +26,29 @@ public class BlurSaberData : MonoBehaviour
     private PluginConfig? m_config = null;
     public Color CustomColor;
     public float BlurTime => m_config != null ? Mathf.Min(m_config.BlurMS * 0.001f, 0.025f) : 0.025f;
+    internal bool AnchorRearCap { get; set; }
+    internal bool IsMenuPointer { get; set; }
     
     private readonly List<BlurSaberPart> m_components = new List<BlurSaberPart>();
     public IReadOnlyList<BlurSaberPart> Components => m_components.AsReadOnly();
     public int ComponentCount => m_components.Count;
+
+    internal float GetRearTubeEnd()
+    {
+        float rear = float.PositiveInfinity;
+        foreach (var part in m_components)
+        {
+            if (part == null || !part.isActiveAndEnabled || !part.ShouldRenderOnCurrentSaber() ||
+                part.GeometryHandling != BlurSaberPart.GeometryType.Simple || part.Length <= 0f)
+                continue;
+
+            var tube = part.transform;
+            float start = tube.localPosition.z;
+            float end = start + (tube.localRotation * Vector3.forward).z * part.Length;
+            rear = Mathf.Min(rear, Mathf.Min(start, end));
+        }
+        return rear;
+    }
 
     public bool UseCustomTrails { get; private set; }
     public List<SaberTrailData> TipTrails { get; private set; } = new();
